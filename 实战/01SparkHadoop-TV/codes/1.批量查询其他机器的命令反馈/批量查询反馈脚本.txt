@@ -1,0 +1,30 @@
+1.写一个脚本能批量看到机器的命令执行的反馈信息
+如jps我在一台机器执行的话只能看到这台机器的反馈,我需要在一台机器执行看到其他机器的反馈
+
+类似执行xshell.sh jps 返回如下：
+==============vm01==============
+3074 SecondaryNameNode
+3224 ResourceManager
+2890 NameNode
+3868 Jps
+==============vm02==============
+3074 SecondaryNameNode
+3224 ResourceManager
+2890 NameNode
+3868 Jps
+==============vm03==============
+3074 SecondaryNameNode
+3224 ResourceManager
+2890 NameNode
+3868 Jps
+
+采用 ssh 命令实现
+原型 ssh vm01 cmd
+
+#!/bin/bash
+
+params=$@
+for((i=1;i<=3;i++));do
+ echo ===============vm0$i=================
+ ssh vm0$i $params
+done

@@ -1,0 +1,155 @@
+SparkHadoop项目
+1.安装虚拟机配置网络
+修改
+BOOTPROTO=static  #设置静态Ip
+ONBOOT=yes  #这里如果为no的话就改为yes，表示网卡设备自动启动
+增加
+GATEWAY=192.168.10.2  #这里的网关地址就是第二步获取到的那个网关地址
+IPADDR=192.168.10.150  #配置ip，在第二步已经设置ip处于192.168.10.xxx这个范围，我就随便设为150了，只要不和网关相同均可
+NETMASK=255.255.255.0#子网掩码
+DNS1=8.8.8.8#dns服务器1，填写你所在的网络可用的dns服务器地址即可
+
+重启生效
+service network restart
+（这部分还没搞明白先忽略使用动态地址）
+
+2.安装三台虚拟机
+VM01 192.168.8.128
+VM02 192.168.8.129
+VM03 192.168.8.130
+
+修改域名
+
+
+3.安装hadoop
+
+卸载OpenJDK 
+rpm -qa | grep jdk | xargs rpm -e --nodeps  
+安装JDK
+###############JDK
+export JAVA_HOME=/appl/jdk
+export PATH=$PATH:$JAVA_HOME/bin
+
+下载hadoop-2.6.5.tar.gz
+解压
+配置/etc/profile增加
+
+export HADOOP_HOME=/appl/hadoop
+export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+
+测试是否成功
+hadoop version
+hadoop fs -ls /
+
+4.复制JDK hadoop profile
+scp -r /appl/jdk/  root@192.168.8.130:/appl/
+ln -s hadoop-2.7.5/ hadoop
+scp /etc/profile  root@192.168.8.130:/etc/profile
+
+5.配置主机名对于ip  配置SSH 免密码
+/etc/hosts 增加对于关系
+修改主机名
+/etc/hostname vm01
+scp /etc/hosts root@vm03:/etc/hosts
+
+生成秘钥 三个机器都生成下
+ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+拷贝秘钥
+scp ~/.ssh/id_rsa.pub root@vm03:~/.ssh/authorized_keys
+
+6.修改hadoop配置
+core-site.xml
+	<?xml version="1.0" encoding="UTF-8"?>
+	<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+	<configuration>
+	    <property>
+	        <name>fs.defaultFS</name>
+	        <value>hdfs://vm01/</value>
+	    </property>
+	</configuration>
+
+hdfs-site.xml
+	<?xml version="1.0" encoding="UTF-8"?>
+	<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+	<configuration>
+	<property>
+	   <name>dfs.replication</name>
+	   <value>2</value>
+	</property>
+	</configuration>
+
+	cp mapred-site.xml.template mapred-site.xml
+	<?xml version="1.0"?>
+	<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+	<configuration>
+	<property>
+	       <name>mapreduce.framework.name</name>
+	       <value>yarn</value>
+	</property>
+	</configuration>
+
+nano yarn-site.xml
+	<?xml version="1.0"?>
+	<configuration>
+	   <property>
+	        <name>yarn.resourcemanager.hostname</name>
+	        <value>vm01</value>
+	   </property>
+	   <property>
+	        <name>yarn.nodemanager.aux-services</name>
+	        <value>mapreduce_shuffle</value>
+	   </property>
+	</configuration>
+
+slaves
+	vm02
+	vm03
+
+nano hadoop-env.sh 
+export JAVA_HOME=/appl/jdk
+
+
+7. 分发hadoop配置
+scp -r  hadoop/ root@vm03:/appl/hadoop/etc/
+
+8.格式化文件
+hadoop namenode -format
+
+9.启动hadoop
+start-all.sh
+
+10.启动成功
+[root@vm01 etc]# jps
+1369 NameNode
+1549 SecondaryNameNode
+1694 ResourceManager
+1951 Jps
+启动成功
+
+
+第二部分
+利用hadoop自带的demo来计算wordcount
+mkdir input
+   87  cd input/
+   88  touch test01.txt
+   89  echo 'hello world' >> test01.txt 
+   90  echo 'hello hadoop' >> test02.txt 
+   91  echo 'hello mapreduce' >> test02.txt
+   93  hadoop fs -mkdir /wc_input
+   94  hadoop fs -lsr /
+   95  hadoop fs -put test* /wc_input
+
+
+cd /appl/hadoop/share/hadoop/mapreduce/
+运行jar包
+hadoop jar hadoop-mapreduce-examples-2.7.5.jar wordcount /wc_input /wc_output
+运行完成
+查看结果
+hadoop fs cat /wc_output/part-r-00000
+
+附加作业：写一个小教本如jps打印出三台机器的状态
+
+
+
+
+

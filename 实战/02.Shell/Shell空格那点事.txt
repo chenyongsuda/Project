@@ -1,0 +1,139 @@
+Shell 编程：Bash空格的那点事
+
+空格，一个看不见的字符，很不起眼，也正由于不起眼，很多人经常忽略它，导致代码出错，却还找不着北。这里，我们来聊聊bash中空格的那点事
+
+先了解下bash中什么时候该用空格，什么时候不该用。
+
+1. 等号赋值两边不能有空格
+2. 命令与选项之间需要空格
+3. 管道两边空格可有可无
+
+我们来看看常见的问题
+
+1. 赋值时等号两边或者只有左边多了空格
+igi@gentoo ~ $ var1 = test
+bash: var1: command not found
+igi@gentoo ~ $ echo ${var1:?error}
+bash: var1: error
+igi@gentoo ~ $ echo ${var1?error}
+bash: var1: error
+igi@gentoo ~ $ var2 =test
+bash: var2: command not found
+igi@gentoo ~ $ echo ${var2:?error}
+bash: var2: error
+igi@gentoo ~ $ echo ${var2?error}
+bash: var2: error
+这里我用了bash的变量扩展，${var1:?error}当var1为unset或null(未定义或空)时, 报指定错误; ${var1?error}当var1为unset时，报指定错误 。从执行结果来看，如果等号左边有空格，则变量名当成命令执行，结果报command not found，变量没有被赋值
+
+2. 赋值时等号左边没有空格，右边有空格(这种情况有点特别，你会发现两种情况)
+igi@gentoo ~ $ var= test
+igi@gentoo ~ $ var= nocmd
+bash: nocmd: command not found
+同样是等号右边有空格，第一条命令没报错，而第二条报错了。
+这是因为shell中有这么一种执行命令的方式: var=string command
+命令command将得到变量var的值(至于在命令执行后，变量var的值是否保留下来，bash4中没有保留，但我在dash中发现时保留下来的，不 同的shell对这个的处理不同), 由于test是个命令，而nocmd不是，所以报了command not found.
+
+
+igi@gentoo ~ $ var=newtest eval echo \$var
+newtest
+igi@gentoo ~ $ echo $var
+注意: 这里我使用了eval, 是想避免在第一次解析时$var被替换成空字符串, 不然就会出现下面的情况(下面是错误的测试方法，在echo还没执行时，$var已经被替换成空字符串)
+
+复制代码 代码如下:
+
+igi@gentoo ~ $ var=newtest echo $var
+igi@gentoo ~ $ echo $var
+到这里，相信大家都明白了吧， 对于等号赋值，左右两边不可以有空格，虽然右边有空格不一定报错，但那绝对不是你想要的结果。
+
+3. 命令和选项之间必须有空格
+这个似乎大家都明白，为何我还这么罗嗦呢？说到这里，不得不提一下一个非常特别的命令: [ 命令(你没看错，是[ ), 也就是test命令(当然bash中，这是个内置命令，但在这里不影响
+我们的理解)。或许你会觉得[命令眼熟，没错，我保证你见过它，来看看下面的例子
+
+igi@gentoo ~ $ if [ "abc" = "abc" ]; then echo ‘they are the same'; fi
+they are the same
+igi@gentoo ~ $ type -a [
+[ is a shell builtin
+[ is /usr/bin/[
+想起来了吧？[命令经常用到if判断中，当然也有人喜欢这么写
+
+
+igi@gentoo ~ $ [ "abc" = "cba" ] || echo ‘they are not the same'
+they are not the same
+igi@gentoo ~ $ type -a [
+[ is a shell builtin
+[ is /usr/bin/[
+[ 命令正名叫test命令，它们两者几乎一样，为什么不是完全一样？来看看这个
+
+
+igi@gentoo ~ $ [ "abc" = "cba"
+bash: [: missing `]‘
+igi@gentoo ~ $ [ "abc" = "cba" ]
+igi@gentoo ~ $ test "abc" = "cba" ]
+bash: test: too many arguments
+igi@gentoo ~ $ test "abc" = "cba"
+清晰了吧，用[命令时，你必须给它个尾巴], 用test命令时，就不能加个尾巴。尾巴］是[最后一个参数，不可缺少的参数, 代表[命令的结束
+
+扯了这么多，那到底这个和空格有毛关系？说这些，是先让大家明白: [在shell中是个命令，它左右必须有空格！]是[的最后不可缺少的参数，它两边也需要空格(虽然有些命令的参数能连一起，例如ps, 但［命令不行，它的参数之间必须有空格)。让我们看看关于[常见的错误
+
+a. if 与 [ 之间缺少空格
+
+igi@gentoo ~ $ if[ "$HOME" = "/home/igi"];then echo 'equal'; fi
+bash: syntax error near unexpected token `then'
+igi@gentoo ~ $ if[ "$HOME" = "/home/igi" ];then echo 'equal'; fi
+bash: syntax error near unexpected token `then'
+igi@gentoo ~ $ if["$HOME" = "/home/igi"];then echo 'equal'; fi
+bash: syntax error near unexpected token `then'
+igi@gentoo ~ $ if["$HOME" = "/home/igi" ];then echo 'equal'; fi
+bash: syntax error near unexpected token `then'
+语法分析错误，很明显，if[ 对于bash来说，不知道是什么鬼东西
+
+b. [与后面的参数之间缺少空格
+igi@gentoo ~ $ if ["$HOME" = "/home/igi" ];then echo 'equal'; fi
+bash: [/home/igi: No such file or directory
+igi@gentoo ~ $ if ["$HOME" = "/home/igi"];then echo 'equal'; fi
+bash: [/home/igi: No such file or directory
+["$HOME" 对于bash来说，也不知道是什么鬼东西
+
+c. [ ] 之间的参数之间缺少空格
+igi@gentoo ~ $ if [ "abc"="abc" ]; then echo 'equal'; fi
+equal
+igi@gentoo ~ $ if [ "abc"="cba" ]; then echo 'equal'; fi
+equal
+第一条命令似乎是对的(实际上是正巧而已)，看看第二条命令"abc" 和 "cba"明显不同，但却判断为相同。这是因为参数之间缺少了空格，被[命令认为内部是个值而已。看看下面的命令，你就会释然
+
+igi@gentoo ~ $ if [ 0 ]; then echo 'equal'; fi
+equal
+igi@gentoo ~ $ if [ "1" ]; then echo 'equal'; fi
+equal
+igi@gentoo ~ $ if [ "" ]; then echo 'equal'; fi
+igi@gentoo ~ $ if [ ]; then echo 'equal'; fi
+在[ ] 内部，如果只有一个值(那些因为缺少了空格而连一起的也算)，不是空字符串就为真。所以在[ ] 之间的参数，也要两边有空格，而不能堆一起
+
+d. 参数和尾巴]之间缺少空格
+这个就不罗嗦了，尾巴]也是[命令的参数，如同上面所讲，参数之间必须有空格
+
+扯了这么多[命令与空格的事，但有些时候，缺了空格却能正确运行, 当然这只是你好运, 一起来看看
+
+
+igi@gentoo ~ $ var=' abc'
+igi@gentoo ~ $ if [$var = "abc" ];then echo 'equal'; fi
+equal
+igi@gentoo ~ $ if ["$var" = "abc" ];then echo 'equal'; fi
+bash: [ abc: command not found
+之前Bash引号那点事提到过，双引号包围起来的是一个整体，而没双引号的时候，字符串前后的空格或制表符都被切开。如果恰巧你遇到了或者你故意要丢弃字符串前后的空格或制表符，那也不是不可能, 但非常不建议你这么写，你的代码将是非常脆弱的。
+
+或者你该加的空格都加了，但还是报错，这也可能和缺少双引号有关。这样的情况很普遍，最后再看看
+
+igi@gentoo ~ $ var=''
+igi@gentoo ~ $ if [ "$var" = "abc" ];then echo 'equal'; fi
+igi@gentoo ~ $ if [ $var = "abc" ];then echo 'equal'; fi
+bash: [: =: unary operator expected
+igi@gentoo ~ $ dvar='a b c'
+igi@gentoo ~ $ if [ $dvar = "a b c" ];then echo 'equal'; fi
+bash: [: too many arguments
+igi@gentoo ~ $ if [ "$dvar" = "a b c" ];then echo 'equal'; fi
+equal
+我再罗嗦一次，不要轻易省略双引号。很清楚了吧？如果你还不明白，
+请读读Bash引号那点事
+
+最后，对于管道两边可有可无的空格，就不扯淡了，因为没遇到有人对此有疑惑.

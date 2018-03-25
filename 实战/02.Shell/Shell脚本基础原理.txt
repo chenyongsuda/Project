@@ -1,0 +1,38 @@
+1.shell是用户交互系统,系统最外层的.解析器为bash
+
+实验1
+清除/var/log下message日志的简单日志脚本
+#/bin/bash
+
+/dev/null > /var/log/message
+echo 'logs cleaned...'
+
+很简单,但是如果不是ROOT就没法清楚,没有条件判断
+
+#/bin/bash
+
+USER_ROOT_ID=0
+CLEAN_FILE='/var/log/'
+
+if [ "$UID" -ne "$USER_ROOT_ID" ]
+then
+	echo "the login user is not root ,can't do action..."
+	exit -1
+fi
+
+cd $CLEAN_FILE || {
+	echo "the file path not exit..."
+	exit -1
+}
+
+cat /dev/null > message && echo "logs cleaned success..."
+exit 0
+
+
+拓展三种清空方法
+cat /dev/null > /var/log/message
+echo > /var/log/message
+> /var/log/message
+
+看系统日志
+dmesg 命令 看
