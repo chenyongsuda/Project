@@ -1,0 +1,135 @@
+
+用root用户登录到你的linux系统，查看你系统的分区
+
+#fdisk -l
+		会出现以下的信息：
+		Device Boot Start End Blocks Id System
+		/dev/sda1 * 1 64 512000 83 Linux
+		/dev/sda2 64 2611 20458496 8e Linux LVM
+		Disk /dev/mapper/vg_zxw-lv_root: 18.8 GB, 18832424960 bytes
+		255 heads, 63 sectors/track, 2289 cylinders
+		Units = cylinders of 16065 * 512 = 8225280 bytes
+		Sector size (logical/physical): 512 bytes / 512 bytes
+		I/O size (minimum/optimal): 512 bytes / 512 bytes
+		Disk identifier: 0x00000000
+		Disk /dev/mapper/vg_zxw-lv_root doesn't contain a valid partition table
+		Disk /dev/mapper/vg_zxw-lv_swap: 2113 MB, 2113929216 bytes
+		255 heads, 63 sectors/track, 257 cylinders
+		Units = cylinders of 16065 * 512 = 8225280 bytes
+		Sector size (logical/physical): 512 bytes / 512 bytes
+		I/O size (minimum/optimal): 512 bytes / 512 bytes
+		Disk identifier: 0x00000000
+		Disk /dev/mapper/vg_zxw-lv_swap doesn't contain a valid partition table
+		根据提示信息可以判断出此系统的磁盘接口为SCSI，对应“sda”如果上面的红色字体是“hda”，那么此系统的磁盘接口为IDE对应“hda”所以我做一下操作：
+#fdisk /dev/sda/
+	WARNING: DOS-compatible mode is deprecated. It's strongly recommended to
+	switch off the mode (command 'c') and change display units to
+	sectors (command 'u').
+	Command (m for help):m //“ 列出fdisk的帮助”
+	Command action
+	a toggle a bootable flag
+	b edit bsd disklabel
+	c toggle the dos compatibility flag
+	d delete a partition
+	l list known partition types
+	m print this menu
+	n add a new partition
+	o create a new empty DOS partition table
+	p print the partition table
+	q quit without saving changes
+	s create a new empty Sun disklabel
+	t change a partition's system id
+	u change display/entry units
+	v verify the partition table
+	w write table to disk and exit
+	x extra functionality (experts only)
+Command (m for help):n //” 命令n用于添加新分区"
+	Command action
+	e extended
+	p primary partition (1-4)
+	p //" 选择创建主分区"此时，
+
+Partition number (1-4):3 //fdisk会让你选择主分区的编号，如果已经有了主分区sda1，sda2，那么编号就选3，即要创建的该分区为sda3.
+	First cylinder (2611-3916, default 2611): //此时，fdisk又会让你选择该分区的开始值这个就是分区的Start 值（start cylinder）；这里最好直接按回车，
+	Using default value 2611
+	Last cylinder, +cylinders or +size{K,M,G} (2611-3916, default 3916): //此时，fdisk又会让你选择该分区的开始值这个就是分区的End 值这里最好直接按回车，
+	Using default value 3916
+
+Command (m for help): w //w "保存所有并退出，分区划分完毕"
+	The partition table has been altered!
+	Calling ioctl() to re-read partition table.
+	WARNING: Re-reading the partition table failed with error 16: Device or resource busy.
+	The kernel still uses the old table. The new table will be used at
+	the next reboot or after you run partprobe(8) or kpartx(8)
+	Syncing disks.
+
+----------------------------------暂时不用操作----------------------------
+三、我们的新建分区/dev/sda3，却不是LVM的。所以，接下来使用fdisk将其改成LVM的。
+#fdisk /dev/sda
+Command (m for help): m
+Command (m for help): t //改变分区系统id
+Partition number (1-4): 3 //指定分区号
+Hex code (type L to list codes): 8e //指定要改成的id号，8e代表LVM。
+Command (m for help): w
+-------------------------------------------------------------------------
+四、重启系统后，登陆系统。（一定要重启系统，否则无法扩充新分区）
+
+五、格式化该新添加的分区：
+#fdisk -l
+	Device Boot Start End Blocks Id System
+	/dev/sda1 * 1 64 512000 83 Linux
+	/dev/sda2 64 2611 20458496 8e Linux LVM
+	/dev/sda3 2611 3916 10483750 8e Linux LVM
+	你会发现多了一块分区。
+#mkfs.ext3 /dev/sda3 //在硬盘分区“/dev/sda3”上创建“ext3”文件系统。
+此时我们就可以使用该新增分区啦：
+
+六、扩充新分区
+#lvs
+#pvcreate /dev/sda3 //pvcreate指令用于将物理硬盘分区初始化为物理卷，以便被LVM使用。要创建物理卷必须首先对硬盘进行分区，并且将硬盘分区的类型设置为“8e”后，才能使用pvcreat指令将分区初始化为物理卷。
+	Physical volume "/dev/sda3" successfully created
+#vgextend VolGroup00 /dev/sda3 （其中是当前需要扩充的lvm组名，可以通过df -h查看，例如我的是： /dev/mapper/VolGroup00-LogVol00） //	vgextend指令用于动态的扩展卷组，它通过向卷组中添加物理卷来增加卷组的容量。
+
+#vgdisplay //用于显示LNM卷组的元数据信息。
+--- Volume group ---
+VG Name vg_zxw
+System ID
+Format lvm2
+Metadata Areas 1
+Metadata Sequence No 3
+VG Access read/write
+VG Status resizable
+MAX LV 0
+Cur LV 2
+Open LV 2
+Max PV 0
+Cur PV 1
+Act PV 1
+VG Size 19.51 GiB
+PE Size 4.00 MiB
+Total PE 4994
+Alloc PE / Size 4994 / 19.51 GiB
+Free PE / Size 4994 / 10.01GB
+VG UUID sqBgTs-iA8x-tCXZ-KYxK-SyWS-TfXQ-uBsLaR
+(主要查看Free PE / Size 4994 / 10.01GB，说明我们最多可以有10.01GB的扩充空间。我一般选择小于10.01GB)
+
+
+# lvextend -L+14G /dev/VolGroup00/LogVol00 /dev/sda3
+
+#xfs_growfs /dev/centos/root //指令被用来增大或者收缩未加载的“ext2/ext3”文件系统的大小。
+#df -h //查看一下你的系统磁盘空间"/"目录变成了40GB
+ok，这样就大功告成了。
+
+如果出现 
+Couldn't find device with uuid 0byR3l-EutA-Pqyh-AxaP-IN1k-KMz5-af6MTI. 
+Cannot change VG vg while PVs are missing. 
+  Consider vgreduce --removemissing.
+	查看所有VG
+	pvscan
+
+	修复位置VG 
+	vgreduce --removemissing VolGroup
+
+扩展容量
+xfs_growfs /dev/centos/root
+

@@ -1,0 +1,527 @@
+VM01 
+
+VM02
+  安装ELK
+VM03
+  安装essearch 父节点
+VM-CDH001
+  安装CDH集群
+VM-CDH002
+
+VM-CDH003
+
+1.安装Linux
+1）
+安装最小化CentOS-7-x86_64-Minimal-1708.iso 
+执行ip addr 看网卡
+cd /etc/sysconfig/network-scripts/
+vi ifcfg-eno16777736（网卡名）
+修改ONBOOT=yes
+service network restart
+执行ip addr
+
+2）文件打开数优化
+在该配置文件中添加
+* soft nofile 65535   
+* hard nofile 65535  
+echo "* soft nofile 65536"  >> /etc/security/limits.conf
+echo "* hard nofile 65536"  >> /etc/security/limits.conf
+其实上的修改都是对一个进程打开的文件句柄数量的限制，我们还需要设置系统的总限制才可以。
+假如，我们设置进程打开的文件句柄数是1024 ，但是系统总线制才500，所以所有进程最多能打开文件句柄数量500。从这里我们可以看出只设置进程的打开文件句柄的数量是不行的。所以需要修改系统的总限制才可以。
+echo  6553560 > /proc/sys/fs/file-max
+上面是临时生效方法，重启机器后会失效；
+永久生效方法：
+修改 /etc/sysctl.conf, 加入
+fs.file-max = 6553560 重启生效
+
+3）关闭防火墙和selinux
+在root用户下 
+systemctl stop firewalld 
+systemctl disable firewalld 
+systemctl status firewalld 
+vi /etc/selinux/config 
+把SELINUX=enforcing 改成 SELINUX=disabled 
+重启电脑就可以了
+
+
+
+2.拷贝多个虚拟机
+
+3.修改linux yum 源
+[1] 首先备份/etc/yum.repos.d/CentOS-Base.repo
+cp /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.backup
+
+[2] 进入yum源配置文件所在文件夹
+[root@localhost yum.repos.d]# cd /etc/yum.repos.d/
+
+[3] 下载163的yum源配置文件，放入/etc/yum.repos.d/(操作前请做好相应备份)
+[root@localhost yum.repos.d]# wget http://mirrors.163.com/.help/CentOS6-Base-163.repo
+
+[4] 运行yum makecache生成缓存
+
+[root@localhost yum.repos.d]# yum makecache
+[5] 更新系统(时间比较久,主要看个人网速)
+
+[root@localhost yum.repos.d]# yum -y update
+
+4.安装ES
+1) 安装java yum install -y java
+下载https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.2.2.tar.gz
+
+2) 解压缩配置yml
+
+3）只能用非root账号开启服务 创建新用户
+groupadd elsearch
+useradd elsearch -g elsearch -p elasticsearch
+chown -R elsearch:elsearch  elasticsearch
+
+4）开启遇到问题
+[1]: max file descriptors [4096] for elasticsearch process is too low, increase to at least [65536]
+要想ulimits 的数值永久生效，必须修改配置文件/etc/security/limits.conf 
+在该配置文件中添加
+* soft nofile 65535   
+* hard nofile 65535  
+echo "* soft nofile 65535"  >> /etc/security/limits.conf
+echo "* hard nofile 65535"  >> /etc/security/limits.conf
+其实上的修改都是对一个进程打开的文件句柄数量的限制，我们还需要设置系统的总限制才可以。
+假如，我们设置进程打开的文件句柄数是1024 ，但是系统总线制才500，所以所有进程最多能打开文件句柄数量500。从这里我们可以看出只设置进程的打开文件句柄的数量是不行的。所以需要修改系统的总限制才可以。
+echo  6553560 > /proc/sys/fs/file-max
+上面是临时生效方法，重启机器后会失效；
+永久生效方法：
+修改 /etc/sysctl.conf, 加入
+fs.file-max = 6553560 重启生效
+
+* 表示所用的用户
+
+[2]: memory locking requested for elasticsearch process but memory is not locked
+原因：锁定内存失败
+
+解决方案： 
+切换到root用户，编辑limits.conf配置文件， 添加类似如下内容： 
+sudo vim /etc/security/limits.conf
+
+添加如下内容: 
+* soft memlock unlimited 
+* hard memlock unlimited 
+或者
+echo "* soft memlock unlimited "  >> /etc/security/limits.conf
+echo "* hard memlock unlimited"  >> /etc/security/limits.conf
+备注：* 代表Linux所有用户名称
+[3]: max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]
+原因：最大虚拟内存太小 
+解决方案：切换到root用户下，修改配置文件sysctl.conf
+
+sudo vim /etc/sysctl.conf
+
+添加下面配置： 
+vm.max_map_count=655360
+或者
+echo "vm.max_map_count=262144"  >> /etc/sysctl.conf
+并执行命令： 
+sysctl -p
+
+5）开启elastic-header
+
+5.安装kibana
+官网下载 解压 修改配置文件 启动 很简单
+
+6.安装header 插件
+wget https://npm.taobao.org/mirrors/node/latest-v4.x/node-v4.4.7-linux-x64.tar.gz
+tar -zxvf node-v4.4.7-linux-x64.tar.gz
+配置下环境变量,编辑/etc/profile添加
+#nodejs
+export NODE_HOME=/appl/node-v4.4.7-linux-x64
+export PATH=$PATH:$NODE_HOME/bin
+export NODE_PATH=$NODE_HOME/lib/node_modules
+
+执行 source /etc/profile
+安装grunt
+
+grunt是基于Node.js的项目构建工具，可以进行打包压缩、测试、执行等等的工作，head插件就是通过grunt启动
+cd /opt/elasticsearch-head-master
+npm install -g grunt-cli  //执行后会生成node_modules文件夹
+检查是否安装成功
+
+7.修改head插件源码
+修改服务器监听地址:Gruntfile.js
+修改连接地址：_site/app.js
+npm install(安装下载下来的包)
+grunt server
+访问http://xxx:9100
+这时候显示集群未连接
+
+在es配置文件加上
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+
+
+8.集群加入错误
+注意做集群的时候要清空其他节点的data如果从已存在节点拷贝文件夹的话会出现无法连接的问题
+
+9.安装logstash
+直接启动-f 带上文件
+input { stdin { } }
+output {
+  stdout {  }
+}
+
+输出到es
+input { stdin { } }
+output {
+  elasticsearch { hosts => ["localhost:9200"] }
+  stdout { codec => rubydebug }
+}
+
+配置输出到ES
+input {
+	file {
+		path => "/var/log/messages"
+		start_position => "beginning"
+	}
+}
+
+output {
+	elasticsearch { 
+		hosts => ["192.168.1.109:9200"] 
+		index => "system-%{+YYYY.MM.dd}"
+	}
+}
+
+设置条件输出
+input {
+	file {
+		path => "/var/log/messages"
+		type => "system"
+		start_position => "beginning"
+	}
+	file {
+		path => "/appl/elasticsearch-6.2.2/logs/tony_future.log"
+		type => "es"
+		start_position => "beginning"
+	}
+}
+
+output {
+	if [type] == "system" {
+		elasticsearch { 
+			hosts => ["192.168.1.109:9200"] 
+			index => "system-%{+YYYY.MM.dd}"
+		}
+	}
+
+	if [type] == "es" {
+		elasticsearch { 
+			hosts => ["192.168.1.109:9200"] 
+			index => "es-%{+YYYY.MM.dd}"
+		}
+	}
+}
+把同一行归类到一个event
+
+对 multiline 插件来说，有三个设置比较重要：negate、pattern 和 what。
+
+negate类型是 boolean默认为 false否定正则表达式（如果没有匹配的话）。
+pattern必须设置类型为 string没有默认值要匹配的正则表达式。
+what必须设置可以为 previous 或 next没有默认值如果正则表达式匹配了，那么该事件是属于下一个或是前一个事件？
+
+codec=> multiline {
+                        pattern => "^\["
+                        negate => true
+                        what => "previous"
+                }
+说明：匹配以“[”开头的行，如果不是，那肯定是属于前一行的。
+
+input {
+	file {
+		path => "/var/log/messages"
+		type => "system"
+		start_position => "beginning"
+		sincedb_path => "/appl/logstash-6.2.2/logs/system_msg_progress"
+	}
+	file {
+		path => "/appl/elasticsearch-6.2.2/logs/tony_future.log"
+		type => "es"
+		start_position => "beginning"
+		sincedb_path => "/appl/logstash-6.2.2/logs/es_progress"
+		codec => multiline {
+			pattern => "^\["
+            negate => true
+            what => "previous"
+		}
+	}
+}
+
+output {
+	if [type] == "system" {
+		elasticsearch { 
+			hosts => ["192.168.1.109:9200"] 
+			index => "system-%{+YYYY.MM.dd}"
+		}
+	}
+
+	if [type] == "es" {
+		elasticsearch { 
+			hosts => ["192.168.1.109:9200"] 
+			index => "es-%{+YYYY.MM.dd}"
+		}
+	}
+}
+
+------------------------------------------------------------------------------------------------------
+安装CDH集群
+JDK版本：1.8.0_91 jdk-8u91-linux-x64.rpm
+下载地址：http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+
+Cloudera Manager下载地址：
+http://archive.cloudera.com/cm5/cm/5/cloudera-manager-centos7-cm5.12.0_x86_64.tar.gz
+
+CDH安装包地址：http://archive.cloudera.com/cdh5/parcels/5.12/，由于我们的操作系统为CentOS7，需要下载以下文件：
+CDH-5.12.0-1.cdh5.12.0.p0.29-el7.parcel
+CDH-5.12.0-1.cdh5.12.0.p0.29-el7.parcel.sha1
+manifest.json
+
+java-mysql连接jar包
+下载地址：http://central.maven.org/maven2/mysql/mysql-connector-java/6.0.2/mysql-connector-java-6.0.2.jar
+
+关闭防火墙&Selinux
+
+更改主机名和hosts
+所有节点
+
+注意每个主机名对应的IP，按实际情况更改。
+# echo "bigdata0*.tfpay.com" > /etc/hostname
+# echo "172.17.28.1    cdh1.tfpay.com    cdh1" >> /etc/hosts
+# echo "172.17.28.2    cdh2.tfpay.com    cdh2" >> /etc/hosts
+# echo "172.17.28.3    cdh3.tfpay.com    cdh3" >> /etc/hosts
+
+RPM JDK替换OpenJDK
+rpm -qa | grep java
+删掉查到的包
+yum -y remove java-1.8.0-openjdk-headless-1.8.0.102-4.b14.el7.x86_64
+
+rpm -ivh jdk-8u131-linux-x64.rpm
+③配置环境变量(告诉电脑jdk在哪里)
+vim /etc/profile //打开环境变量文件
+进入insert模式(按字母i) 在最后面加上下面这段，然后按esc 然后保存退出(按 :wq回车)
+
+JAVA_HOME=/usr/java/jdk1.8.0_161
+CLASSPATH=%JAVA_HOME%/lib:%JAVA_HOME%/jre/lib
+PATH=$PATH:$JAVA_HOME/bin:$JAVA_HOME/jre/bin
+export PATH CLASSPATH JAVA_HOME
+source /etc/profile //重新载入
+④检查是否完成安装
+java -version
+
+
+SSH无密码登陆
+配置master namenode节点无密码登陆到其他节点
+
+在master namenode节点
+# ssh-keygen -t rsa
+Generating public/private rsa key pair.
+Enter file in which to save the key (/root/.ssh/id_rsa): 回车
+Enter passphrase (empty for no passphrase): 回车
+Enter same passphrase again: 回车
+Your identification has been saved in /root/.ssh/id_rsa.
+Your public key has been saved in /root/.ssh/id_rsa.pub.
+The key fingerprint is:
+bc:14:e2:59:42:1f:21:80:eb:49:d8:3b:7c:8d:b7:f9 root@bigdata05.tfpay.com
+The key's randomart image is:
++--[ RSA 2048]----+
+|   ...o o.       |
+|  .  . o .       |
+| o .  o +        |
+|. +  . * .       |
+| + o oo S        |
+|  * o o. .       |
+|   o . o.        |
+|      o          |
+|       .E        |
++-----------------+
+
+拷贝到授权列表里
+方法一直接拷贝
+scp -p ~/.ssh/id_rsa.pub root@192.168.91.135:/root/.ssh/authorized_keys
+
+方法二：
+http://www.jb51.net/article/94599.htm
+拷贝过去然后加入
+$ scp ~/.ssh/id_rsa.pub root@<remote_ip>:pub_key //将文件拷贝至远程服务器
+$ cat ~/pub_key >>~/.ssh/authorized_keys //将内容追加到authorized_keys文件中， 不过要登录远程服务器来执行这条命令
+
+如果希望ssh公钥生效需满足至少下面两个条件：
+　　　　　　1) .ssh目录的权限必须是700 
+　　　　　2) .ssh/authorized_keys文件权限必须是600
+
+
+先同步一下
+ntpdate -u ntp.api.bz
+
+定是同步
+echo "*/5 * * * * root ntpdate -u ntp.api.bz" >> /etc/crontab
+
+所有节点安装NTP
+yum -y install ntp
+
+设置主节点同步外部时间
+vi /etc/ntp.conf
+	……
+	 #server 0.centos.pool.ntp.org iburst
+	#server 1.centos.pool.ntp.org iburst
+	#server 2.centos.pool.ntp.org iburst
+	#server 3.centos.pool.ntp.org iburst
+	server ntp.api.gz iburst
+	......
+
+其余节点时间服务器都指向主节点
+
+所有节点设置开机自启动
+systemctl start ntpd
+systemctl enable ntpd
+
+检查是否已经设置成功
+systemctl list-unit-files |grep ntp
+
+主节点安装数据库
+# yum -y install mariadb-server
+# vi /etc/my.cnf
+    [mysqld]
+    datadir=/var/lib/mysql
+    socket=/var/lib/mysql/mysql.sock
+    symbolic-links=0
+    character-set-server=utf8     \\添加的行
+    [mysqld_safe]
+    log-error=/var/log/mariadb/mariadb.log
+    pid-file=/var/run/mariadb/mariadb.pid
+    !includedir /etc/my.cnf.d
+# systemctl start mariadb 
+# systemctl enable mariadb 
+ln -s '/usr/lib/systemd/system/mariadb.service' '/etc/systemd/system/multi-user.target.wants/mariadb.service'
+# mysql_secure_installation 
+/usr/bin/mysql_secure_installation: line 379: find_mysql_client: command not found
+NOTE: RUNNING ALL PARTS OF THIS SCRIPT IS RECOMMENDED FOR ALL MariaDB
+      SERVERS IN PRODUCTION USE!  PLEASE READ EACH STEP CAREFULLY!
+In order to log into MariaDB to secure it, we'll need the current
+password for the root user.  If you've just installed MariaDB, and
+you haven't set the root password yet, the password will be blank,
+so you should just press enter here.
+Enter current password for root (enter for none): 
+OK, successfully used password, moving on...
+Setting the root password ensures that nobody can log into the MariaDB
+root user without the proper authorisation.
+Set root password? [Y/n] y          \\设置数据库root密码
+New password:                       \\设置密码
+Re-enter new password:              \\再次输入密码
+Password updated successfully!
+Reloading privilege tables..
+ ... Success!
+By default, a MariaDB installation has an anonymous user, allowing anyone
+to log into MariaDB without having to have a user account created for
+them.  This is intended only for testing, and to make the installation
+go a bit smoother.  You should remove them before moving into a
+production environment.
+Remove anonymous users? [Y/n] y  \\移除匿名用户
+ ... Success!
+Normally, root should only be allowed to connect from 'localhost'.  This
+ensures that someone cannot guess at the root password from the network.
+Disallow root login remotely? [Y/n] y  \\禁止root用户远程登录
+ ... Success!
+By default, MariaDB comes with a database named 'test' that anyone can
+access.  This is also intended only for testing, and should be removed
+before moving into a production environment.
+Remove test database and access to it? [Y/n] y \\删除测试数据库
+ - Dropping test database...
+ ... Success!
+ - Removing privileges on test database...
+ ... Success!
+Reloading the privilege tables will ensure that all changes made so far
+will take effect immediately.
+Reload privilege tables now? [Y/n]    //
+ ... Success!
+Cleaning up...
+All done!  If you've completed all of the above steps, your MariaDB
+installation should now be secure.
+Thanks for using MariaDB!
+
+所有节点
+# yum  -y  install psmisc MySQL-python at bc bind-libs bind-utils cups-client cups-libs cyrus-sasl-gssapi cyrus-sasl-plain ed fuse fuse-libs httpd httpd-tools keyutils-libs-devel krb5-devel libcom_err-devel libselinux-devel libsepol-devel libverto-devel mailcap noarch mailx mod_ssl openssl-devel pcre-devel postgresql-libs python-psycopg2 redhat-lsb-core redhat-lsb-submod-security  x86_64 spax time zlib-devel perl perl-devel
+# chmod +x /etc/rc.d/rc.local
+# echo "echo 0 > /proc/sys/vm/swappiness" >>/etc/rc.d/rc.local
+# echo "echo never > /sys/kernel/mm/transparent_hugepage/defrag" >>/etc/rc.d/rc.local
+# echo 0 > /proc/sys/vm/swappiness
+# echo never > /sys/kernel/mm/transparent_hugepage/defrag
+# yum -y install rpcbind
+# systemctl start rpcbind
+# echo "systemctl start rpcbind" >> /etc/rc.d/rc.local
+
+安装Cloudrea Manager Server Agent
+把这些文件拷贝到所有机器
+创建解压目录所有机器
+#mkdir /opt/cloud-manager
+#tar zxvf cloudera-manager-centos7-cm5.12.0_x86_64.tar.gz -C /opt/cloud-manager
+创建账户（所有机器）
+useradd --system --home=/opt/cloud-manager/cm-5.12.0/run/cloudera-scm-server  --shell=/bin/false --comment "Cloudera SCM User" cloudera-scm
+
+配置CM agent
+vi /opt/cloud-manager/cm-5.12.0/etc/cloudera-scm-agent/config.ini
+每台机器都配置为主节点的域名
+[General]
+# Hostname of the CM server.
+server_host=cdh1
+
+配置数据库（只要在主节点）
+改名
+cp mysql-connector-java-6.0.2.jar mysql-connector-java.jar  必须为mysql-connector-java.jar
+
+进入mysql
+grant all on *.* to root@"%" Identified by "root" WITH GRANT OPTION;
+
+#/opt/cloud-manager/cm-5.12.0/share/cmf/schema/scm_prepare_database.sh mysql cm -h cdh1 -uroot -proot --scm-host cdh1 scm scm scm
+执行这个语句失败的话 将数据库驱动换成5.x
+格式是:scm_prepare_database.sh 数据库类型  数据库 服务器 用户名 密码  –scm-host  Cloudera_Manager_Server所在的机器，后面那三个不知道代表什么，直接照抄官网的了。 因为我们用的是Mysql数据库，所以我们需要下载Mysql的JDBC驱动
+
+创建服务器节点repo
+mkdir -p /opt/cloudera/parcel-repo
+chown cloudera-scm:cloudera-scm /opt/cloudera/parcel-repo/
+
+创建子节点repos（所有节点）
+mkdir -p /opt/cloudera/parcels
+chown cloudera-scm:cloudera-scm /opt/cloudera/parcels/
+
+拷贝CDH-5.12.0-1.cdh5.12.0.p0.29-el7.parcel CDH-5.12.0-1.cdh5.12.0.p0.29-el7.parcel.sha 到 /opt/cloudera/parcel-repo/
+
+启动服务器
+通过/opt/cloud-manager/cm-5.12.0/etc/init.d/cloudera-scm-server start启动服务端。
+
+通过/opt/cloud-manager/cm-5.12.0/etc/init.d/cloudera-scm-agent start启动Agent服务。所有节点
+
+
+
+显示问题
+Cloudera 建议将 /proc/sys/vm/swappiness 设置为最大值 10。当前设置为 30。使用 sysctl 命令在运行时更改该设置并编辑 /etc/sysctl.conf，以在重启后保存该设置。您可以继续进行安装，但 Cloudera Manager 可能会报告您的主机由于交换而运行状况不良。以下主机将受到影响： 
+cdh1
+
+修复
+sysctl vm.swappiness=10
+
+vi /etc/sysctl
+vm.swappiness=10
+
+
+已启用透明大页面压缩，可能会导致重大性能问题。请运行“echo never > /sys/kernel/mm/transparent_hugepage/defrag”和“echo never > /sys/kernel/mm/transparent_hugepage/enabled”以禁用此设置，然后将同一命令添加到 /etc/rc.local 等初始化脚本中，以便在系统重启时予以设置。以下主机将受到影响: 
+
+
+修复
+在/etc/rc.local中加入如下两行
+if test -f /sys/kernel/mm/transparent_hugepage/enabled; then
+ echo never > /sys/kernel/mm/transparent_hugepage/enabled
+fi
+if test -f /sys/kernel/mm/transparent_hugepage/defrag; then
+ echo never > /sys/kernel/mm/transparent_hugepage/defrag
+fi
+
+
+主机时钟不同步。cdh2 (March 11, 2018 5:00:01 PM +08:00) 和 cdh1 (March 11, 2018 9:57:20 AM +08:00) 之间的最大差异。
+
+
+
