@@ -36,3 +36,24 @@ echo > /var/log/message
 
 看系统日志
 dmesg 命令 看
+
+2.Shell 以非交互式方式执行时候先找ENV(/etc/profile,/etc/bashrc,.bashrc,.bash_profile)再执行脚本
+Crond 任务中需要把系统变量在脚本中重新定义
+
+3.Shell脚本执行的三种方法
+bash/sh xxx.sh 指定解释器,这种不需要执行权限
+path/xxx.sh or ./xxx.sh 文件必须要有执行权限
+source xxx.sh or . xxx.sh 该方式执行脚本后能把变量带到当前执行的shell中
+使用方式参考. /etc/rc.d/init.d/functions 讲函数库引入该脚本
+
+4.Shell书写规则
+开头
+#!/bin/bash
+然后写注释 日期 作者 用途 版本
+成对出现的都要写完 [  ]
+条件判断写全再补
+if
+then
+fi
+
+
