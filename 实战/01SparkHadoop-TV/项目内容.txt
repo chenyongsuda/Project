@@ -445,7 +445,66 @@ taildir实例
 	a1.sources.r1.channels = c1
 	a1.sinks.k1.channel = c1
 
+##########################################Hive外表说明######################
+在hive中，外表是个很重要的组成部分，通过外表可以很方便进行数据的共享。
+因为普通的表会将数据文件拷贝自己的目录下，这样想要分享数据只能保存多份数据。
+但是外表很好的解决了这个问题。
+CREATE EXTERNAL TABLE sunwg_test09(id INT, name string)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ‘\t’
+LOCATION ‘/sunwg/test08′;
 
+上面的语句创建了一张名字为sunwg_test09的外表，该表有id和name两个字段，
+字段的分割符为tab，文件的数据文件夹为/sunwg/test08
+
+实际上外表不光可以指定hdfs的目录，本地的目录也是可以的。
+比如：
+CREATE EXTERNAL TABLE test10(id INT, name string)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ‘\t’
+LOCATION ‘file:////home/hjl/sunwg/’;
+
+#######################################MapReduce和Hive支持文件夹递归##########
+一般情况下，传递给MapReduce和Hive的input文件夹中不能包含子目录，否则就会报错。但后来增加了递归遍历Input目录的功能，
+这个貌似是从0.23开始的，具体不清楚，反正在0.20中是不支持的。
+MapReduce
+默认情况下，mapreduce.input.fileinputformat.input.dir.recursive为flase.
+设置mapreduce.input.fileinputformat.input.dir.recursive=true，这个参数是客户端参数，可以在MapReduce中设置，也可以在mapred-site.xml中设置，无所谓。
+
+CREATE EXTERNAL TABLE lxw1234 (d string) stored AS textfile location '/tmp/lxw1234/';
+查询：select * from lxw1234;
+同样报错 “Not a file: hdfs://cdh5/tmp/lxw1234/subdir” 。
+
+在hive-cli中设置参数：
+set hive.mapred.supports.subdirectories=true;
+set mapreduce.input.fileinputformat.input.dir.recursive=true;
+也可以Hive脚本中添加
+
+实例：
+
+CREATE EXTERNAL TABLE tony.testweblog(id int, name string, age string, tel string)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION '/weblogs/flume/';
+
+这样就讲flume收集上来的数据和hive挂钩了
+下面需要写个代码定时产生相关数据
+
+实验脚本：
+内容：定时差生如下格式数据
+id int, name string, age string, tel string
+1,chenyong,32,18721688888
+
+脚本内容
+#/bin/bash
+
+MAX=10000
+ 
+for (( i = 0; i < MAX ; i ++ ))
+do
+    echo "$i,chenyong,32,123" >> /appl/monitor/1.log
+    sleep 1s
+done
 
 
 
