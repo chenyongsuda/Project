@@ -126,6 +126,7 @@ start-all.sh
 1951 Jps
 启动成功
 
+hadoopadmin 界面 http://192.168.8.128:50070/
 
 第二部分
 利用hadoop自带的demo来计算wordcount
@@ -148,6 +149,314 @@ hadoop jar hadoop-mapreduce-examples-2.7.5.jar wordcount /wc_input /wc_output
 hadoop fs cat /wc_output/part-r-00000
 
 附加作业：写一个小教本如jps打印出三台机器的状态
+
+
+附加：
+防止时间不同步每台机器安装ntp
+yum install ntp
+
+然后通过ntpdate asia.pool.ntp.org
+
+#crontab -e 
+*/10 * * * *  /usr/sbin/ntpdate -u asia.pool.ntp.org >/dev/null 2>&1
+#service crond restart
+
+
+第三部分
+Hive的工作原理：将文本数据与表结构数据做mapping,这样就可以通过SQL来查询.
+将关联关系存在mysql中.
+安装依赖库
+搜索yum search libaio
+yun install libaio
+
+检查mysql是否安装
+yum list installed |grep mysql
+
+如果有卸载
+yum remove -y xxx
+
+下载仓库
+wget http://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm (centos7)
+导入本地仓库
+yum localinstall mysql-community-release-el7-5.noarch.rpm
+验证本地仓库是否导入
+yum repolist enabled | grep "mysql.*-community.*"
+查看所有版本
+yum repolist all | grep mysql
+启用禁用某些版本
+yum-config-manager --disable mysql56-community
+yum-config-manager --enable mysql57-community-dmr
+
+安装
+yum install mysql-community-server 
+
+启动mysql
+systemctl start mysql (centos修改为了systemctl)
+systemctl status mysql
+
+进入mysql
+mysql
+>> show databases;
+>> create database if not exists hive_metadata;
+
+授权
+grant all privileges on hive_metadata.* to 'hive'@'%' identified by 'hive'; 为hive：hive 来自所有机器的hive metadata表的权限
+grant all privileges on hive_metadata.* to 'hive'@'localhost' identified by 'hive'; 为hive：hive 来自localhost机器的hive metadata表的权限
+生效权限
+flush privileges;
+
+准备好环境后下载hive包随便选取一个版本2.1.2
+解压后设置环境变量
+###############HIVE
+export HIVE_HOME=/appl/hive
+export PATH=$PATH:$HIVE_HOME/bin
+source /etc/profile
+
+由于要连接mysql需要连接驱动下载mysql-connector-java-5.1.31.jar
+放入hive目录下的lib文件夹中 拷贝完成设置配置文件
+
+cp hive-env.sh.template hive-env.sh
+cp hive-default.xml.template hive-site.xml
+cp hive-log4j2.properties.template hive-log4j2.properties
+cp hive-exec-log4j2.properties.template hive-exec-log4j2.properties
+
+
+解放hive-env.sh
+mv hive-env.sh.template hive-env.sh
+修改为
+export JAVA_HOME=/appl/jdk
+# Set HADOOP_HOME to point to a specific hadoop install directory
+export HADOOP_HOME=/appl/hadoop       
+# Hive Configuration Directory can be controlled by:
+export HIVE_CONF_DIR=/appl/hive/conf
+# Folder containing extra ibraries required for hive compilation/execution can be controlled by:
+export HIVE_AUX_JARS_PATH=/appl/hive/lib 
+
+修改配置文件名为hive-site.xml 修改连接
+<name>javax.jdo.option.ConnectionURL</name>
+<value>jdbc:mysql://192.168.8.128:3306/hive_metadata?createDatabaseIfNotExist=true</value>
+
+<name>javax.jdo.option.ConnectionDriverName</name>
+<value>com.mysql.jdbc.Driver</value>
+
+<name>javax.jdo.option.ConnectionUserName</name>
+<value>hive</value>
+
+<name>javax.jdo.option.ConnectionPassword</name>
+<value>hive</value>
+
+配置hive数据存储位置
+新增三个存储文件夹由于hive依赖hdfs 所以要在hdfs建立存储文件夹
+[root@vm01 conf]# hadoop fs -mkdir -p /hive-data/warehouse
+[root@vm01 conf]# hadoop fs -mkdir -p /hive-data/tmp
+[root@vm01 conf]# hadoop fs -mkdir -p /hive-data/log
+hadoop fs -chmod -R 777 /hive-data/warehouse
+hadoop fs -chmod -R 777 /hive-data/tmp
+hadoop fs -chmod -R 777 /hive-data/log
+
+
+<property>
+    <name>hive.exec.scratchdir</name>
+    <value>/hive-data/tmp</value>
+</property>
+HDFS路径，用于存储不同 map/reduce 阶段的执行计划和这些阶段的中间输出结果。
+
+<property>
+    <name>hive.metastore.warehouse.dir</name>
+    <value>/hive-data/warehouse</value>
+</property>
+Hive 默认的数据文件存储路径，通常为 HDFS 可写的路径。 
+
+<property>
+    <name>hive.querylog.location</name>
+    <value>/hive-data/log</value>
+</property>
+Hive 实时查询日志所在的目录，如果该值为空，将不创建实时的查询日志。 通常为 HDFS 可写的路径
+
+设置本地临时目录
+mkdir /appl/hive-tmp/
+把{system:java.io.tmpdir} 改成 /appl/hive-tmp/
+
+把 {system:user.name} 改成 {user.name}
+
+初始化元数据到mysql
+./schematool -initSchema -dbType mysql
+初始化完成
+
+
+hive 进入命令行
+create database tony;
+
+use tont;
+
+create table test (mykey string,myval string);
+
+insert into test values("1","www.ymq.io");
+
+select * from test; 查处结果表示成功
+
+创建逗号分隔的表
+create table t2(id int, name string, age string, tel string) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE;
+
+创建a.txt
+1,chenyong,32
+2,fangfa,28
+3.chenwei,31
+4.chenfangwei,32
+5.beijun,28
+6.xiaoxun,28
+
+将本地数据和hive表结构关联
+
+LOAD DATA LOCAL INPATH '/appl/a.txt' OVERWRITE INTO TABLE t2; 本地数据导入
+LOAD DATA INPATH '/appl/a.txt' OVERWRITE INTO TABLE t2; HDFS数据导入
+
+
+第四部分 Flume
+
+Flume概念：
+Flume可以直接到HDFS或者到kafka里面
+源source(文件.文件夹),管道channel,目标sink(hdfs.kafka)
+
+下载flume1.8
+解压
+做软链接
+ln -s apache-flume-1.8.0-bin/ ./flume
+
+添加环境变量
+###############FLUME
+export FLUME_HOME=/appl/flume
+export PATH=$PATH:$FLUME_HOME/bin
+
+source /etc/profile
+
+flume-ng version 查看版本
+
+修改flume的变量在conf/flume-env.sh
+添加java环境变量
+export JAVA_HOME=/appl/jdk/
+
+创建监听配置文件在conf目录下创建一个net-logger-test.conf
+写入内容
+	# Name the components on this agent  
+	a1.sources = r1  
+	a1.sinks = k1  
+	a1.channels = c1  
+	  
+	# Describe/configure the source  
+	a1.sources.r1.type = netcat  
+	a1.sources.r1.bind = localhost  
+	a1.sources.r1.port = 44444  
+	  
+	# Describe the sink  
+	a1.sinks.k1.type = logger  
+	  
+	# Use a channel which buffers events in memory  
+	a1.channels.c1.type = memory  
+	a1.channels.c1.capacity = 1000  
+	a1.channels.c1.transactionCapacity = 100  
+	  
+	# Bind the source and sink to the channel  
+	a1.sources.r1.channels = c1  
+	a1.sinks.k1.channel = c1  
+
+flume-ng agent -n a1 -c conf -f /appl/flume/conf/net-logger-test.conf -Dflume.root.logger=INFO,console
+-n 表示名字
+-c 制定配置文件所在目录
+-f 制定采集方案文件
+
+测试使用nc
+nc localhost 44444
+>> hello
+
+实例源监听文件夹=>目标输出到HDFS
+	#agent名， source、channel、sink的名称
+	a1.sources = r1
+	a1.channels = c1
+	a1.sinks = k1
+	#具体定义source
+	a1.sources.r1.type = spooldir
+	a1.sources.r1.spoolDir = /appl/monitor
+	#具体定义channel
+	a1.channels.c1.type = memory
+	a1.channels.c1.capacity = 10000
+	a1.channels.c1.transactionCapacity = 100
+	#具体定义sink
+	a1.sinks.k1.type = hdfs
+	a1.sinks.k1.hdfs.path = hdfs://vm01/weblogs/flume/%Y-%m-%d
+	a1.sinks.k1.hdfs.filePrefix = access_log
+	a1.sinks.k1.hdfs.fileType = DataStream
+	a1.sinks.k1.hdfs.useLocalTimeStamp = true
+	#不按照条数生成文件
+	a1.sinks.k1.hdfs.rollCount = 0
+	#HDFS上的文件达到128M时生成一个文件
+	a1.sinks.k1.hdfs.rollSize = 134217728
+	#HDFS上的文件达到60秒生成一个文件
+	a1.sinks.k1.hdfs.rollInterval = 60
+	 
+	#组装source、channel、sink
+	a1.sources.r1.channels = c1
+	a1.sinks.k1.channel = c1
+
+
+flume支持的source种类
+常用的有
+net
+spooldir 监听目录将目录文件读取读完后设置为OK 不实时 支持断点
+对指定目录进行实时监控，如发现目录新增文件，立刻收集并发送
+缺点：不能对目录文件进行修改，如果有追加内容的文本文件，不允许，
+
+exec 执行如tail -f 监听单个文件 比较实时但是不支持断点
+taildirSource 实时支持文件夹中的匹配的所有文件的监控支持断点--->这个是最好的最实用的
+
+
+taildir实例
+	#agent名， source、channel、sink的名称
+	a1.sources = r1
+	a1.channels = c1
+	a1.sinks = k1
+	#具体定义source
+	a1.sources.r1.type = TAILDIR
+	a1.sources.r1.channels = c1
+	a1.sources.r1.positionFile = /appl/monitor/taildir_position.json  
+	a1.sources.r1.filegroups = f1                          
+	a1.sources.r1.filegroups.f1 = /appl/monitor/.*.log  
+	a1.sources.r1.headers.f1.headerKey1 = value1             
+	a1.sources.r1.fileHeader = true
+
+	#具体定义channel
+	a1.channels.c1.type = memory
+	a1.channels.c1.capacity = 10000
+	a1.channels.c1.transactionCapacity = 100
+	#具体定义sink
+	a1.sinks.k1.type = hdfs
+	a1.sinks.k1.hdfs.path = hdfs://vm01/weblogs/flume/%Y-%m-%d
+	a1.sinks.k1.hdfs.filePrefix = access_log
+	a1.sinks.k1.hdfs.fileType = DataStream
+	a1.sinks.k1.hdfs.useLocalTimeStamp = true
+	#不按照条数生成文件
+	a1.sinks.k1.hdfs.rollCount = 0
+	#HDFS上的文件达到128M时生成一个文件
+	a1.sinks.k1.hdfs.rollSize = 1024
+	#HDFS上的文件达到60秒生成一个文件
+	a1.sinks.k1.hdfs.rollInterval = 0
+	 
+	#组装source、channel、sink
+	a1.sources.r1.channels = c1
+	a1.sinks.k1.channel = c1
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
