@@ -1,0 +1,162 @@
+Shell变量分为全局变量和局部变量,全局又称环境变量
+如系统定义变量如登录名 命令路径 家目录 终端类型
+
+所有环境变量必须大写
+环境变量可以在/etc/profile /etc/bashrc 或者个人变量.bash_profile .bashrc 比较好的/etc/profile.d/ 这些都是用于进入bash运行,注意不是开机自启动
+开机自启动是/etc/rc.local
+进入欢迎语句是在
+/etc/motd 可以修改欢迎语句
+
+如系统内置的
+$HOME $USER $UID $PWD $SHELL $PATH
+
+显示环境变量使用env命令
+
+设置取消环境变量
+set unset
+unset HOME 注意不带$
+
+打印环境变量 echo & printf
+
+本地变量(自己的规范或者大写不限制)
+	生命周期在Shell中使用
+
+普通字符串变量的定义
+变量名=value
+变量名='value'
+变量名="value"
+上面都一样
+
+命令定义
+变量名=`value`
+变量名=$(value)
+
+一般尽量用""表示将内部解析完在输出适合于其中含有变量和命令的子串 而另一个''表示原字符串不会做变量解析
+
+******使用习惯 数字不加引号 其他使用双引号
+
+例子：往一个文件里面连续写东西用cat > file
+grep用法 grep "$name" file
+
+函数的变量用local定义
+很多可以参考/etc/init.d/functions
+
+脚本题目：
+查找某个目录以log结尾的日志中将所有包含hello的都替换成hi
+find $path -type f -name "*.log" 查找所有以log结尾的文件
+如何替换呢？
+替换的方法
+sed -i s#hello#hi#g file
+
+有两种方法
+第一种查找所有的文件再替换
+find $path -type f -name "*.log" | xargs sed -i "s#hello#hi#g"
+第二种方法替换掉查找到的文件
+sed -i "s#hello#hi#g" $(find $path -type f -name "*.log")
+
+Shell脚本特殊变量
+$0 获取脚本的名称:包括脚本的路径
+[root@vm01 appl]# sh shells/shell-day2.sh 
+shells/shell-day2.sh
+[root@vm01 appl]# sh  /appl/shells/shell-day2.sh 
+/appl/shells/shell-day2.sh
+[root@vm01 shells]# sh `pwd`/shell-day2.sh
+/appl/shells/shell-day2.sh
+
+两个截取的命令
+basename $0
+dirname $0
+
+$1.....9 大于9就要用{}包起来,这些个变量表示执行的参数
+
+seq命令
+生成从某个数到某个数的所有数
+如下
+[root@vm01 shells]# seq 1 8
+1
+2
+3
+4
+5
+6
+7
+8
+
+默认分隔符为回车 可以指定分隔符
+seq -s ' ' 1 8
+[root@vm01 shells]# seq -s ' ' 1 8
+1 2 3 4 5 6 7 8
+
+shell还有扩展参数如{0..9}
+sh shell.sh {0..9}
+
+或者也可以用
+sh shell.sh `seq -s " " 1 20`
+
+写个脚本输出$1 到 $20
+首先echo `seq -s " " 1 20` > a.sh
+然后在头部添加echo就行了
+添加使用替换来讲空格替换为空格加$ 
+
+[root@vm01 shells]# cat a.sh 
+[root@vm01 shells]# echo `seq -s " " 1 20` > a.sh
+[root@vm01 shells]# sed 's# # $#g'  a.sh 
+1 $2 $3 $4 $5 $6 $7 $8 $9 $10 $11 $12 $13 $14 $15 $16 $17 $18 $19 $20
+[root@vm01 shells]# cat a.sh 
+1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+
+可以看出来其实不加-i 实例内容没替换
+所以需要加-i
+
+[root@vm01 shells]# sed -i 's# # $#g' a.sh 
+[root@vm01 shells]# cat a.sh 
+1 $2 $3 $4 $5 $6 $7 $8 $9 $10 $11 $12 $13 $14 $15 $16 $17 $18 $19 $20
+
+通过扩展参数执行如下
+[root@vm01 shells]# cat a.sh 
+echo $1 $2 $3 $4 $5 $6 $7 $8 $9 $10 $11 $12 $13 $14 $15 $16 $17 $18 $19 $20
+[root@vm01 shells]# sh a.sh {a..z}
+a b c d e f g h i a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 b0
+
+或者通过序列
+[root@vm01 shells]# sh a.sh `seq -s " " 1 20`
+1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+
+***注意seq 后面的替换语句请用单引号
+
+$#表示参数的个数(一般判断参数的个数,来判断这个参数是否是合法等等...)
+$*表示所有的参数连成一个字符串
+$@获取参数以便传递给其他程序作为参数输入
+
+$#的例子
+#/bin/bash
+[ $# -ne 2 ] && {
+	echo "params not equals 2 please notify"
+	exit -1
+}
+
+$?表示上一个程序的状态 0表示OK 非零为失败
+$! 上一个指令的pid 
+$$ 当前指令的pid
+[root@vm01 shells]# ls
+a.sh  clean.sh  datasource.sh  replacetest  shell-day2.sh  xshell.sh
+[root@vm01 shells]# echo $?
+0
+
+[root@vm01 shells]# $?
+-bash: 0: command not found
+[root@vm01 shells]# echo $?
+127
+
+学习系统的脚本
+/etc/init.d/rpcbind.sh
+
+
+
+
+
+
+
+
+
+

@@ -507,11 +507,17 @@ do
 done
 
 
+第五部分
+将hive执行结果保存到hive表中并且将HIVE表中的数据同步到mysql(使用sqoop)
+其实可以这个如下的SQL(将查到的数据插入新表中)
+insert into upflow select ip,sum(upflow) as sum from accesslog group by ip order by sum desc;
 
+然后使用sqoop将hive数据导入mysql
+下载sqoop http://mirrors.hust.edu.cn/apache/sqoop/1.99.7/sqoop-1.99.7-bin-hadoop200.tar.gz
+这是2 请安装sqoop1.4
 
-
-
-
+[root@vm01 bin]# sqoop version
+看下是否成功
 
 
 
