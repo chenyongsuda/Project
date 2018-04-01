@@ -520,10 +520,21 @@ insert into upflow select ip,sum(upflow) as sum from accesslog group by ip order
 看下是否成功
 
 
+创建mysql库
+create sqoop if not exists sqoop;
+授权
+grant all privileges on sqoop.* to 'sqoop'@'%' identified by 'sqoop'; sqoop 来自所有机器的hive metadata表的权限
+grant all privileges on sqoop.* to 'sqoop'@'localhost' identified by 'sqoop'; sqoop 来自localhost机器的hive metadata表的权限
+grant all privileges on sqoop.* to 'sqoop'@'vm01' identified by 'sqoop';
 
-
-
-
-
+flush privileges;
+//id int, name string, age string, tel string
+CREATE TABLE Logs
+(
+id int,
+name varchar(255),
+age varchar(255),
+tel varchar(255)
+)
 
 
