@@ -496,15 +496,81 @@ id int, name string, age string, tel string
 1,chenyong,32,18721688888
 
 脚本内容
-#/bin/bash
+#!/bin/bash  
 
 MAX=10000
- 
+
+function rand(){    
+    min=$1    
+    max=$(($2-$min+1))    
+    num=$(($RANDOM+1000000000)) #增加一个10位的数再求余    
+    echo $(($num%$max+$min))    
+}
+
 for (( i = 0; i < MAX ; i ++ ))
 do
-    echo "$i,chenyong,32,123" >> /appl/monitor/1.log
+	RAND_NUM=$(rand 1 6)
+	if [ "$RAND_NUM" -eq "1" ];then
+    	echo "$i,beijun,32,123" >> /appl/monitor/1.log
+    fi
+    if [ "$RAND_NUM" -eq "2" ];then
+    	echo "$i,chenfangwei,32,123" >> /appl/monitor/1.log
+    fi
+    if [ "$RAND_NUM" -eq "3" ];then
+    	echo "$i,chenwei,32,123" >> /appl/monitor/1.log
+    fi
+    if [ "$RAND_NUM" -eq "4" ];then
+    	echo "$i,chenyong,32,123" >> /appl/monitor/1.log
+    fi
+    if [ "$RAND_NUM" -eq "5" ];then
+    	echo "$i,fangfa,32,123" >> /appl/monitor/1.log
+    fi
+    if [ "$RAND_NUM" -eq "6" ];then
+    	echo "$i,xiaoxun,32,123" >> /appl/monitor/1.log
+    fi
     sleep 1s
 done
+
+==================hive的特殊设置=======================
+flume拉取数据的时候会先产生tmp文件到达某个条件下才会变成正式文件所有需要指定不拉取tmp文件
+flume打到hdfs上时，按照文件大小生成文件，在达到指定大小之前数据都是以.tmp文件形式保存在hdfs上，hive外部表也会加载这些文件，但是当文件完成后.tmp会消失，这时候hive会报找不到文件的错误。解决方法是自己写hive的pathfilter类，hive加载数据的时候把tmp文件过滤掉不加载即可。
+
+ 错误信息如下：
+
+自定义PathFilter类如下：
+/**
+ * 
+   * @Title: FileFilterExcludeTmpFiles.java 
+   * @Description: hive加载分区表时会加载.tmp的文件，该类型文件在flume滚动数据之后就会消失，此时hive找不到该文件就会报错
+   *                     该类会将.tmp的文件过滤掉，不加载进hive的分区表中 
+   * @version V0.1.0
+   * @see
+ */ public class FileFilterExcludeTmpFiles implements PathFilter{
+    private static final Logger logger = LoggerFactory.getLogger(FileFilterExcludeTmpFiles.class);
+    public boolean accept(Path path) {
+        // TODO Auto-generated method stub         return !name.startsWith("_") && !name.startsWith(".") && !name.endsWith(".tmp");
+    }
+  
+}
+
+编写完后，打成jar包上传服务器，再修改hive-site.xml文件，修改如下：
+<property>
+  
+    <name>hive.aux.jars.path</name><value>file:///usr/lib/mylib/FilterTmpPath.jar</value>
+  
+    <description>The location of the plugin jars that contain implementations of user defined functions and serdes.</description>
+  
+  </property>
+  
+  <property>
+  
+    <name>mapred.input.pathFilter.class</name>
+  
+    <value>cn.utils.hive.FileFilterExcludeTmpFiles</value>
+  
+  </property>
+
+======================================================
 
 
 第五部分
@@ -537,4 +603,415 @@ age varchar(255),
 tel varchar(255)
 )
 
+复制驱动到sqoop的lib中
 
+导入数据到mysql中
+sqoop export --connect jdbc:mysql://vm01:3306/sqoop --username sqoop --password sqoop --table Logs --direct --export-dir /weblogs/flume/2018-04-01 --driver com.mysql.jdbc.Driver --input-fields-terminated-by ','
+在这里需要是直接文件夹入/weblogs/flume/2018-04-01 如果放为/weblogs/flume/好像不行
+一直的疑问那如果按照日期来区分的话如何全部导入到数据库中呢？
+
+现在按照简单的思路来做个吧
+建立hive表就当访问次数来计算
+再建立个hive表记录每个人的访问次数
+然后将这个数据更新到mysql
+前台页面将这个数据读取到页面
+
+select name,count(name) from testweblog GROUP BY name;
+结果
+beijun	1
+chenfangwei	1
+chenwei	1
+chenyong	463
+fangfa	1
+xiaoxun	1
+
+注意可以调整执行器的个数
+Number of reduce tasks not specified. Estimated from input data size: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+
+
+创建hive表
+CREATE TABLE count_sum(name string, counts INT)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ","
+
+将hive计算的数据更新到新表
+insert into table count_sum select name,count(name) from testweblog GROUP BY name; 这样发现每次都往新表中增加
+就会出现
+chenyong	463
+fangfa	1
+chenyong	463
+fangfa	1
+其实之前的数据不需要就可以用
+insert overwrite table count_sum select name,count(name) from testweblog GROUP BY name;
+
+创建表结构通过sqoop将hive表推送到mysql
+CREATE TABLE accessLogs
+(
+name varchar(255),
+count int
+)
+
+插入
+sqoop export --connect jdbc:mysql://vm01:3306/sqoop --username sqoop --password sqoop --table accessLogs --direct --export-dir /hive-data/warehouse/tony.db/count_sum --driver com.mysql.jdbc.Driver --input-fields-terminated-by ','
+
+更新
+sqoop export --connect jdbc:mysql://vm01:3306/sqoop --username sqoop --password sqoop --table accessLogs --export-dir /hive-data/warehouse/tony.db/count_sum --driver com.mysql.jdbc.Driver --input-fields-terminated-by ',' --update-key name --update-mode allowinsert
+这条语句有问题去掉 --direct 去掉 --dricer
+可以执行的语句如下
+sqoop export --connect jdbc:mysql://vm01:3306/sqoop --username sqoop --password sqoop --table accessLogs --export-dir /hive-data/warehouse/tony.db/count_sum  --input-fields-terminated-by ',' --update-key name --update-mode allowinsert
+
+第六部分
+
+接下来通过azkaban将所有联系起来
+下载安装gradle
+解压加环境变量
+设置阿里源在build.gradle里换源
+repositories {
+        maven {
+           url 'http://maven.aliyun.com/nexus/content/groups/public/'
+        }
+    }
+
+allprojects{
+    repositories {
+        def REPOSITORY_URL = 'http://maven.aliyun.com/nexus/content/groups/public/'
+        all { ArtifactRepository repo ->
+            if(repo instanceof MavenArtifactRepository){
+                def url = repo.url.toString()
+                if (url.startsWith('https://repo1.maven.org/maven2') || url.startsWith('https://jcenter.bintray.com/')) {
+                    project.logger.lifecycle "Repository ${repo.url} replaced by $REPOSITORY_URL."
+                    remove repo
+                }
+            }
+        }
+        maven {
+            url REPOSITORY_URL
+        }
+    }
+}
+
+安装依赖
+yum -y install gcc  
+yum -y install gcc-c++  
+yum install make  
+  
+-- 或者  
+yum groupinstall "Development Tools"  
+-- 或者  
+yum install gcc gcc-c++ kernel-devel  
+
+yum install git
+
+下载azkaban
+# Build Azkaban
+./gradlew build
+
+# Clean the build
+./gradlew clean
+
+# Build and install distributions
+./gradlew installDist
+
+# Run tests
+./gradlew test
+
+# Build without running tests
+./gradlew build -x test
+编译失败 又是存储不够又是什么的
+下载别人编译好的自己百度云里有2.5的
+三个包一个web包一个执行器包一个sql包
+
+创建数据库和表
+>> create database if not exists azkaban;
+>> use azkaban;
+>> source /appl/azkaban-2.5.0/create-all-sql-2.5.0.sql 
+
+
+授权
+grant all privileges on azkaban.* to 'azkaban'@'%' identified by 'azkaban'; 
+grant all privileges on azkaban.* to 'azkaban'@'localhost' identified by 'azkaban'; 
+grant all privileges on azkaban.* to 'azkaban'@'vm01' identified by 'azkaban';
+
+创建SSL
+到需要创建keystore的地方生成
+cd /appl/azkaban-web/
+keytool -keystore keystore -alias jetty -genkey -keyalg RSA
+密码123456
+Enter keystore password:  
+Re-enter new password: 
+What is your first and last name?
+  [Unknown]:  
+What is the name of your organizational unit?
+  [Unknown]:  
+What is the name of your organization?
+  [Unknown]:  
+What is the name of your City or Locality?
+  [Unknown]:  
+What is the name of your State or Province?
+  [Unknown]:  
+What is the two-letter country code for this unit?
+  [Unknown]:  CN
+Is CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=CN correct?
+  [no]:  y
+
+Enter key password for <jetty>
+	(RETURN if same as keystore password):  
+
+
+web配置文件
+Azkaban Personalization Settings
+azkaban.name=Test
+azkaban.label=My Local Azkaban
+azkaban.color=#FF3601
+azkaban.default.servlet.path=/index
+web.resource.dir=web/
+default.timezone.id=Asia/Shanghai
+
+#Azkaban UserManager class
+user.manager.class=azkaban.user.XmlUserManager
+user.manager.xml.file=conf/azkaban-users.xml
+
+#Loader for projects
+executor.global.properties=conf/global.properties
+azkaban.project.dir=projects
+
+database.type=mysql
+mysql.port=3306
+mysql.host=localhost
+mysql.database=azkaban
+mysql.user=azkaban
+mysql.password=azkaban
+mysql.numconnections=100
+
+# Velocity dev mode
+velocity.dev.mode=false
+
+# Azkaban Jetty server properties.
+jetty.maxThreads=25
+jetty.ssl.port=8443
+jetty.port=8081
+jetty.keystore=keystore
+jetty.password=123456
+jetty.keypassword=123456
+jetty.truststore=keystore
+jetty.trustpassword=123456
+# Azkaban Executor settings
+executor.port=12321
+
+# mail settings
+mail.sender=
+mail.host=
+job.failure.email=
+job.success.email=
+
+lockdown.create.projects=false
+
+cache.directory=cache
+
+添加一个用户
+在conf/azkaban-users.xml 添加一个用户
+<user username="admin" password="admin" roles="admin,metrics"/>
+
+修改执行器
+#Azkaban
+default.timezone.id=Asia/Shanghai
+
+# Azkaban JobTypes Plugins
+azkaban.jobtype.plugin.dir=plugins/jobtypes
+
+#Loader for projects
+executor.global.properties=conf/global.properties
+azkaban.project.dir=projects
+
+database.type=mysql
+mysql.port=3306
+mysql.host=localhost
+mysql.database=azkaban
+mysql.user=azkaban
+mysql.password=azkaban
+mysql.numconnections=100
+
+# Azkaban Executor settings
+executor.maxThreads=50
+executor.port=12321
+executor.flow.threads=30
+
+启动web
+启动$AK_HOME/bin/azkaban-web-start.sh 
+必须在web目录跟目录执行 否则报错
+bin/azkaban-web-start.sh
+后天运行使用
+nohup  bin/azkaban-web-start.sh  1>/tmp/azstd.out  2>/tmp/azerr.out &
+
+浏览器访问https://192.168.8.128:8443/
+
+启动executor
+bin/azkaban-executor-start.sh
+后台运行
+nohup  bin/azkaban-executor-start.sh 
+azkaban环境安装完成
+
+使用azkaban
+创建一个工程
+一个工程中包含多个flow,一个flow包含多个job
+例子创建hello.job
+type=command
+command=echo "data 2 hive"
+
+但是一个flow是有多个job组成的,多个job还会有依赖关系,依赖关系通过dependencies定义
+如我们这个项目中包含有,
+1.HDFS2Hive
+type=command
+command=echo "HDFS2Hive"
+
+2.Hive2SumHive
+type=command
+command=echo "Hive2SumHive"
+dependencies=HDFS2Hive
+
+3.SumHive2Mysql
+type=command
+command=echo "SumHive2Mysql"
+dependencies=Hive2SumHive
+
+将三个文件打包成zip上传
+
+其他内容
+其他job配置选项
+可以定义job依赖另一个flow，配置
+type=flow
+flow.name=fisrt_flow
+
+可以设置每个job中子命令
+type=command
+command=echo "hello"
+command.1=echo "world"
+
+可以配置job失败重启次数，及间隔时间,比如，上述ftp获取日志，我可以配置重试12次，每隔5分钟一次。
+type=command
+command=wget "ftp://file1" -O /data/file1
+retries=12
+#单位毫秒
+retry.backoff=300000
+
+现阶段的脚本如下：
+#!/bin/bash
+
+###############JDK
+export JAVA_HOME=/appl/jdk
+export PATH=$PATH:$JAVA_HOME/bin
+
+###############HADOOP
+export HADOOP_HOME=/appl/hadoop
+export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+
+###############HIVE
+export HIVE_HOME=/appl/hive
+export PATH=$PATH:$HIVE_HOME/bin
+
+###############FLUME
+export FLUME_HOME=/appl/flume
+export PATH=$PATH:$FLUME_HOME/bin
+
+###############sqoop
+export SQOOP_HOME=/appl/sqoop
+export PATH=$PATH:$SQOOP_HOME/bin
+
+
+HQL="set hive.mapred.supports.subdirectories=true;set mapreduce.input.fileinputformat.input.dir.recursive=true;insert overwrite table tony.count_sum select name,count(name) from tony.testweblog GROUP BY name;"
+hive -e "$HQL"
+
+
+第七部分
+配置hadoop,azkaban-web,azkaban-executor的自动启动(还未完成)
+
+#Start Hadoop
+start-all.sh
+
+#Start azkaban
+bin/azkaban-web-start.sh
+bin/azkaban-executor-start.sh
+
+
+第八部分
+全部联系起来
+实验中发现HDFS被锁定
+发现丢失blocks
+使用
+hdfs fsck /检查
+使用
+hdfs fsck / -delete修复
+
+首先开启hadoop
+然后开启flume
+然后开启模拟数据
+然后开始azkaban的定时任务
+最后在页面上画图出来数据的图形
+
+在这个过程中经常azkaban会莫名其妙退出,看了下内存原理执行任务的时候内存耗尽了进程被强制终止了.
+调节azkaban机器内存从1G到3G后没有在发生该类现象.
+
+生成图标的话可以用代码或者grafana,grafana比较简单
+
+下载wget https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-4.6.2-1.x86_64.rpm
+yum localinstall grafana-4.6.2-1.x86_64.rpm
+或者编译好的
+wget https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-4.6.0.linux-x64.tar.gz 
+tar -zxvf grafana-4.2.0.linux-x64.tar.gz 
+
+#/bin/systemctl daemon-reload //重新加载systemd 发现新的项目
+#/bin/systemctl enable grafana-server.service //将服务加入开机启动
+打开浏览器输入 本机 IP：3000 就可以访问了
+用户名和密码默认都是 admin
+到此全部安装完毕，添加数据源就可以使用了
+搞了一小时数据库了没有时间维度算了直接用e-chart
+
+例子
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>ECharts</title>
+    <!-- 引入 echarts.js -->
+    <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/echarts-all-3.js"></script>
+</head>
+<body>
+    <!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+    <div id="main" style="width: 600px;height:400px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        // 指定图表的配置项和数据
+        var option = {
+            title: {
+                text: 'ECharts 入门示例'
+            },
+            tooltip: {},
+            legend: {
+                data:['销量']
+            },
+            xAxis: {
+                data: ["衬衫","羊毛衫","雪纺衫","裤子","高跟鞋","袜子"]
+            },
+            yAxis: {},
+            series: [{
+                name: '销量',
+                type: 'bar',
+                data: [5, 20, 36, 10, 10, 20]
+            }]
+        };
+
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+    </script>
+</body>
+</html>
+
+感觉还要建立个springboot项目以后再弄吧.
