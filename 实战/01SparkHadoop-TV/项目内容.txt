@@ -1343,4 +1343,102 @@ spark参数调优
         sc.close();
     }
 
+    RDD Tracsform操作包括 8大金刚
+    map 		1->1
+    filter 		n->m
+    flatmap     1->n
+    mapToPair
+    groupbykey  
+    reducebykey
+    sortbykey
+    join
+    cogroup
+
+    RDD Action操作
+    reduce
+    collect
+    count
+    take n
+    saveastext
+    countbykey
+    foreach
+
+    map演示
+    public static void map(){
+        // 第一步：创建SparkConf对象,设置相关配置信息
+        SparkConf conf = new SparkConf();
+        conf.setAppName("wordcount");
+        conf.setMaster("local");
+
+        // 第二步：创建JavaSparkContext对象，SparkContext是Spark的所有功能的入口
+        JavaSparkContext sc = new JavaSparkContext(conf);
+
+        JavaRDD<Integer> numberRDD = sc.parallelize(Arrays.asList(1,2,3,4,5,6,7,8,9,0));
+        JavaRDD<Integer> result =  numberRDD.map(new Function<Integer, Integer>() {
+
+            @Override
+            public Integer call(Integer v1) throws Exception {
+                return v1 * v1;
+            }
+        });
+        result.foreach(new VoidFunction<Integer>() {
+            @Override
+            public void call(Integer integer) throws Exception {
+                System.out.println("结果和：" + integer);
+            }
+        });
+        sc.close();
+    }
+
+    filter演示
+    public static void filter(){
+        // 第一步：创建SparkConf对象,设置相关配置信息
+        SparkConf conf = new SparkConf();
+        conf.setAppName("wordcount");
+        conf.setMaster("local");
+
+        // 第二步：创建JavaSparkContext对象，SparkContext是Spark的所有功能的入口
+        JavaSparkContext sc = new JavaSparkContext(conf);
+
+        JavaRDD<Integer> numberRDD = sc.parallelize(Arrays.asList(1,2,3,4,5,6,7,8,9,0));
+        JavaRDD<Integer> result = numberRDD.filter(new Function<Integer, Boolean>() {
+            @Override
+            public Boolean call(Integer v1) throws Exception {
+                return (v1%2==0);
+            }
+        });
+        result.foreach(new VoidFunction<Integer>() {
+            @Override
+            public void call(Integer integer) throws Exception {
+                System.out.println("结果和：" + integer);
+            }
+        });
+    }
+
+    flatmap演示
+    public static void flatmap(){
+        // 第一步：创建SparkConf对象,设置相关配置信息
+        SparkConf conf = new SparkConf();
+        conf.setAppName("wordcount");
+        conf.setMaster("local");
+
+        // 第二步：创建JavaSparkContext对象，SparkContext是Spark的所有功能的入口
+        JavaSparkContext sc = new JavaSparkContext(conf);
+        JavaRDD<String> lines = sc.textFile("C:/project/01SparkHadoop-TV/test.txt");
+        JavaRDD<String> words = lines.flatMap(new FlatMapFunction<String, String>() {
+            @Override
+            public Iterator<String> call(String s) throws Exception {
+                return Arrays.asList(s.split(" ")).iterator();
+            }
+        });
+        words.foreach(new VoidFunction<String>() {
+            @Override
+            public void call(String s) throws Exception {
+                System.out.println("结果和：" + s);
+            }
+        });
+        sc.close();
+    }
     
+
+
