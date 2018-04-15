@@ -21,7 +21,7 @@
 		Disk identifier: 0x00000000
 		Disk /dev/mapper/vg_zxw-lv_swap doesn't contain a valid partition table
 		根据提示信息可以判断出此系统的磁盘接口为SCSI，对应“sda”如果上面的红色字体是“hda”，那么此系统的磁盘接口为IDE对应“hda”所以我做一下操作：
-#fdisk /dev/sda/
+#fdisk /dev/sda
 	WARNING: DOS-compatible mode is deprecated. It's strongly recommended to
 	switch off the mode (command 'c') and change display units to
 	sectors (command 'u').
