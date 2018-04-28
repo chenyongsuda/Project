@@ -1,0 +1,163 @@
+0.vue 构建使用vue-cli客户端构建
+安装brew
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+
+安装nodejs
+brew install nodejs
+
+安装淘宝镜像
+npm install -g cnpm --registry=https://registry.npm.taobao.org
+
+安装webpack
+cnpm install webpack -g
+
+安装vue脚手架
+npm install vue-cli -g
+
+根据模板创建项目
+vue init webpack-simple 工程名字<工程名字不能用中文>
+
+会有一些初始化的设置，如下输入:
+Target directory exists. Continue? (Y/n)直接回车默认(然后会下载 vue2.0模板，这里可能需要连代理)
+Project name (vue-test)直接回车默认
+Project description (A Vue.js project) 直接回车默认
+Author 写你自己的名字
+安装项目依赖
+一定要从官方仓库安装，npm 服务器在国外所以这一步安装速度会很慢。
+
+npm install
+
+不要从国内镜像cnpm安装(会导致后面缺了很多依赖库)
+
+cnpm install
+
+安装 vue 路由模块vue-router和网络请求模块vue-resource
+cnpm install vue-router vue-resource --save
+
+启动项目
+npm run dev
+
+
+1. VUE 2个组成部分 main.js App.VUE 
+如：
+---------------APP.VUE
+<template>
+  <div id="app">
+    <img src="./assets/logo.png">
+    <hello></hello>
+  </div>
+</template>
+--注意一个组件下只能有一个并列的 div
+
+<script>
+import Hello from './components/Hello'
+
+export default {
+  name: 'app',
+  components: {
+    Hello
+  }
+}
+</script>
+
+<style>
+#app {
+  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
+</style>
+
+
+-----------------------main.js
+import Vue from 'vue'
+import App from './App'
+
+/* eslint-disable no-new */
+new Vue({
+  el: '#app',
+  template: '<App/>',
+  components: { App }
+})
+
+数据要使用return如下：
+<script type="text/javascript">
+export default {
+  data () {
+    return {
+      author: "微信公众号 jinkey-love"
+    }
+  }
+}
+</script>
+
+2.引入组件
+组件在文件夹中比如layout/layout.vue 
+使用 import Layout from layout 默认回去找layout.vue
+只写文件夹名字的话会找index.vue
+
+如果要导入js的话 需要js使用export 会默认找index.js
+mport Layout from @/layout 其中@为src
+
+
+相信很多人都使用过export、export default、import，然而它们到底有什么区别呢？ 
+在JavaScript ES6中，export与export default均可用于导出常量、函数、文件、模块等，
+你可以在其它文件或模块中通过import+(常量 | 函数 | 文件 | 模块)名的方式，将其导入，以便能够对其进行使用，
+但在一个文件或模块中，export、import可以有多个，export default仅有一个。 
+具体使用： 
+1、
+//demo1.js
+export const str = 'hello world'
+
+export function f(a){
+    return a+1
+}
+
+对应的导入方式：
+//demo2.js
+import { str, f } from 'demo1' //也可以分开写两次，导入的时候带花括号
+
+//demo1.js
+export default const str = 'hello world'
+对应的导入方式：
+//demo2.js
+import str from 'demo1' //导入的时候没有花括号
+
+1.export与export default均可用于导出常量、函数、文件、模块等
+2.你可以在其它文件或模块中通过import+(常量 | 函数 | 文件 | 模块)名的方式，将其导入，以便能够对其进行使用
+3.在一个文件或模块中，export、import可以有多个，export default仅有一个
+4.通过export方式导出，在导入时要加{ }，export default则不需要
+
+1.export
+//a.js
+export const str = "blablabla~";
+export function log(sth) { 
+  return sth;
+}
+对应的导入方式：
+
+//b.js
+import { str, log } from 'a'; //也可以分开写两次，导入的时候带花括号
+
+2.export default
+//a.js
+const str = "blablabla~";
+export default str;
+对应的导入方式：
+
+//b.js
+import str from 'a'; //导入的时候没有花括号
+使用export default命令，为模块指定默认输出，这样就不需要知道所要加载模块的变量名
+//a.js
+let sex = "boy";
+export default sex（sex不能加大括号）
+//原本直接export sex外部是无法识别的，加上default就可以了.但是一个文件内最多只能有一个export default。
+其实此处相当于为sex变量值"boy"起了一个系统默认的变量名default，自然default只能有一个值，所以一个文件内不能有多个export default。
+// b.js
+本质上，a.js文件的export default输出一个叫做default的变量，然后系统允许你为它取任意名字。所以可以为import的模块起任何变量名，且不需要用大括号包含
+import any from "./a.js"
+import any12 from "./a.js" 
+console.log(any,any12)   // boy,boy
