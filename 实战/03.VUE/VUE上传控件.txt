@@ -1,6 +1,6 @@
 VUE上传控件
 参考官网 http://element-cn.eleme.io/ 上传控件的介绍
-
+参考    https://segmentfault.com/a/1190000013708438
 上传控件个人总结：
 多文件上传
 <el-upload
