@@ -1,0 +1,131 @@
+VUE上传控件
+参考官网 http://element-cn.eleme.io/ 上传控件的介绍
+
+上传控件个人总结：
+多文件上传
+<el-upload
+            class="upload-demo"
+            ref="uploadGalary"
+            drag
+            action="http://upload-z1.qiniu.com"
+            :file-list="fileList"
+            :on-success="handleAvatarSuccess"
+            :on-change="handleChange"
+            :on-error="handleError"
+            :before-upload="beforeAvatarUpload"
+            :on-remove="handleRemove"
+            :data="postData"
+            list-type="picture"
+            :limit="4"
+            multiple>
+            <!--<img v-if="imageUrl" :src="imageUrl" class="avatar">-->
+            <i class="el-icon-upload"></i>
+            <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+            <div class="el-upload__tip" slot="tip">只能上传jpg/png文件，且不超过500kb</div>
+          </el-upload>
+
+单文件上传
+<el-form-item label="首页主图">
+          <el-upload
+            action="http://upload-z1.qiniu.com"
+            ref="uploadlistPicUrl"
+            list-type="picture-card"
+            :file-list="listPicFileList"
+            :data="postData"
+            :on-success="handleListPicUrlSuccess"
+            :on-remove="handleListPicUrlRemove"
+            :limit="1">
+            <i class="el-icon-plus"></i>
+          </el-upload>
+          <el-dialog :visible.sync="dialogVisible">
+            <img width="100%" :src="dialogImageUrl" alt="">
+          </el-dialog>
+        </el-form-item>
+
+请注意：
+:file-list="fileList" 为绑定的文件列表（作用在于在修改记录时候设置该属性的话会将相应的图片设置上）
+该属性在外部设置的时候能改变组件的已上传文件的列表预览.当比如说我在这些列表中删掉部分已上传的图片该值不会相应改变,
+也就是说这个值外部变动会改变显示但是内部变动不会修改改值.
+
+this.$refs.uploadGalary.uploadFiles 这个值是控件内部的值,该值一直是动态变化的.
+
+
+注意点:在挂载ref="uploadlistPicUrl"的时候一定要卸载前面不能写在比如:on-remove="handleListPicUrlRemove"后面写在后面我就遇到
+不生效.
+
+
+注意点：
+:on-success="handleAvatarSuccess"
+:on-change="handleChange"
+:on-remove="handleRemove"
+
+添加一个或者多个图片的话on-success触发 on-change也触发 
+删除的话on-remove触发 on-change不触发 
+
+
+现在按照之前讲的有两种设置方式
+1. 使用this.$refs.uploadGalary.uploadFiles
+新增框弹出
+    上传完成函数    不做任何变动
+    删除完成函数    不做任何变动
+    点击上传按钮    取得this.$refs.uploadGalary.uploadFiles里面的值然后给要提交的参数
+    弹框取消       this.$refs.uploadGalary.clearFiles() 清空历史数据
+修改弹框
+    将后台取到的数据添加进绑定的:file-list="fileList" 相当于初始化显示
+    // update gallary
+    this.fileList = []
+    for (let j = 0; j < this.dataForm.gallery.length; j++) {
+        this.fileList.push({
+            name: j,
+            url: this.dataForm.gallery[j]
+        })
+    }
+
+
+2. 使用:file-list="fileList" 
+新增框弹出
+    上传完成函数        将现在的内部list复制到外部使外部和内部同步
+        handleAvatarSuccess(res, file, fileList, $event) {
+            this.fileList = fileList
+        }
+    删除完成函数        将现在的内部list复制到外部使外部和内部同步
+        handleRemove(file, fileList) {
+            this.fileList = fileList
+        }
+    点击上传按钮        将list数据设置给外面form的数据
+        // set gallery images
+        this.dataForm.gallery = []
+        for (let j = 0; j < this.fileList.length; j++) {
+            this.dataForm.gallery.push(this.fileList[j].url)
+        }
+    弹框取消       this.$refs.uploadGalary.clearFiles() 清空历史数据
+修改弹框
+    将后台取到的数据添加进绑定的:file-list="fileList" 相当于初始化显示
+    // update gallary
+    this.fileList = []
+    for (let j = 0; j < this.dataForm.gallery.length; j++) {
+        this.fileList.push({
+            name: j,
+            url: this.dataForm.gallery[j]
+        })
+    }    
+
+
+---------------------------------------------------------------------------
+如何产生七牛云的上传token
+先安装
+cnpm install qiniu --save
+
+const qiniu = require('qiniu')
+ // // 创建上传凭证
+      // const accessKey = ''
+      // const secretKey = ''
+      // const mac = new qiniu.auth.digest.Mac(accessKey, secretKey)
+      // const options = {
+      //   scope: '54aiti-wordpress',
+      //   expires: 720000
+      // };
+      // const putPolicy = new qiniu.rs.PutPolicy(options)
+      // const uploadToken = putPolicy.uploadToken(mac)
+      // console.log("console.log(uploadToken)")
+      // console.log(uploadToken)
