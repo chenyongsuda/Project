@@ -1,0 +1,30 @@
+不错的一个网站：http://linux.51yip.com/search/ps  命令的详细使用
+1. Grep 
+Grep -v string file
+过滤string
+
+
+2. SED
+sed -n /STRING/P file 查找包含STRING的串 n表示忽略原始输出
+sed /STRING/d file 删除STRING
+sed s#STRING1#STRING2#g file 替换STRING1为STRING2
+sed -n n,mp file 打印第几行到第几行
+
+题目 查看文件第20行到第三十行
+解决方式1： cat file|head -30|tail -10
+解决方式2： sed -n 20,30p file
+
+取行使用sed
+sed -n 30p file
+
+通过sed替换
+find ./ttt/ -name '*.db' |xargs sed -i s#d41d8cd98f00b204e9800998ecf8427e#success#g
+
+3. AWK
+awk擅长列
+打印行
+ awk '{if(NR>19&&NR<31) print $0}' test.count
+
+打印列
+ awk -F ':' '{print $1}' /etc/passwd
+

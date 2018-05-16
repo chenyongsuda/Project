@@ -89,3 +89,7 @@ DASAD
 END
 6.编辑文件
 cat > aa
+
+题目 查看文件第20行到第三十行
+解决方式1： cat file|head -30|tail -10
+解决方式2： sed -n 20,30p file
