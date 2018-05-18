@@ -27,4 +27,8 @@ awk擅长列
 
 打印列
  awk -F ':' '{print $1}' /etc/passwd
+ 
+匹配包含字符串的行类似于sed
+awk /string/ test.count 
+
 
