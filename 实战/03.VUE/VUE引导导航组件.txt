@@ -1,0 +1,14 @@
+用户在进行一些新的操作流程时，提供一些导航流程也是必要的。项目中采用的是iview 
+的对话框进行实现的。 
+<Modal v-if="modalOFF === 1">
+<p>这里是对话框一</p>
+<button @click="modalOFF = 2"></button>
+</Modal>
+<Modal v-if="modalOFF === 2">
+<p>这里是对话框二</p>
+<button @click="modalOFF = 3"></button>
+</Modal>
+<Modal v-if="modalOFF === 3">
+<p>这里是对话框二</p>
+<button @click="modalOFF = null"></button>
+</Modal>

@@ -1,0 +1,177 @@
+VUE实现商品的多维规格
+
+使用的数据结构
+1.规格数据结构
+specs: [
+        {
+            type: '颜色',
+            children: ['红', '蓝']
+        },
+        {
+            type: '尺寸',
+            children: ['大', '中']
+        }
+]
+
+specPrices: [ 
+              {
+                specs: ['红', '大'],
+                prices: {
+                    price: 40,
+                    amount: 10
+                }
+              },
+              {
+                specs: ['红', '大'],
+                prices: {
+                    price: 40,
+                    amount: 10
+                }
+              }
+            ]
+
+表格数据
+        // 表格数据
+        tableData() {
+          var arr = this.specPrices;
+          console.log(arr)
+          for (var i = 0; i < arr.length; i++) {
+            arr[i].spec0 = arr[i].specs[0]
+            arr[i].spec1 = arr[i].specs[1]
+          }
+          // console.log(this.mySpecPrices)
+          return arr
+        }
+
+表格的组合完的数据结构为
+        [ 
+            {
+            spec0: '红',
+            spec1:  '大',
+                prices: {
+                    price: 40,
+                    amount: 10
+                }
+            },
+            {
+            spec0: '红',
+            spec1:  '大',
+                prices: {
+                    price: 40,
+                    amount: 10
+                }
+            }
+        ]
+
+这是二阶的其实可以扩展到n阶  但是这时候循环出总的种类有问题
+循环是for 有几个就是几层for如果n级动态无法写
+
+
+组合数据
+// 规格组合数组
+        specCombinations() {
+          console.log(this.specs)
+          var arrWra = [];
+          // 有2个规格type
+          if (this.specs.length == 2) {
+            var arr1 = this.specs[0].children
+            var arr2 = this.specs[1].children
+            // 判断arr1是否为[], 如果是 为其添加个空字符串占位
+            if (arr1.length == 0) {
+              arr1 = ['']
+            }
+            if (arr2.length == 0) {
+              arr2 = ['']
+            }
+            var arr = []
+            for (var t = 0; t < arr1.length; t++) {
+              for (var i = 0; i < arr2.length; i++) {
+                arr = []
+                arr.push(arr1[t])
+                arr.push(arr2[i])
+                arrWra.push(arr)
+              }
+            }
+            console.log(arrWra)
+            return arrWra
+            // 只有1个规格type
+          } else if (this.specs.length == 1) {
+            var arr = this.specs[0].children
+            if (arr.length == 0) {
+              arr = ['']
+            }
+            for (var i = 0; i < arr.length; i++) {
+              var _arr = []
+              _arr.push(arr[i])
+              arrWra.push(_arr)
+            }
+            console.log(arrWra)
+            console.log('arrWra............')
+            return arrWra
+          }
+        }
+
+
+动态计算数据表的数据
+[ 
+    {
+    spec0: '红',
+    spec1:  '大',
+        prices: {
+            price: 40,
+            amount: 10
+        }
+    },
+    {
+    spec0: '红',
+    spec1:  '大',
+        prices: {
+            price: 40,
+            amount: 10
+        }
+    }
+]
+
+插入 删除 规格动态计算table的格式
+
+1.插入/删除规格
+2.动态计算table的数据格式,根据this.specs.length
+var arr1 = this.specs[0].children
+var arr2 = this.specs[1].children
+// 判断arr1是否为[], 如果是 为其添加个空字符串占位
+if (arr1.length == 0) {
+    arr1 = ['']
+}
+if (arr2.length == 0) {
+    arr2 = ['']
+}
+var arr = []
+for (var t = 0; t < arr1.length; t++) {
+    for (var i = 0; i < arr2.length; i++) {
+    arr = []
+    arr.push(arr1[t])
+    arr.push(arr2[i])
+    arrWra.push(arr)
+    }
+}
+通过循环计算出一共多少行.
+
+根据这些行数据拼接出table表数据  搞定
+[ 
+    {
+    spec0: '红',
+    spec1:  '大',
+        prices: {
+            price: 40,
+            amount: 10
+        }
+    },
+    {
+    spec0: '红',
+    spec1:  '大',
+        prices: {
+            price: 40,
+            amount: 10
+        }
+    }
+]
