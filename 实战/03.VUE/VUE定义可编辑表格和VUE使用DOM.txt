@@ -1,0 +1,167 @@
+自定义可编辑表格方式
+1. 直接通过element的table组件中的cell-click和cell-dbclick监听表格事件,回调函数有四个参数row, column, cell, event,可以拿这些参数做相应的筛选,然后使用操作dom的方法添加input达到更改值的作用,贴上原生代码:
+<template>
+//表格也可以写成原生的table
+<el-table :data="addPlanRoute" border style="width:100%" @cell-dblclick="tableDbEdit">
+       <el-table-column property="order1" label="顺序"></el-table-column>
+       <el-table-column property="order2" label="装车点">
+           <template slot-scope="scope">
+               <el-input v-model="scope.row.order2" placeholder="请输入内容"></el-input>
+           </template>
+       </el-table-column>
+</el-table> 
+</template>
+
+<script>
+export default{
+    data(){
+        return{}
+    },
+    methods:{
+    tableDbEdit(row, column, cell, event) {
+          console.log(row, column, cell, event);
+          if (column.label != "顺序") {
+            event.target.innerHTML = "";
+            let cellInput = document.createElement("input");
+            cellInput.value = "";
+            cellInput.setAttribute("type", "text");
+            cellInput.style.width = "80%";
+            cell.appendChild(cellInput);
+            cellInput.onblur = function() {
+              cell.removeChild(cellInput);
+              event.target.innerHTML = cellInput.value;
+            };
+        }
+     }
+    }
+}
+</script>
+
+2.  <1.>在element的table组件中使用slot-scope（作用域插槽）来实现该需求，就相当于将<el-input>直接作为<el-table-column>的子组件使用,不用绑定对应的方法,直接用:hover方法就可以修改<el-input>的样式
+    <2.>slot-scope可能有些人有点陌生，这里贴上官网的链接请戳这里，里面很详细
+<el-table :data="addPlanRoute" border style="width:100%">
+   <el-table-column property="order1" label="顺序"></el-table-column>
+   <el-table-column property="order2" label="装车点">
+       <template slot-scope="scope">
+           <el-input v-model="scope.row.order2" placeholder="请输入内容"></el-input>
+       </template>
+   </el-table-column>
+</el-table> 
+
+3. 直接在原生<table>里面嵌套<input>标签,然后通过改变样式来改变边框的显示,直接贴上代码,复制即可演示!
+<template>
+  <div>
+    <table class="edit-table">
+      <thead>
+        <th>姓名</th><th>年龄</th><th>成绩</th><th>性别</th>
+      </thead>
+      <tbody>
+        <tr><td><input value="张三"/></td><td><input value="30"/></td><td><input value="90"/></td><td><input value="女"/></td></tr>
+      </tbody>
+    </table>
+  </div>
+</template>
+
+<script>
+  
+</script>
+
+<style lang="scss">
+.edit-table{
+    border:1px solid gray;
+    border-collapse: collapse;
+    th{
+      border:1px solid gray;
+    }
+  tbody{
+    
+    tr{
+      td{
+        border:1px solid gray;
+        input{
+          border:none;
+        }
+      }
+    }
+  }
+}
+</style>
+
+我采用的方式是第二种
+<el-table
+      :data="tableData"
+      style="width: 100%">
+      <el-table-column
+        prop="date"
+        label="日期"
+        width="180">
+      </el-table-column>
+      <el-table-column
+        prop="name"
+        label="姓名"
+        width="180">
+        <template slot-scope="scope">
+           <el-input v-dom="scope.row" v-model="scope.row.name" :disabled="!visable" placeholder="请输入内容"></el-input>
+        </template>
+      </el-table-column>
+      <el-table-column
+        prop="address"
+        label="地址">
+      </el-table-column>
+      <el-table-column
+        label="Option">
+            <template slot-scope="scope">
+              <el-button @click="handleClick(scope.row)" type="primary" icon="el-icon-edit" circle></el-button>
+            </template>
+      </el-table-column>
+    </el-table>
+
+我做了个demo是点击后面的按钮,一点击前面框子就变成可点击,但是不能使用一个参数啊,有100行就要100个参数,这样需要设定一个数组
+还能怎么样？
+
+使用自定义属性吧
+Vue.directive('dom', {
+    bind: function (el, binding) {
+        var obj = binding.value;
+        if (obj != null) {
+            var key = Object.keys(binding.modifiers)[0] || "el";
+            Vue.set(obj, key, el);
+        }
+    }
+});
+注册一个全局自定义指令v-dom，并且这个指令可以用一个修饰符拓展，
+它的作用是在指令被绑定到元素时，将被绑定的dom元素添加到指定的对象的属性中去，属性名就是修饰符名称，如果不存在修饰符时默认为el；
+
+然后将第一部分的代码做如下修改：
+
+<input v-dom="row" v-model.number="row.count" type="number" />
+表示将input元素保存到row对象的属性el里；
+然后修改submit部分的代码：
+
+methods: {
+    submit: function () {
+        var rows = this.rows;
+        var arr = ["您需要的水果是:"];
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            if (row.count < 0) {
+                row.el.focus(); //获得焦点
+                row.el.select(); //全选
+                return;
+            }
+            arr.push(row.text + ": " + row.count + "个");
+        }
+        alert(arr.join("\n"));
+    }
+}
+
+从控制台中也可以看到rows中的每一个对象都已经拥有了el属性
+PS：如果不希望使用el为属性名可以使用修饰符自定义属性名称
+
+<input v-dom.input="row" v-model.number="row.count" type="number" />
+相应的，在取值的时候需要使用row.input来获取dom元素。
+
+作者：冰麟轻武
+链接：https://www.jianshu.com/p/558c54c614a1
+來源：简书
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
