@@ -161,6 +161,16 @@ PS：如果不希望使用el为属性名可以使用修饰符自定义属性名�
 <input v-dom.input="row" v-model.number="row.count" type="number" />
 相应的，在取值的时候需要使用row.input来获取dom元素。
 
+
+vue2.*版本中
+
+在标签中加上ref='dom'，然后在代码中this.$refs.dom这样就拿到了页面元素
+
+例如：<div class='box' ref='myBox'>你好</div>
+
+让你好的颜色显示为红色：this.$refs.myBox.style.color = 'red
+
+
 作者：冰麟轻武
 链接：https://www.jianshu.com/p/558c54c614a1
 來源：简书
