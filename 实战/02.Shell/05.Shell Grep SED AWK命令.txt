@@ -31,4 +31,5 @@ awk擅长列
 匹配包含字符串的行类似于sed
 awk /string/ test.count 
 
-
+# 使用多个分隔符.先使用空格分割，然后对分割结果再使用","分割
+$ awk -F '[ ,]'  '{print $1,$2,$5}'   log.txt

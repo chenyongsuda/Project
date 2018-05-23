@@ -170,7 +170,6 @@ vue2.*版本中
 
 让你好的颜色显示为红色：this.$refs.myBox.style.color = 'red
 
-
 作者：冰麟轻武
 链接：https://www.jianshu.com/p/558c54c614a1
 來源：简书
