@@ -49,3 +49,10 @@ cut -d" " -f2,3 file
 awk命令awk '{print $3" "$6}' aaa.txt
 cut 一般用来截取字符 cut -c 6-11,21- 从第6个到第11个 从21到结尾
 
+8.计算文件的行
+wc -l
+或者
+cat -n|tail -1
+或者
+awk '{print NR}' hello.txt |tail -1
+
