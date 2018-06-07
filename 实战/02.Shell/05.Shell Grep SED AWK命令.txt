@@ -20,6 +20,9 @@ sed -n 30p file
 通过sed替换
 find ./ttt/ -name '*.db' |xargs sed -i s#d41d8cd98f00b204e9800998ecf8427e#success#g
 
+使用sed查询ip
+ifconfig ens256|sed -n /inet/p|sed 's#^.*inet ##g'|sed 's#  net.*$##g'
+
 3. AWK
 awk擅长列
 打印行
@@ -37,3 +40,4 @@ $ awk -F '[ ,]'  '{print $1,$2,$5}'   log.txt
 如果
 $ awk -F '[ ,]+'  '{print $1,$2,$5}'   log.txt
 加上加号把多个分隔符看成一个走
+
