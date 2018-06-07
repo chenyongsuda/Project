@@ -23,6 +23,10 @@ find ./ttt/ -name '*.db' |xargs sed -i s#d41d8cd98f00b204e9800998ecf8427e#succes
 使用sed查询ip
 ifconfig ens256|sed -n /inet/p|sed 's#^.*inet ##g'|sed 's#  net.*$##g'
 
+ifconfig ens256|sed -n 's#^.*inet \(.*\)  netmask.*$#\1#gp'
+这种方式为使用()将前面括号起来的内容替换后通过p输出
+
+
 3. AWK
 awk擅长列
 打印行
