@@ -25,6 +25,10 @@ ifconfig ens256|sed -n /inet/p|sed 's#^.*inet ##g'|sed 's#  net.*$##g'
 
 ifconfig ens256|sed -n 's#^.*inet \(.*\)  netmask.*$#\1#gp'
 这种方式为使用()将前面括号起来的内容替换后通过p输出
+这个是sed小括号分组
+
+又是一种方式
+ifconfig ens256|sed -n 's#^.*et \(.*\)  .*sk \(.*\)  .*st \(.*\)#\1-\2-\3#gp'
 
 
 3. AWK
