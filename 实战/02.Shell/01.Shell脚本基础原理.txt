@@ -56,3 +56,6 @@ cat -n|tail -1
 或者
 awk '{print NR}' hello.txt |tail -1
 
+9.文件删除的原理
+一个程序有ilink和icount表示一个文件被程序使用icount+1 如果有硬链接就ilink+1
+当文件ilink=0 icoung=0就可以删除了.
