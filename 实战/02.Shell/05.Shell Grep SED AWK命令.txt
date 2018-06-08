@@ -1,0 +1,51 @@
+不错的一个网站：http://linux.51yip.com/search/ps  命令的详细使用
+1. Grep 
+Grep -v string file
+过滤string
+
+
+2. SED
+sed -n /STRING/P file 查找包含STRING的串 n表示忽略原始输出
+sed /STRING/d file 删除STRING
+sed s#STRING1#STRING2#g file 替换STRING1为STRING2
+sed -n n,mp file 打印第几行到第几行
+
+题目 查看文件第20行到第三十行
+解决方式1： cat file|head -30|tail -10
+解决方式2： sed -n 20,30p file
+
+取行使用sed
+sed -n 30p file
+
+通过sed替换
+find ./ttt/ -name '*.db' |xargs sed -i s#d41d8cd98f00b204e9800998ecf8427e#success#g
+
+使用sed查询ip
+ifconfig ens256|sed -n /inet/p|sed 's#^.*inet ##g'|sed 's#  net.*$##g'
+
+ifconfig ens256|sed -n 's#^.*inet \(.*\)  netmask.*$#\1#gp'
+这种方式为使用()将前面括号起来的内容替换后通过p输出
+这个是sed小括号分组
+
+又是一种方式
+ifconfig ens256|sed -n 's#^.*et \(.*\)  .*sk \(.*\)  .*st \(.*\)#\1-\2-\3#gp'
+
+
+3. AWK
+awk擅长列
+打印行
+ awk '{if(NR>19&&NR<31) print $0}' test.count
+
+打印列
+ awk -F ':' '{print $1}' /etc/passwd
+ 
+匹配包含字符串的行类似于sed
+awk /string/ test.count 
+
+# 使用多个分隔符.先使用空格分割，然后对分割结果再使用","分割
+$ awk -F '[ ,]'  '{print $1,$2,$5}'   log.txt
+
+如果
+$ awk -F '[ ,]+'  '{print $1,$2,$5}'   log.txt
+加上加号把多个分隔符看成一个走
+ll hello.txt|awk -F ' ' '{print $1}'|tr rwx- 4210|awk -F '' '{print $1+$2+$3 $4+$5+$6 $7+$8+$9}'

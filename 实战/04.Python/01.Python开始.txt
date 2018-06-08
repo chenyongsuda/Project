@@ -7,10 +7,87 @@ Python3.x 和Python2.7
 
 编程环境
 vscode 插件Python
+配置flake8
+安装flake8之后写代码的时候编辑器就会提示哪里出错，代码格式不规范也会提示
+
+打开命令行
+输入 "pip install flake8"
+安装flake8成功后，打开VScode，文件->首选项->用户设置，在settings.json文件中输入"python.linting.flake8Enabled": true
+
+配置yapf
+安装yapf之后在VScode中按Alt+Shift+F即可自动格式化代码
+打开命令行
+输入 "pip install yapf"
+安装yapf成功后，打开VScode，文件->首选项->用户设置，在settings.json文件中输入"python.formatting.provider": "yapf"
+
 调试快捷键
 F5：调试/继续，
 F10：单步跳过，
 F11：单步进入，
 Shift+F11：跳出。
 F9：切换断点
+
+几个小技巧
+查看函数或者类的定义
+Ctrl+鼠标左键点击函数名或者类名即可跳转到定义处，在函数名或者类名上按F12也可以实现同样功能
+
+更改变量名
+在变量名上按F2即可实现重命名变量
+
+python断点调试
+在行号的左边点击即可设置断点，在左边的调试界面可以查看变量的变化
+
+设置快捷键
+文件->首选项->键盘快捷方式，将需要的修改的快捷键的整个大括号里面的内容复制到右边keybindings.json文件中，然后修改“key”的值为你需要的快捷键即可。我这边只修改了复制一行和删除一行的快捷键。
+
+
+
+创建python项目
+
+创建文件夹 创建文件
+
+vscode把含有.vscode文件夹（类似git的.git文件夹）的文件夹当做工程。必须是这样的工程才支持ctrl+shift+B这样的生成任务。
+
+需要运行一次ctrl+shift+B，然后.vscode文件夹下面出现一个task.json。用来定义如何生成
+使用如下配置
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run py3 File",
+            "command": "C:/Python36/python.exe ${file}",
+            "type": "shell",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "focus": true
+            }
+        },
+        {
+            "label": "nosetest",
+            "command": "nosetests -v",
+            "type": "shell",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "focus": true
+            }
+        }
+    ]
+}
+
+由于调试的时候按F5会跳出选择哪个环境,每次都要选很烦啊,直接点击左侧的调试虫子设置默认模式这样文件夹会多一个launch.json
+下次直接F5就默认是那个python环境.
+
+
 
