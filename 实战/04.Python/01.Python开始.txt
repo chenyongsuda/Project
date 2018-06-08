@@ -1,0 +1,16 @@
+Python3.x 和Python2.7
+区别
+3持续支持新功能
+2只是维护
+3是unicode编码支持中文
+2是ascii
+
+编程环境
+vscode 插件Python
+调试快捷键
+F5：调试/继续，
+F10：单步跳过，
+F11：单步进入，
+Shift+F11：跳出。
+F9：切换断点
+
