@@ -1,0 +1,73 @@
+一、作业需求：
+1. 用户加密认证（已完成）
+2. 多用户同时登陆（已完成）
+3. 每个用户有自己的家目录且只能访问自己的家目录（已完成）
+4. 对用户进行磁盘配额、不同用户配额可不同（已完成）
+5. 用户可以登陆server后，可切换目录（已完成）
+6. 查看当前目录下文件（已完成）
+7. 上传下载文件，保证文件一致性（已完成）
+8. 传输过程中现实进度条（已完成）
+9. 支持断点续传（未完成）
+
+实现方式：
+创建两个文件夹1.FTPClient 和 FTPServer 两个文件夹来分别放置客户端和服务端
+在服务器端
+首先有个启动的文件夹 bin
+然后有个配置的文件夹 conf
+最后有个某块的文件夹 models
+可能有个日志的文件夹 logs
+
+总体的启动文件在bin下创建startup.py文件(总的项目的启动文件,设置整体的环境变量,然后调用main的方法)
+
+模块的启动文件在models下创建main.py文件
+main里面有参数处理的方法 有跑socketserver的方法 有每个连接处理的方法
+
+1.解析参数
+例如执行python时候是这样的
+xxx.py start -p 8080
+使用optparse模块
+
+optparse模块的使用
+self.op = optparse.OptionParser()
+self.op.add_option('-s', '--server', dest='server')
+self.op.add_option('-p', '--port', dest='port')
+options, args = self.op.parse_args()
+print(options) 以server port的键值对
+print(args) 其他的单个参数
+
+如何然后使用反射来调用其他方法如start stop
+def checkParams(self, options, args):
+    cmd = args[0]
+    if hasattr(self, cmd):
+        func = getattr(self, cmd)
+        func()
+
+def start(self):
+    print('Start Server...')
+
+def stop(self):
+    print('Stop Server...')
+
+
+TCPServer
+class TCPServer:
+    def __init__(self):
+        self.server = socketserver.ThreadingTCPServer(('localhost', 8888), handler.RequestHandler)
+
+    def start(self):
+        print('Start Server...')
+        self.server.serve_forever()
+
+    def stop(self):
+        print('Stop Server...')
+
+RequestHandler
+class RequestHandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        print('ok')
+
+
+
+
+
+
