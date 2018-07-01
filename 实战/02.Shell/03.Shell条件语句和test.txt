@@ -1,0 +1,48 @@
+1.条件IF
+if 条件
+    then
+    指令
+fi
+
+if 条件;then
+    指令
+fi
+
+一行的写法
+if [ -f file ];then echo 1;fi 
+相当于
+[ -f file ]&&{
+    echo 1
+}
+[ -f file ]&& echo 1
+
+多分支
+if [ -f file ];then
+    echo 1
+elif xxx;then
+    echo 2
+fi
+
+if [ -f file ];then
+    echo 1
+else
+    echo 2
+fi
+
+实验脚本：
+获取内存如果内存不足报警
+1. 获取内存
+2. 如果内存小于多少发送报警邮件
+
+
+总结判断是否是数字
+1. 把数字去掉如果为空就是数字
+
+实验题目：判断mysql是否执行没执行就执行
+如何判断mysql是否执行
+1.看端口 netstat -lntup|grep 3306
+2.看进程 ps -ef|grep mysql
+3.mysql -uroot -proot -e "version();"
+
+如果是远程监控使用telnet nmap nc
+

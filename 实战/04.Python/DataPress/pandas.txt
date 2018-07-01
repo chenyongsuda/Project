@@ -1,0 +1,103 @@
+1.pandas使用read_csv
+data = pd.read_csv("data.csv")
+print(data.head(5))
+打印前五行
+
+print(data.tail(3))
+打印尾三行
+
+print(data.columns)
+print(data.columns.tolist())
+打印列的所有名字
+
+print(data.shape)
+打印行列数
+(12873, 9)
+
+print(data.loc[0])
+打印行的所有值
+如：
+region         BJ
+ee          26.89
+num            20
+cost      33973.4
+
+打印某些行
+print(data.loc[3:5])
+print(data.loc[[3,4,5])
+
+ type gender  vage  age  ageg region      ee  num     cost
+3    B      F     1   18     1     CQ   1.000    0      0.0
+4    B      F     1   19     1     BJ  31.493   23  36339.2
+5    B      F     1   19     1     SH   6.420    2   3315.0
+
+打印列
+print(data['region'])
+0        BJ
+1        SH
+2        SZ
+3        CQ
+4        BJ
+5        SH
+6        SZ
+7        TJ
+8        CQ
+
+
+对于某一列加减乘除
+print((data['num'] * 100) - 2) 等于对于一列都操作
+
+某一列的最大最小
+print(data['num'].max())
+print(data['num'].min())
+
+排序
+data.sort_values('ee', inplace=True)
+print(data)
+设置为原地dataframe排序
+否则就生成一个新的dataframe代码要写成如下
+new_data = data.sort_values('ee', inplace=True)
+print(new_data)
+
+如果需要升降序如下:
+new_data = data.sort_values('ee', inplace=True, ascending=True)
+print(new_data)
+
+处理泰坦尼克号的数据分析
+1.关于数据缺失值
+使用isnull
+pd.isnull(data['Age'])
+0      False
+1      False
+2      False
+3      False
+4      False
+5       True
+
+然后再通过data拿到那些事缺失的
+age = data['Age']
+age_is_null = pd.isnull(data['Age'])
+age_null = age[age_is_null]
+
+==============>计算所以用户的平均年龄
+age = data['Age']
+age_is_null = pd.isnull(data['Age'])
+age_good = age[age_is_null == False]
+
+print(sum(age_good)/len(age_good))
+
+如果不处理null值得话直接调用mean方法
+print(data['Age'].mean())
+
+==============>统计不同仓位的价格是多少
+首先找到一等舱价格,然后二等舱,三等舱 然后求均值
+data[data['Pclass'] == 1] 这是找到所有1等仓的数据
+print(data[data['Pclass'] == 1])
+print(data[data['Pclass'] == 1]['Fare'].mean())
+
+或者使用pivot_table
+print(data.pivot_table(index='Pclass', values='Fare', aggfunc='mean'))
+
+==============>统计不同仓位的获救几率
+print(data.pivot_table(index='Pclass', values='Survived', aggfunc='mean'))
+安装仓位为基准,值为是否获救,计算方式平均

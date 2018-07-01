@@ -151,7 +151,112 @@ a.sh  clean.sh  datasource.sh  replacetest  shell-day2.sh  xshell.sh
 学习系统的脚本
 /etc/init.d/rpcbind.sh
 
+read命令
+语法
+read 参数 变量名
+p 提示信息
+t 超时时间
+read -t 5 -p "please input" var
 
+传入多个
+read -t 5 -p "please input" var1 var2
+
+echo -n "please input"
+read a b
+相当如：
+read -p "please input" var1 var2
+
+一个while read 的case
+while read line只读一行或者最后一行读不到
+  今天碰到一个ssh的问题，google之。原因如下：
+需要读取一个文本，次文本每一行包含一个IP在while循环中使用ssh，但ssh完第一行后就退出了，如何避免自动读取一行就跳出while循环，此文将详细解释其原因。 
+ 
+    最近在写一个自动更新的shell，可是发现如果在使用while循环从一个文件中读取ip地址，然后访问就只能读取第一行纪录。代码如下： 
+
+while read line;
+do
+echo *******************************************$LINE
+ssh 192.168.10.233 ls 
+done < data
+
+但是如果使用for就没有这个问题，非常的奇怪，for的代码如下： 
+
+for i in data;
+do
+echo *******************************************$LINE
+ssh 192.168.10.233 ls 
+done < data
+难道for和while竟然有这么大的差别，不可能吧。经过一番试验以后发现，原来并不是while的for的差别，而是while中使用重定向机制，data文件中的信息都已经读入并重定向给了整个while语句。所以当我们在while循环中再一次调用read语句，就会读取到下一条记录。问题就出在这里，ssh语句正好回读取输入中的所有东西，下面这个shell能很好的说明这个问题： 
+while read line;
+do
+echo *******************************************$LINE
+ssh 192.168.10.233 ls 
+done < data
+
+执行这个shell就会发现，ssh中的cat语句会打印出data文件中的其他纪录，这就导致调用玩ssh语句后，输入缓存中已经都被读完了，当read语句再读的时候当然也就读不到纪录，循环也就退出了。改进方法是，将ssh的输入重定向输入： 
+while read line;
+do
+echo *******************************************$LINE
+ssh 192.168.10.233 ls < /dev/null
+done < data
+这样，在while语句中也能顺利的执行ssh语句了。linux的重定向还真复杂。
+
+
+
+其实还有更加简单的方法就是:在while read line时，使用ssh 的时候加入参数 -n
+
+ssh 参数详解：
+
+主要参数说明：
+
+-l 指定登入用户
+
+-p 设置端口号
+
+-f 后台运行，并推荐加上 -n 参数
+
+-n 将标准输入重定向到 /dev/null，防止读取标准输入
+
+-N 不执行远程命令，只做端口转发
+
+-q 安静模式，忽略一切对话和错误提示
+
+-T 禁用伪终端配置
+而最后一行读不到的原因也很奇葩，因为是最后一行没有回车到下一行
+
+
+同样百度中的解决方案
+1、while使用重定向机制，ip.txt文件中的信息都已经读入并重定向给了整个while语句。所以当我们在while循环中再一次调用read语句，
+就会读取到下一条记录。问题就出在这里，ssh语句正好回读取输入中的所有东西。为了禁止ssh读所有东西增加一个< /dev/null，将ssh 的输入重定向输入
+while read ips;
+do
+        echo $ips;
+        upt=`ssh root@${ip1} uptime < /dev/null;`;
+        echo $upt;
+done < ip.txt;
+
+2、用for
+for ips in `cat ip.txt`; do
+       echo ${ips};
+       upt=`ssh root@${ips} uptime`;
+       echo $upt;
+done
+
+案例：使用cat和read
+cat的几大作用
+1.输出文件
+2.创建编辑新文件 cat > file  追加cat >> file
+3.非交互式追加类似cat >> file << EOF
+4.清空 cat > file
+
+使用cat代替echo
+cat <<END
+1. UNIX
+2. WINS
+END
+
+"END"是一对，将中间的部分送到前面的命令中
+这种显示信息的方法,在shell中,叫"HERE文档"
 
 
 
