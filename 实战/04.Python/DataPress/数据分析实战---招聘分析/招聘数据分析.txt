@@ -1,0 +1,138 @@
+http://www.woshipm.com/data-analysis/756741.html
+如何七周成为数据分析师22：用pandas进行数据分析实战
+
+1.读取文件数据
+import pandas as pd
+data = pd.read_csv('DataAnalyst.csv',encoding='gb2312')
+
+首先载入我们的练习数据。
+在pandas中，常用的载入函数是read_csv。除此之外还有read_excel和read_table，table可以读取txt。若是服务器相关的部署，则还会用到read_sql，直接访问数据库，但它必须配合mysql相关包。
+read_csv拥有诸多的参数，encoding是最常用的参数之一，它用来读取csv格式的编码。这里使用了gb2312，该编码常见于windows，如果报错，可以尝试utf-8。
+sep参数是分割符，有些csv文件用逗号分割列，有些是分号，有些是\t，这些都需要具体设置。header参数为是否使用表头作为列名，默认是。names参数可以为列设置额外的名字，比如csv中的表头是中文，但是在pandas中最好转换成英文。
+上述是主要的参数，其他参数有兴趣可以学习。一般来说，csv的数据都是干净的，excel文件则有合并单元格这种恶心的玩意，尽量避免。
+data.info()
+----------------------------------------------------------------------------------------------------------------------
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 6876 entries, 0 to 6875
+Data columns (total 17 columns):
+city                 6876 non-null object
+companyFullName      6876 non-null object
+companyId            6876 non-null int64
+companyLabelList     6170 non-null object
+companyShortName     6876 non-null object
+companySize          6876 non-null object
+businessZones        4873 non-null object
+firstType            6869 non-null object
+secondType           6870 non-null object
+education            6876 non-null object
+industryField        6876 non-null object
+positionId           6876 non-null int64
+positionAdvantage    6876 non-null object
+positionName         6876 non-null object
+positionLables       6844 non-null object
+salary               6876 non-null object
+workYear             6876 non-null object
+dtypes: int64(2), object(15)
+memory usage: 913.3+ KB
+
+现在有了数据dataframe，首先对数据进行快速的浏览。
+这里列举出了数据集拥有的各类字段，一共有6876个，其中companyLabelList，businessZones，secondType，positionLables都存在为空的情况。公司id和职位id为数字，其他都是字符串。
+
+看一下是否有重复的数据,通过unique
+len(data['positionId'].unique())
+显示5031一共有6876个说明有重复
+清洗数据去掉重复
+data.drop_duplicates(subset='positionId', keep='first')
+
+-------------------------------------------------------------------------
+1 data.drop_duplicates()#data中一行元素全部相同时才去除
+2 data.drop_duplicates(['a','b'])#data根据’a','b'组合列删除重复项，默认保留第一个出现的值组合。传入参数keep='last'则保留最后一个
+3 
+4 data.drop_duplicates(['a','b'],keep='last')
+
+接下来加工salary薪资字段。目的是计算出薪资下限以及薪资上限。
+薪资内容没有特殊的规律，既有小写k，也有大小K，还有「k以上」这种蛋疼的用法，k以上只能上下限默认相同。
+这里需要用到pandas中的apply。它可以针对DataFrame中的一行或者一列数据进行操作，允许使用自定义函数。
+
+def parse_salary(col):
+    pos = col.find('-')
+    if pos > 0:
+        salary = col[:pos-1]
+    else:
+        salary = col[:col.upper().find('K')]
+    return salary
+
+data['basesalary'] = data.salary.apply(parse_salary)
+
+然后怎么判断是否有有问题数据呢,通过将数据转为int看下有错没
+data['basesalary'].astype('int')
+
+处理上限也可以一样处理
+def high_salary(col):
+    pos = col.find('-')
+    if pos > 0:
+        salary = col[pos+1:len(col)-1]
+    else:
+        salary = col[:col.upper().find('K')]
+    return salary
+data['highsalary'] = data.salary.apply(high_salary).astype('int')
+
+可以写成函数
+def hello(method):
+    xxxx
+apply(hello,method='xxx')
+
+计算平均工资
+data['avg_salary'] = data.apply(lambda x: (x.basesalary + x.highsalary)/2,axis=1)
+数据类型转换为数字，这里引入新的知识点，匿名函数lamba。很多时候我们并不需要复杂地使用def定义函数，而用lamdba作为一次性函数。
+lambda x: ******* ，前面的lambda x:理解为输入，后面的星号区域则是针对输入的x进行运算。案例中，因为同时对top和bottom求平均值，所以需要加上x.bottomSalary和x.topSalary。word_cut的apply是针对Series，现在则是DataFrame。
+axis是apply中的参数，axis=1表示将函数用在行，axis=1则是列。
+这里的lambda可以用(df_duplicates.bottomSalary + df_duplicates.topSalary)/2替代。
+到此，数据清洗的部分完成。切选出我们想要的内容进行后续分析(大家可以选择更多数据)。
+data[['city','companyShortName','companySize','education','positionName','positionLables','workYear','avg_salary']]
+
+先对数据进行几个描述统计。城市计算
+data.city.value_counts()
+
+北京    4177
+上海     980
+深圳     527
+杭州     407
+广州     335
+成都     135
+南京      83
+武汉      69
+西安      51
+苏州      37
+厦门      30
+长沙      25
+天津      20
+Name: city, dtype: int64
+
+value_counts是计数，统计所有非零元素的个数，以降序的方式输出Series。数据中可以看到北京招募的数据分析师一骑绝尘。
+我们可以依次分析数据分析师的学历要求，工作年限要求等。
+针对数据分析师的薪资，我们用describe函数。
+avg_salary
+count	6876.000000
+mean	17.454261
+std	9.037826
+min	1.500000
+25%	11.500000
+50%	16.000000
+75%	22.500000
+max	75.000000
+
+它能快速生成各类统计指标。数据分析师的薪资的平均数是17k，中位数是15k，两者相差不大，最大薪资在75k，应该是数据科学家或者数据分析总监档位的水平。标准差在8.99k，有一定的波动性，大部分分析师薪资在17+—9k之间。
+
+pandas自带绘图函数，它是以matplotlib包为基础封装，所以两者能够结合使用。
+%matplotlib inline是jupyter自带的方式，允许图表在cell中输出。plt.style.use(‘ggplot’)使用R语言中的ggplot2配色作为绘图风格，纯粹为了好看。
+
+import matplotlib as mb
+%matplotlib inline
+mb.style.use(‘ggplot’)
+data_clean.avg_salary.hist()
+
+为了更精细可以调节柱形包含范围
+data_clean.avg_salary.hist(bins=15)
+
+

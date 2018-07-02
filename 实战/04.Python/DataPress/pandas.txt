@@ -101,3 +101,126 @@ print(data.pivot_table(index='Pclass', values='Fare', aggfunc='mean'))
 ==============>统计不同仓位的获救几率
 print(data.pivot_table(index='Pclass', values='Survived', aggfunc='mean'))
 安装仓位为基准,值为是否获救,计算方式平均
+
+
+==============>在不同登船点的票价和获救率
+data.pivot_table(index='Embarked',values=['Fare','Survived'],aggfunc='mean')
+
+
+pandas 中的Axis（轴）含义
+0表示上下 1表示左右
+mean(axis=0)计算的是每一列平均值， 表示上下线求和
+mean(axis=1)计算的是每一行平均值。 表示左右线求和
+drop(0,axis=0)删除行，            表示上下线移动删除
+drop([‘col1’],axis=1)删除列。     表示左右线移动删除
+
+===============>删除N/A数据
+data.dropna(axis=1) 有N/A的列都删除
+data.dropna(axis=0,subset=['Age']) 如果Age列中哪些行有N/A就删除行
+
+===============>定位
+data.loc[83,'Age']  第83行的Age字段的值
+
+===============>排序
+data.sort_values('Age',ascending=True)
+删掉混乱的索引,重新建一个索引
+sort_data.reset_index(drop=True)
+
+===============>自定义函数
+def filter_row(d):
+    return d.loc[1:2]
+data.apply(filter_row)
+目的是通过函数名称来分开各个模块
+
+统计表格中各列null个数
+apply是按照列处理的
+之前单个处理计数如下：
+age = data['Age']
+age_is_null = pd.isnull(data['Age'])
+age_null = age[age_is_null]
+
+现在可以这样
+def count_null(col):
+    col_null = col.isnull()
+    return len(col[col_null])
+data.apply(count_null)
+
+还可以按照行处理 如果大于20岁显示小于等于就显示空行
+def replace(row):
+    if row['Age'] > 20:
+        return row
+    return ''
+data.apply(replace,axis=1)
+
+年龄段划分
+def replace_age(row):
+    if row['Age'] > 20:
+        return 'audit'
+    return 'child'
+age_slot=data.apply(replace_age,axis=1)
+添加到原表
+data['age_slot'] = age_slot
+统计年级大的和小的的获救率
+print(data.pivot_table(index='age_slot', values='Survived', aggfunc='mean'))
+
+=====================>数据整体分析
+data.describe()
+
+count，是总数的意思。
+mean，是平均值
+std，是方差
+min，最小值
+max，最大值
+25%、50%、75%，意思是位置分别是25%、50%、75%大的数据是什么。比如，Age，就是年龄大小排在25%的人的年龄是20.125岁，小数点表示年月。
+
+	    PassengerId	Survived	Pclass	    Age	        SibSp	    Parch	    Fare
+count	891.000000	891.000000	891.000000	714.000000	891.000000	891.000000	891.000000
+mean	446.000000	0.383838	2.308642	29.699118	0.523008	0.381594	32.204208
+std	    257.353842	0.486592	0.836071	14.526497	1.102743	0.806057	49.693429
+min	    1.000000	0.000000	1.000000	0.420000	0.000000	0.000000	0.000000
+25%	    223.500000	0.000000	2.000000	20.125000	0.000000	0.000000	7.910400
+50%	    446.000000	0.000000	3.000000	28.000000	0.000000	0.000000	14.454200
+75%	    668.500000	1.000000	3.000000	38.000000	1.000000	0.000000	31.000000
+max	    891.000000	1.000000	3.000000	80.000000	8.000000	6.000000	512.329200
+
+表明Age中的数据有缺失
+由上面可知：
+Age那列只有714个数。而其他属性都有891个数值。那说明，Age那列有空值，就是数据丢失了，一共有接近200个数据丢失。
+那怎么办？因为我们一开始分析了，Age这一列对生存率分析有影响，我们必须保留，不能忽略。所以我选择补充上去。
+那么问题来了，补充什么样的数据比较合理呢？才不会导致数据的准确性呢？我想应该补充平均值。
+
+data['Age'] = data['Age'].fillna(data['Age'].median()) 通过fillna
+
+机器学习算法一般来说解决不了对字符的分类。因为我们是要对Survived这列‘’0‘’和"1"进行分类嘛。
+还要把"Sex"这一列的数据进行处理，把它改为数值型。那我们就把"male"和“female”进行处理，分别用0和1替代。
+
+查看有多少种分类
+data['Sex'].unique()
+
+将所有等于male的行的sex的值设置为特定的0
+data.loc[] 分为两方面前面一个是索引或者范围如1:10 后面是包括显示字段
+例子：
+data.loc[1:10] 取1到10行的所有列字段
+data.loc[1:10,'Age'] 取1到10行的Age字段
+data.loc[data['Age']=='female']取所以满足female的行输出全部的列(data['Age']=='female'这个是一个包含True False的序列)
+data.loc[data['Age']=='female','Age'] 取所以满足female的行输出的列只取Age
+
+继续数据处理
+data.loc[data['Sex'] == 'female','Sex']=0 全部满足的赋值
+data.loc[data['Sex'] == 'male','Sex']=1
+
+处理登船地点
+data['Embarked'].unique()
+data['Embarked'] = data['Embarked'].fillna('S')
+data.loc[data['Embarked'] == 'S','Embarked']=0
+data.loc[data['Embarked'] == 'C','Embarked']=1
+data.loc[data['Embarked'] == 'Q','Embarked']=2
+
+好了，到这里基本数据就处理完了。我们下一步就要做什么？就是要建立模型了，就是撸代码。让这模型替我们做分析做分类。
+参考链接
+https://blog.csdn.net/JonyHwang/article/details/78932466
+
+series sort_index or sort_values 按照index 或者value排序
+serise 中过滤 如serise[serise > 50]
+serise操作
+可以相加/2 就是求平均
