@@ -135,4 +135,119 @@ data_clean.avg_salary.hist()
 为了更精细可以调节柱形包含范围
 data_clean.avg_salary.hist(bins=15)
 
+通过groupby来分类合并
+data_clean.groupby('city')
+默认只会合并计算数值类型
+这样只是返回对象
+还有增加计算方式如sum mean 
+
+groupby可以传递一组列表，这时得到一组层次化的Series
+
+data_clean.groupby(['city','education']).mean()
+表示按照城市和教育水平统计
+city	education	
+上海	不限	14.051471
+        博士	15.000000
+        大专	13.395455
+        本科	17.993785
+        硕士	19.180000
+北京	不限	15.516588
+        博士	25.000000
+        大专	12.467143
+        本科	19.342943
+        硕士	19.510638
+
+通过行列转置可以转为二维表data_clean.groupby(['city','education']).mean().unstack()
+	avg_salary
+education	不限	博士	大专	本科	硕士
+city					
+上海	14.051471	15.0	13.395455	17.993785	19.180000
+北京	15.516588	25.0	12.467143	19.342943	19.510638
+南京	7.000000	NaN	9.272727	11.327869	13.500000
+我们在groupby后面加一个avgSalary，说明只统计avgSalary的计数结果，不用混入相同数据。
+
+这个只是暂时一个度量,可以进行多度量用agg
+data_clean.groupby('city').agg(['mean','sum'])
+avg_salary
+mean	sum
+city		
+上海	17.285714	16940.0
+北京	18.590256	77651.5
+南京	10.951807	909.0
+
+然后排序
+data_clean.groupby('city').avg_salary.agg(['mean','sum']).sort_values(by='sum',ascending=False)
+
+agg 支持函数
+data_clean.groupby('city').avg_salary.agg(lambda x:max(x) - min(x))
+
+上图用lamba函数，返回了不同公司中最高薪资和最低薪资的差值。agg是一个很方便的函数，它能针对分组后的列数据进行丰富多彩的计算。但是在pandas的分组计算中，它也不是最灵活的函数。
+现在我们有一个新的问题，我想计算出不同城市，招聘数据分析师需求前5的公司，应该如何处理？
+agg虽然能返回计数也能排序，但它返回的是所有结果，前五还需要手工计算。能不能直接返回前五结果？当然可以，这里再次请出apply。
+def top(df):
+    return df.value_counts().sort_values(ascending = False)[:5]
+
+data_clean.groupby('city').companyShortName.apply(top)
+
+
+================================================
+sort_values 函数   serise有该方法  dataframe也有
+这个很简单不需要演示了
+
+value_counts 统计数据出现频次
+
+import numpy as np
+import pandas as pd
+from pandas import DataFrame
+from pandas import Series
+ss = Series(['Tokyo', 'Nagoya', 'Nagoya', 'Osaka', 'Tokyo', 'Tokyo'])   
+ss.value_counts() 
+type(ss.value_counts())
+ss.value_counts().index
+ss.value_counts().values
+----------
+Tokyo     3
+Nagoya    2
+Osaka     1
+pandas.core.series.Series
+Index(['Tokyo', 'Nagoya', 'Osaka'], dtype='object')
+array([3, 2, 1], dtype=int64)
+
+dataframe 的count计算是计算每个分组的数据量
+
+
+
+data_clean.groupby('city').companyShortName
+表示<pandas.core.groupby.groupby.SeriesGroupBy object at 0x0000000009E6E0B8>
+data_clean.groupby('city')
+表示<pandas.core.groupby.groupby.DataFrameGroupBy object at 0x000000000AE8F668>
+
+===================================================总结=============================================================
+serise常用函数
+value_counts                        计数
+sort_values(ascending = False)      排序
+agg                                 聚合函数将一个serise转为DataFrame
+unique()                            去重
+data['basesalary'].astype('int')    转为int类型
+mean(),max(),min()                                          以列数据求值
+
+DataFrame常用函数
+sort_values(by='sum',ascending=False)                       排序 按照某个column排序
+data.info()                                                 DataFrame的基本信息
+data.drop_duplicates(subset='positionId', keep='first')     去重函数
+mean(),max(),min()                                          对每一列数据求值,并返回series
+count()                                                     按照每一列计数
+group()                                                     分组模型
+
+group举例：
+data_clean.groupby('city')表示按照citygroup然后得到类型是DataFrame调用mean的话得到的是DataFrame
+再调用mean得到如下结果
+	avg_salary
+city	
+上海	17.285714
+北京	18.590256
+南京	10.951807
+
+data_clean.mean()直接调用mean的话表示按照column一列列计算得到的以column名为index的series
+avg_salary    17.454261
 
