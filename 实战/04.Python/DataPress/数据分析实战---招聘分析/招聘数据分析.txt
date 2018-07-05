@@ -224,20 +224,27 @@ data_clean.groupby('city')
 
 ===================================================总结=============================================================
 serise常用函数
-value_counts                        计数
-sort_values(ascending = False)      排序
-agg                                 聚合函数将一个serise转为DataFrame
-unique()                            去重
-data['basesalary'].astype('int')    转为int类型
-mean(),max(),min()                                          以列数据求值
+    value_counts                        计数
+    sort_values(ascending = False)      排序
+    agg                                 聚合函数将一个serise转为DataFrame
+    unique()                            去重
+    data['basesalary'].astype('int')    转为int类型
+    mean(),max(),min()                                          以列数据求值
 
 DataFrame常用函数
-sort_values(by='sum',ascending=False)                       排序 按照某个column排序
-data.info()                                                 DataFrame的基本信息
-data.drop_duplicates(subset='positionId', keep='first')     去重函数
-mean(),max(),min()                                          对每一列数据求值,并返回series
-count()                                                     按照每一列计数
-group()                                                     分组模型
+    sort_values(by='sum',ascending=False)                       排序 按照某个column排序
+    data.info()                                                 DataFrame的基本信息
+    data.drop_duplicates(subset='positionId', keep='first')     去重函数
+    mean(),max(),min()                                          对每一列数据求值,并返回series
+    count()                                                     按照每一列计数
+    group()                                                     分组模型
+
+-------------------------获取行,列数据---------------------------------------------
+df.loc[行标签,列标签]
+df.loc['a':'b']#选取ab两行数据
+df.loc[:,'one']#选取one列的数据
+data.loc[:,['city','max_salary']]
+
 
 group举例：
 data_clean.groupby('city')表示按照citygroup然后得到类型是DataFrame调用mean的话得到的是DataFrame
@@ -251,3 +258,5 @@ city
 data_clean.mean()直接调用mean的话表示按照column一列列计算得到的以column名为index的series
 avg_salary    17.454261
 
+--------------------------------------------拿到包含某个元素的列-----------------------------------
+data[data.companyShortName.str.contains('SPD')]

@@ -1,0 +1,68 @@
+http://python.jobbole.com/81212/ 这是个好例子
+
+最简单的透视表必须有一个数据帧和一个索引
+data.pivot_table(index='city')
+
+也可以多个数据索引
+data.pivot_table(index=['city','companyShortName'])
+
+这样的话就会自动为这两个index分组
+	                                        avr_salary	companyId	max_salary	min_salary	positionId
+city	companyShortName					
+上海	12家全国性股份制商业银行之一	     22.500000	143986.0	30.000000	15.000000	2.474921e+06
+        1号店	                          20.750000	8581.0	26.000000	15.500000	1.855386e+06
+        2345.com	                      12.666667	6082.0	16.000000	9.333333	2.125586e+06
+
+
+values”域显式地定义我们关心的列
+如：data.pivot_table(index=['city','companyShortName'],values='min_salary')
+
+		min_salary
+city	companyShortName	
+上海	12家全国性股份制商业银行之一	15.000000
+        1号店	15.500000
+        2345.com	9.333333
+        360	25.000000
+        360金融	15.000000
+
+会自动计算数据的平均值，但是我们也可以对该列元素进行计数或求和。要添加这些功能，使用aggfunc和np.sum就很容易实现。
+aggfunc可以包含很多函数，下面就让我们尝试一种方法，即使用numpy中的函数mean和len来进行计数。
+data.pivot_table(index=['city','companyShortName'],values='min_salary',aggfunc=[sum,len])
+		                                    sum	len
+                                        min_salary	min_salary
+city	companyShortName		
+上海	12家全国性股份制商业银行之一	        15	1
+        1号店	                             62	  4
+        2345.com	                         28	 3
+
+
+或者指定aggfunc={"Quantity":len,"Price":np.sum}
+
+我认为pivot_table中一个令人困惑的地方是“columns（列）”和“values（值）”的使用。记住，变量“columns（列）”是可选的，它提供一种额外的方法来分割你所关心的values
+实际值。然而，聚合函数aggfunc最后是被应用到了变量“values”中你所列举的项目上。
+
+然而，非数值（NaN）有点令人分心。如果想移除它们，我们可以使用“fill_value”将其设置为0。
+
+pd.pivot_table(df,index=["Manager","Rep"],values=["Price"],
+               columns=["Product"],aggfunc=[np.sum],fill_value=0)
+
+其实，我觉得添加“Quantity”列将对我们有所帮助，所以将“Quantity”添加到“values”列表中。
+pd.pivot_table(df,index=["Manager","Rep"],values=["Price","Quantity"],
+               columns=["Product"],aggfunc=[np.sum],fill_value=0)
+
+有趣的是，你可以将几个项目设置为索引来获得不同的可视化表示。下面的代码中，我们将“Product”从“columns”中移除，并添加到“index”变量中。
+
+pd.pivot_table(df,index=["Manager","Rep","Product"],
+               values=["Price","Quantity"],aggfunc=[np.sum],fill_value=0)
+
+
+对于这个数据集，这种显示方式看起来更有意义。不过，如果我想查看一些总和数据呢？“margins=True”就可以为我们实现这种功能。
+
+pd.pivot_table(df,index=["Manager","Rep","Product"],
+               values=["Price","Quantity"],
+               aggfunc=[np.sum,np.mean],fill_value=0,margins=True)
+
+一个很方便的特性是，为了对你选择的不同值执行不同的函数，你可以向aggfunc传递一个字典。不过，这样做有一个副作用，那就是必须将标签做的更加简洁才行。
+pd.pivot_table(df,index=["Manager","Status"],columns=["Product"],values=["Quantity","Price"],
+               aggfunc={"Quantity":len,"Price":np.sum},fill_value=0)
+
