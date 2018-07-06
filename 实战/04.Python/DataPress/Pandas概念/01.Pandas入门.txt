@@ -1,0 +1,551 @@
+pandas是python环境下最有名的数据统计包，而DataFrame翻译为数据框，是一种数据组织方式，这么说你可能无法从感性上认识它，举个例子，你大概用过Excel，
+而它也是一种数据组织和呈现的方式，简单说就是表格，而在在pandas中用DataFrame组织数据，如果你不print DataFrame，你看不到这些数据，
+下面我们来看看DataFrame是如何使用的。
+
+
+=====================================================基础================================================================
+首先是引入pandas和numpy，这是经常配合使用的两个包，pandas依赖于numpy，引入以后我们可以直接使用np/pd来表示这个两个模块
+import numpy as np
+import pandas as pd
+
+1.产生时间序列
+pandas.date_range(start=None, end=None, periods=None, freq=’D’, tz=None, normalize=False, name=None, closed=None, **kwargs)
+
+参数
+start：string或datetime-like，默认值是None，表示日期的起点。
+end：string或datetime-like，默认值是None，表示日期的终点。
+periods：integer或None，默认值是None，表示你要从这个函数产生多少个日期索引值；如果是None的话，那么start和end必须不能为None。
+freq：string或DateOffset，默认值是’D’，表示以自然日为单位，这个参数用来指定计时单位，比如’5H’表示每隔5个小时计算一次。
+tz：string或None，表示时区，例如：’Asia/Hong_Kong’。
+normalize：bool，默认值为False，如果为True的话，那么在产生时间索引值之前会先把start和end都转化为当日的午夜0点。
+name：str，默认值为None，给返回的时间索引指定一个名字。
+closed：string或者None，默认值为None，表示start和end这个区间端点是否包含在区间内，可以有三个值，’left’表示左闭右开区间，’right’表示左开右闭区间，None表示两边都是闭区间。
+返回值
+DatetimeIndex
+idx=pd.date_range('20180706',periods=6)
+
+2.创建DataFrame
+pd.DataFrame(np.random.randn(6,4),index=idx,columns=list('ABCD'))
+
+3.还可以通过{}创建DataFrame
+pd.DataFrame({'A':np.random.randn(6),})
+	A
+0	0.407748
+1	-0.382403
+2	-0.806356
+3	-0.697742
+4	-0.877818
+5	0.719069
+
+pd.DataFrame({'A':pd.Timestamp('20170910'),'B':pd.Series(1)})
+
+假如字典内的数据长度不同，以最长的数据为准，比如B列有4行：
+
+pd.DataFrame({'A':pd.Timestamp('20170910'),'B':pd.Series(1,list('ABCD'))})
+
+        A	    B
+X	2017-09-10	1
+Y	2017-09-10	1
+Z	2017-09-10	1
+
+可以使用dtypes来查看各行的数据格式
+A    datetime64[ns]
+B             int64
+dtype: object
+
+
+查看数据框的索引
+data.index
+
+查看列名用columns
+data.columns
+
+查看数据值，用values
+data.values
+
+查看描述性统计，用describe
+data.describe
+
+使用type看一下输出的描述性统计是什么样的数据类型——DataFrame数据
+type(data)
+
+使用T来转置数据，也就是行列转换
+data.T
+
+对数据进行排序，用到了sort_values，参数可以指定根据哪一列数据进行排序.
+dt.sort_values('B',ascending=False)
+
+
+
+
+=====================================================2.DataFrame选择数据================================================================
+创建DataFrame
+dt = pd.DataFrame(np.random.randn(6,4),index=idx,columns=list('ABCD'))
+
+选择列column
+dt['A']
+选择多列
+dt[['A','B']]
+
+切片行
+dt[1:3]
+
+选择几行
+dt['2018-07-06':'2018-07-09']从06号那行到09号
+
+DataFrame的loc方法
+dt.loc[:,['A','B']]
+
+See also
+DataFrame.at
+    Access a single value for a row/column label pair
+DataFrame.iloc
+    Access group of rows and columns by integer position(s)
+DataFrame.xs
+    Returns a cross-section (row(s) or column(s)) from the Series/DataFrame.
+Series.loc
+    Access group of values using labels
+DataFrame.loc
+    Access a group of rows and columns by label(s) or a boolean array.
+
+Examples
+
+Getting values
+
+>>> df = pd.DataFrame([[1, 2], [4, 5], [7, 8]],
+...      index=['cobra', 'viper', 'sidewinder'],
+...      columns=['max_speed', 'shield'])
+>>> df
+            max_speed  shield
+cobra               1       2
+viper               4       5
+sidewinder          7       8
+Single label. Note this returns the row as a Series.
+
+>>> df.loc['viper']
+max_speed    4
+shield       5
+Name: viper, dtype: int64
+List of labels. Note using [[]] returns a DataFrame.
+
+>>> df.loc[['viper', 'sidewinder']]
+            max_speed  shield
+viper               4       5
+sidewinder          7       8
+
+Single label for row and column
+
+>>> df.loc['cobra', 'shield']
+2
+Slice with labels for row and single label for column. As mentioned above, note that both the start and stop of the slice are included.
+
+>>> df.loc['cobra':'viper', 'max_speed']
+cobra    1
+viper    4
+Name: max_speed, dtype: int64
+Boolean list with the same length as the row axis
+
+>>> df.loc[[False, False, True]]
+            max_speed  shield
+sidewinder          7       8
+Conditional that returns a boolean Series
+
+>>> df.loc[df['shield'] > 6]
+            max_speed  shield
+sidewinder          7       8
+
+Conditional that returns a boolean Series with column labels specified
+
+>>> df.loc[df['shield'] > 6, ['max_speed']]
+            max_speed
+sidewinder          7
+Callable that returns a boolean Series
+
+>>> df.loc[lambda df: df['shield'] == 8]
+            max_speed  shield
+sidewinder          7       8
+
+Setting values
+
+Set value for all items matching the list of labels
+
+>>> df.loc[['viper', 'sidewinder'], ['shield']] = 50
+>>> df
+            max_speed  shield
+cobra               1       2
+viper               4      50
+sidewinder          7      50
+Set value for an entire row
+
+>>> df.loc['cobra'] = 10
+>>> df
+            max_speed  shield
+cobra              10      10
+viper               4      50
+sidewinder          7      50
+Set value for an entire column
+
+>>> df.loc[:, 'max_speed'] = 30
+>>> df
+            max_speed  shield
+cobra              30      10
+viper              30      50
+sidewinder         30      50
+Set value for rows matching callable condition
+
+>>> df.loc[df['shield'] > 35] = 0
+>>> df
+            max_speed  shield
+cobra              30      10
+viper               0       0
+sidewinder          0       0
+
+Getting values on a DataFrame with an index that has integer labels
+
+Another example using integers for the index
+
+>>> df = pd.DataFrame([[1, 2], [4, 5], [7, 8]],
+...      index=[7, 8, 9], columns=['max_speed', 'shield'])
+>>> df
+   max_speed  shield
+7          1       2
+8          4       5
+9          7       8
+Slice with integer labels for rows. As mentioned above, note that both the start and stop of the slice are included.
+
+>>> df.loc[7:9]
+   max_speed  shield
+7          1       2
+8          4       5
+9          7       8
+
+Getting values with a MultiIndex
+
+A number of examples using a DataFrame with a MultiIndex
+
+>>> tuples = [
+...    ('cobra', 'mark i'), ('cobra', 'mark ii'),
+...    ('sidewinder', 'mark i'), ('sidewinder', 'mark ii'),
+...    ('viper', 'mark ii'), ('viper', 'mark iii')
+... ]
+>>> index = pd.MultiIndex.from_tuples(tuples)
+>>> values = [[12, 2], [0, 4], [10, 20],
+...         [1, 4], [7, 1], [16, 36]]
+>>> df = pd.DataFrame(values, columns=['max_speed', 'shield'], index=index)
+>>> df
+                     max_speed  shield
+cobra      mark i           12       2
+           mark ii           0       4
+sidewinder mark i           10      20
+           mark ii           1       4
+viper      mark ii           7       1
+           mark iii         16      36
+
+Single label. Note this returns a DataFrame with a single index.
+
+>>> df.loc['cobra']
+         max_speed  shield
+mark i          12       2
+mark ii          0       4
+Single index tuple. Note this returns a Series.
+
+>>> df.loc[('cobra', 'mark ii')]
+max_speed    0
+shield       4
+Name: (cobra, mark ii), dtype: int64
+
+Single label for row and column. Similar to passing in a tuple, this returns a Series.
+
+>>> df.loc['cobra', 'mark i']
+max_speed    12
+shield        2
+Name: (cobra, mark i), dtype: int64
+
+Single tuple. Note using [[]] returns a DataFrame.
+
+>>> df.loc[[('cobra', 'mark ii')]]
+               max_speed  shield
+cobra mark ii          0       4
+
+Single tuple for the index with a single label for the column
+
+>>> df.loc[('cobra', 'mark i'), 'shield']
+2
+Slice from index tuple to single label
+
+>>> df.loc[('cobra', 'mark i'):'viper']
+                     max_speed  shield
+cobra      mark i           12       2
+           mark ii           0       4
+sidewinder mark i           10      20
+           mark ii           1       4
+viper      mark ii           7       1
+           mark iii         16      36
+Slice from index tuple to index tuple
+
+>>> df.loc[('cobra', 'mark i'):('viper', 'mark ii')]
+                    max_speed  shield
+cobra      mark i          12       2
+           mark ii          0       4
+sidewinder mark i          10      20
+           mark ii          1       4
+viper      mark ii          7       1
+
+=================================================pandas教程[3]DataFrame切片操作======================================
+如果我们嫌column name太长了，输入不方便，有或者index是一列时间序列，更不好输入，那就可以选择 .iloc了。这边的 i 我觉得代表index，比较好记点。
+df.iloc[1,1]
+df.iloc[0:3, [0,1]]
+
+=================================================pandas教程：[4]Dataframe筛选数据======================================
+假如我们想要筛选D列数据中大于0的行
+df[df.D>0]
+使用&符号可以实现多条件筛选，当然是用"|"符号也可以实现多条件，只不过他是或的关系。
+df[(df.D>0) && (df.D<100)]
+假如我们只需要A和B列数据，而D和C列数据都是用于筛选的，可以这样写：只返回了AB两列数据
+df[['A','B']][(df.D>0) && (df.D<100)]
+我们以上用到的方法都是通过一个布尔索引完成的，我们看一下这样的运算返回的值是什么
+INDEX = (df.D>0) && (df.D<100)
+0 True
+1 True
+2 True
+3 False
+4 False
+
+我们还可以使用insin方法来筛选特定的值，把要筛选的值写到一个列表里，如alist
+alist = ['1','2','3']
+df.D.isin(alist)
+0 True
+1 True
+2 True
+3 False
+4 False
+
+=================================================pandas教程：[6]计数统计======================================
+经过之前的学习，我们现在可以做一个简单的统计了，比如计数，这是最简单的统计，我们现在就使用pandas统计一下数据中各个专业学生的数目：
+查看一下前三行数据，看读取数据是否正确
+df[:3]
+计数统计我们使用：save_counts()，打印这个结果，查看一下
+df['col'].values_count()
+
+=================================================pandas教程：[7]筛选计数统计======================================
+先引入pandas，然后读取csv数据
+我们先筛选出高考成绩在520以上的学生
+good=df[df['item']>520]
+goods_count = good['专业名称'].values_count()
+all_count = df['专业名称'].values_count()
+
+rate = goods_count/all_count
+
+=================================================pandas教程：[8]数据分组======================================
+使用groupby()可以给数据分组，数据分组的好处是你可以一次性计算得到所有分组中的统计量，
+比如想计算男女学生的平均成绩分别是多少，可以先按照男女分组，然后计算平均数，我们不用计算完女生然后在计算男生，实际上是一次性完成的，这就是分组的好处。
+df.group_by(['A','B'])
+http://pandas.pydata.org/pandas-docs/stable/api.html#id5
+group_by
+Series.groupby(by=None, axis=0, level=None, as_index=True, sort=True, group_keys=True, squeeze=False, observed=False, **kwargs)[source]
+
+Examples
+DataFrame results
+>>> data.groupby(func, axis=0).mean()
+>>> data.groupby(['col1', 'col2'])['col3'].mean()
+DataFrame with hierarchical index
+>>> data.groupby(['col1', 'col2']).mean()
+例子
+from pandas import Series,DataFrame 
+a=[['Li','男','PE',98.],['Li','男','MATH',60.],['liu','男','MATH',60.],['yu','男','PE',100.]]
+af=DataFrame(a,columns=['name','sex','course','score']) 
+
+	name	sex	course	score
+0	Li	男	PE	98.0
+1	Li	男	MATH	60.0
+2	liu	男	MATH	60.0
+3	yu	男	PE	100.0
+
+af.groupby(['name','course'])['score'].sum()#先将af按照namej进行分组，再按照score进行分组，最后将score进行叠加
+特别注意：groupby里面的字段内的数据重构后都会变成索引
+Series对象介绍
+import pandas as pd
+s1 = pd.Series([2,3,4,5], index=['a', 'b', 'c', 'd'])
+print(s1)
+结果：
+a    2
+b    3
+c    4
+d    5
+dtype: int64
+
+print(s1.index)
+结果：
+Index(['a', 'b', 'c', 'd'], dtype='object')
+
+print(s1.values)
+结果：
+[2 3 4 5]
+
+
+---使用index中的值进行索引
+print(s1['a'])
+结果：
+2
+print(s1[['a','d']])
+结果：
+a    2
+d    5
+dtype: int64
+
+print(s1['b':'d'])
+结果（注意，切片索引保存最后一个值）：
+b    3
+c    4
+d    5
+dtype: int64
+
+---使用下标进行索引
+print(s1[0])
+结果：
+2
+
+print(s1[[0,3]])
+结果：
+a    2
+d    5
+dtype: int64
+
+print(s1[1:3])
+结果（注意：这里和上面不同的是不保存最后一个值，与正常索引相同）：
+b    3
+c    4
+dtype: int64
+
+3：特殊情况：
+上面的index为字符串，假如index为数字，这个时候进行索引是按照index值进行还是按照下标进行？
+s1 = pd.Series([2,3,4,5], index=[1,2,3,4])
+print(s1[2])
+结果：
+3
+print(s1[0]) 会报错
+
+print(s1[[2,4]])
+结果：
+2    3
+4    5
+dtype: int64
+
+print(s1[1:3])
+结果：
+2    3
+3    4
+dtype: int64
+
+使用布尔Series进行索引
+s1 = pd.Series([2,3,4,5], index=['a', 'b', 'c', 'd']
+print(s1 > 3)
+结果（这是一个bool Series）：
+a    False
+b    False
+c     True
+d     True
+dtype: bool
+
+print(s1[s1 > 3])
+结果（只需要把bool Series 传入Series就可以实现索引）：
+c    4
+d    5
+dtype: int64
+
+DataFrame对象介绍：
+  DataFrame对象是一个由行列组成的表。DataFrame中行由columns组成，列由index组成，它们都是Index对象。它的值还是numpy数组。
+
+复制代码
+data = {'name':['ming', 'hong', 'gang', 'tian'], 'age':[12, 13, 14, 20], 'score':[80.3, 88.2, 90, 99.9]}
+df1 = pd.DataFrame(data)
+
+print(df1.index)
+结果：
+RangeIndex(start=0, stop=4, step=1)
+
+print(df1.columns)
+结果：
+Index(['age', 'name', 'score'], dtype='object')
+
+print(df1.values)
+结果：
+[[12 'ming' 80.3]
+ [13 'hong' 88.2]
+ [14 'gang' 90.0]
+ [20 'tian' 99.9]]
+复制代码
+回到顶部
+如何对DataFrame对象进行索引
+1：使用columns的值对列进行索引
+  直接使用columns中的值进行索引，得到的是一列或者是多列的值
+
+复制代码
+print(df1['name'])
+结果：
+0    ming
+1    hong
+2    gang
+3    tian
+Name: name, dtype: object
+
+print(df1[['name','age']])
+结果：
+name  age
+0  ming   12
+1  hong   13
+2  gang   14
+3  tian   20
+注意：不可以直接使用下标对列进行索引，除非该columns当中包含该值。如下面的操作是错误的
+print(df1[0])
+结果： 错误
+复制代码
+2：切片或者布尔Series对行进行索引
+使用切片索引，或者布尔类型Series进行索引：
+
+复制代码
+print(df1[0:3])
+使用切片进行选择，结果：
+age  name  score
+0   12  ming   80.3
+1   13  hong   88.2
+2   14  gang   90.0
+
+print(df1[ df1['age'] > 13 ])
+使用布尔类型Series进行索引，其实还是要求布尔Series和DataFrame有相同的index，结果：
+age  name  score
+2   14  gang   90.0
+3   20  tian   99.9
+复制代码
+3：使用loc和iloc进行索引
+本质上loc是用index和columns当中的值进行索引，而iloc是不理会inde和columns当中的值的，永远都是用从0开始的下标进行索引。所以当你搞懂这句话的时候，下面的索引就会变得非常简单：
+
+复制代码
+print(df1.loc[3])
+结果：
+name     hong
+score    88.2
+Name: 3, dtype: object
+
+print(df1.loc[:,'age'])
+结果：
+1    12
+3    13
+4    14
+5    20
+Name: age, dtype: int64
+
+print(df1.iloc[3])
+结果：
+age        20
+name     tian
+score    99.9
+Name: 5, dtype: object
+
+print(df1.iloc[:,1])
+结果：
+1    ming
+3    hong
+4    gang
+5    tian
+Name: name, dtype: object
