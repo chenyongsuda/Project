@@ -1,6 +1,8 @@
 http://www.woshipm.com/data-analysis/756741.html
 如何七周成为数据分析师22：用pandas进行数据分析实战
 
+https://jingyan.baidu.com/season/43456?pn=0 pandas入门教程
+
 1.读取文件数据
 import pandas as pd
 data = pd.read_csv('DataAnalyst.csv',encoding='gb2312')
