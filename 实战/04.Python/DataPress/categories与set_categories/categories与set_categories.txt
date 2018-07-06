@@ -1,0 +1,87 @@
+使用pandas的类别相关的方法可以设置和改变数据的类别。
+
+import pandas as pd
+import numpy as np
+
+df = pd.DataFrame({"id":[1,2,3,4,5,6], "raw_grade":['a', 'b', 'b', 'a', 'a', 'e']})
+#将raw_grade列转化为category类型
+df["grade"] = df["raw_grade"].astype("category")
+print(df["grade"])
+
+
+0    a
+1    b
+2    b
+3    a
+4    a
+5    e
+Name: grade, dtype: category
+Categories (3, object): [a, b, e]
+
+可以看到此时类标签的字符a,b,e ；类标签的集合为[a,b,e] 
+打印类标签的结果如下 
+
+#改变类别标签
+df["grade"].cat.categories = ["very good", "good", "very bad"]
+print(df["grade"])
+
+0    very good
+1         good
+2         good
+3    very good
+4    very good
+5     very bad
+Name: grade, dtype: category
+Categories (3, object): [very good, good, very bad]
+
+
+给categories赋值，可以改变类别标签。赋值的时候是按照顺序进行对应的。a对应very good，b对应good,c对应very bad。操作完成之后，原来的标签a就变成了very good标签。 
+此时类标签的集合为[“very good”, “good”, “very bad”]
+
+#改变类别标签集合，注意和上面的对.categories的操作进行区分。
+df["grade"] = df["grade"].cat.set_categories(["very bad", "bad", "medium", "good", "very good"])
+print(df["grade"])
+
+0    very good
+1         good
+2         good
+3    very good
+4    very good
+5     very bad
+Name: grade, dtype: category
+Categories (5, object): [very bad, bad, medium, good, very good]
+
+改变类别标签集合，操作过后数据的标签不变，但是标签的集合变为[“very bad”, “bad”, “medium”, “good”, “very good”]
+
+#按照类标签在标签集中的顺序排序，而不是安装类标签的字母顺序进行排序
+dfnew = df.sort_values(by="grade")
+print(dfnew)
+ id raw_grade      grade
+5   6         e   very bad
+1   2         b       good
+2   3         b       good
+0   1         a  very good
+3   4         a  very good
+4   5         a  very good
+
+pandas cut函数快速自定义分类
+生成未下单间隔列
+df['未下单间隔']=df.最近下单时间.map(lambda x :round((pd.to_datetime('2018-04-08')-pd.to_datetime(x[:10])).total_seconds()/(24*60*60)))
+df['未下单分类']=pd.cut(df.未下单间隔,bins=[-1,60,90,1000000],labels=['60天内','60-90天','90天以上'])
+df['下单数量分类']=pd.cut(df.下单者数量,bins=[9,14,19,10000000],labels=['10-15单','15-20单','20单以上'])
+df.groupby(['未下单分类','下单数量分类']).count()
+
+实例
+import pandas as pd, numpy as np
+players=['Garsol','Hardon','Bill','Duran','James','Barter']
+scores=[22,34,12,31,26,19]
+teams=['West','West','East','West','East','East']
+df=pd.DataFrame({'player':players,'score':scores,'team':teams})
+df.team.astype('category')
+d=pd.Series(scores).describe()
+score_ranges=[d['min']-1,d['mean'],d['max']+1]
+score_labels=['Role','Star']
+# 用pd.cut(ori_data, bins, labels) 方法
+# 以 bins 设定的画界点来将 ori_data 归类，然后用 labels 中对应的 label 来作为分类名
+df['level']=pd.cut(df['score'],score_ranges,labels=score_labels)
+

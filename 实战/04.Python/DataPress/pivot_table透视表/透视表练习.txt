@@ -1,0 +1,40 @@
+数据任然是sales-funnel.xlsx
+查看数据
+import pandas as pd
+import numpy as np
+data = pd.read_excel('sales-funnel.xlsx',encoding='gb2312')
+data.head()
+
+Account	Name	Rep	Manager	Product	Quantity	Price	Status
+0	714466	Trantow-Barrows	Craig Booker	Debra Henley	CPU	1	30000	presented
+1	714466	Trantow-Barrows	Craig Booker	Debra Henley	Software	1	10000	presented
+2	714466	Trantow-Barrows	Craig Booker	Debra Henley	Maintenance	2	5000	pending
+3	737550	Fritsch, Russel and Anderson	Craig Booker	Debra Henley	CPU	1	35000	declined
+4	146832	Kiehn-Spinka	Daniel Hilton	Debra Henley	CPU	2	65000	won
+
+data["Status"] = data["Status"].astype("category")
+data['value'] = data["Price"] * data["Quantity"]
+data["Status"].cat.set_categories(["won","pending","presented","declined"],inplace=True)
+table = data.pivot_table(index=['Manager','Name','Status'],values=['value'],columns=['Product'],aggfunc=sum,fill_value=0,margins=True)
+table.query('Status == ["won"]')
+
+	                                        value
+                                            Product	CPU	Maintenance	Monitor	Software	All
+Manager	        Name	                    Status					
+Debra Henley	Kiehn-Spinka	            won	130000	0	0	0	130000
+Fred Anderson	Herman LLC	                won	130000	0	0	0	130000
+                Kassulke, Ondricka and Metz	won	0	21000	0	0	21000
+                Keeling LLC	                won	500000	0	0	0	500000
+
+
+数据使用DataAnalyst.csv
+import pandas as pd
+data = pd.read_csv('DataAnalyst.csv',encoding='gb2312')
+data.drop_duplicates(subset='positionId', keep='first')
+data.head()
+
+data.pivot_table(index=['city'],columns=['workYear'],values=['companyId'],aggfunc=len,fill_value=0,margins=True)
+table = data.pivot_table(index=['city','companyShortName'],values=['positionName'],aggfunc=[len])
+table.sort_index(ascending=[True,False]).sort_values(by=('len','positionName'),ascending=False )
+多Index的排序使用tuple
+
