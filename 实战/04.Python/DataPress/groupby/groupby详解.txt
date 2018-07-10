@@ -1,0 +1,144 @@
+数据：
+Name	Brand	Cloth	Count
+girl	uniql	sweater	3
+girl	etam	suit	1
+girl	etam	pants	1
+girl	lagogo	jacket	2
+boy		pants	2
+boy	hailan	t-shirt	1
+mother	hengyuanxiang	coat	2
+mother	hengyuanxiang	sweater	1
+mother		coat	1
+father	hailan	t-shirt	2
+father	hailan	sweater	1
+father	hailan	pants	3
+
+gp是一个把dataframe groupby以后的对象，它实际上还没有进行任何计算，只是一个暂时存储的容器。
+对这个暂时存储的容器进行计数，因为是按'Brand'分的组，：
+gp.count()
+Out[13]: 
+               Name  Cloth  Count
+Brand                            
+etam              2      2      2
+hailan            4      4      4
+hengyuanxiang     2      2      2
+lagogo            1      1      1
+uniql             1      1      1
+
+看到按'Brand'分组后的这个结果，Name,Cloth,Count列在每种Brand所对应行的数字都一样，比如：2 2 2.可以理解为每种Brand各有多少行数据,
+把这个行数显示在所有列。
+因为我们选择时是data.groupby(),而不是data['Count'].groupby()
+
+可以看到分组计数后的index是'Brand‘，这是因为分组是按'Brand’字段分的
+想知道每种Brand的衣服有多少人穿多少种，其实只看 Count列就行了。
+比如father虽然有2件T-shirt,1件sweater,3件pants，还是算1个人穿3种hailan。boy有一件hailan的t-shirt,算1个人穿1种hailan。所以hailan对应4。 总之，count()函数可以理解为对Count列去重的和。
+gp1=data['Count'].groupby(data['Brand'])
+gp1.count() #和gp1.size()结果一样
+Out[20]: 
+Brand
+etam             2
+hailan           4
+hengyuanxiang    2
+lagogo           1
+uniql            1
+
+
+想求某品牌被人均拥有的件数的平均值：
+比如hailan就是father的2件T恤，1件毛衣，3条裤子，还有boy的1件T恤。 （2+1+3+1)/4=1.75。 分母4可以理解为刚才所说的 gp1.count() :每种Brand的衣服有多少人穿多少种
+比如hengyuanxiang就是mother的2件大衣，1件毛衣 ,（2+1）/2=1.5
+gp1.mean()
+Out[21]: 
+Brand
+etam             1.00
+hailan           1.75
+hengyuanxiang    1.50
+lagogo           2.00
+uniql            3.00
+
+说明：type(gp1.mean())  是 Series类型。之所以index叫'Brand',是因为原datafram是按'Brand' groupby的
+
+
+想求某品牌被每人拥有的件数：（与“”想知道每种Brand的衣服有多少人穿多少种“ .count( ）算法的区别在于 不去重）
+在Count列上加和
+gp1.agg(sum) #就是 data['Count'].groupby(data['Brand']).agg(sum) , agg里也可以写'sum'，与不加单引号等效
+Out[5]: 
+Brand
+etam             2
+hailan           7
+hengyuanxiang    3
+lagogo           2
+uniql            3
+
+
+综上所述可以观察出，gp1.mean()操作的结果等于 gp1.agg(sum)/gp1.count()
+
+for name,group in data.groupby(data['Brand']):
+    print(name)
+    print(group)
+    
+etam
+   Name Brand  Cloth  Count
+1  girl  etam   suit      1
+2  girl  etam  pants      1
+hailan
+      Name   Brand    Cloth  Count
+5      boy  hailan  t-shirt      1
+9   father  hailan  t-shirt      2
+10  father  hailan  sweater      1
+11  father  hailan    pants      3
+hengyuanxiang
+     Name          Brand    Cloth  Count
+6  mother  hengyuanxiang     coat      2
+7  mother  hengyuanxiang  sweater      1
+lagogo
+   Name   Brand   Cloth  Count
+3  girl  lagogo  jacket      2
+uniql
+   Name  Brand    Cloth  Count
+
+对于由DataFrame产生的GroupBy对象，如果用一个（单个字符串）或一组（字符串数组）列名对其进行索引，就能实现选取部分列进行聚合的目的，即：
+
+写法一：
+data.groupby('Brand')['Count'].sum()#等价于data.groupby('Brand')['Count'].agg(sum)，等价于data.groupby('Brand')['Count'].agg('sum')#等价于data.groupby('Brand').agg('sum')['Count'],等价于data.groupby('Brand').agg(sum)['Count'],等价于data.groupby('Brand').sum()['Count']
+Out[13]: 
+Brand
+etam             2
+hailan           7
+hengyuanxiang    3
+lagogo           2
+uniql            3
+Name: Count, dtype: int64
+
+这和写法二：
+
+data['Count'].groupby(data['Brand']).sum()
+Out[19]: 
+Brand
+etam             2
+hailan           7
+hengyuanxiang    3
+lagogo           2
+uniql            3
+
+是等效的
+注意写法一里面的'Brand'不用必须写成（当然也可以写成）data['Brand']，是因为data.groupby()由于是对data这个dataframe调用的方法，所以能识别出data的字段'Brand'。但是写法二是对data['Count'] 这个Series对象调用的groupby,不认识'Brand'，只认识data['Brand'],如果写法二还写成.groupby('Brand')就会报错。
+
+
+
+双索引分组：
+
+想知道每人拥有每种品牌的衣服多少种类型（类型就是Cloth字段，写成ClothType大家更容易理解哈）：
+
+data.groupby(['Name','Brand'])['Count'].count() #和写.size( )效果一样
+Out[31]: 
+Name    Brand        
+boy     hailan           1
+father  hailan           3
+girl    etam             2
+        lagogo           1
+        uniql            1
+mother  hengyuanxiang    2
+从结果可以看出，对boy拥有的没Brand的一条裤子，和mother没牌子的一件大衣，都自动忽略不计了。
+
+==================================================================================================================
+腾讯社交广告算法大赛
