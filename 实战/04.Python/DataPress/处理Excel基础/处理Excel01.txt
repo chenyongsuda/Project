@@ -1,0 +1,24 @@
+http://pbpython.com
+
+1. 按照数据增加一列和为Sum
+获取1月2月3月的数据和
+fd['sum'] = fd.iloc[:,6:9].sum(axis=1)
+首先获取这三列然后横向相加求和
+或者
+fd['sum'] = fd['Jan'] + fd['Feb'] + fd['Mar']
+
+2. 增加汇总行
+获取那几列并计算和
+sum_row = fd.iloc[:,6:10].sum()
+然后转为frame并转至
+sum_row = sum_row.to_frame().T
+补充所有数据
+sum_row.reindex(columns=fd.columns)
+最后添加一行
+fd.append(sum_row,ignore_index=True,sort=False)
+
+
+修改日期格式
+对于已经是datetime格式的 x1 
+x1 = pd.to_datetime( market.DATE, format=”%Y-%m-%d-%H-%M-%S”) 
+x1 = x1.dt.strftime(‘%m/%d/%Y’)
