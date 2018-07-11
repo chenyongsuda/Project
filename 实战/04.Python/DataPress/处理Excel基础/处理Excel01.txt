@@ -1,4 +1,5 @@
 http://pbpython.com
+http://pbpython.com/index2.html
 
 1. 按照数据增加一列和为Sum
 获取1月2月3月的数据和
