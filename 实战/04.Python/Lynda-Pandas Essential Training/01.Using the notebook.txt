@@ -1,0 +1,133 @@
+1. notebook 有两种模式 Markdown和code
+    切换快捷键
+    m   --------------------->切换为 Markdown
+    esc + Y ----------------->切换为 code
+    shift + enter ----------->切换执行并切换到下一行
+
+    esc + v ----------------->插入上面空白执行区
+    esc + a ----------------->插入下面空白执行区
+
+2.series和dataframe
+    获取series使用
+    dataframe['column']
+    dataframe.column
+    一次获取多个series使用dataframe[['column01','column02']]
+
+3.读入csv时候跳过几行如何写
+    oo=pd.read_csv('olympics.csv',skiprows=4)
+
+    oo.shape    (29216, 10)
+    oo.head()
+    oo.tail()
+    oo.info()
+
+4.数据分析
+    oo.value_counts() 返回无重复的各个值得计数  仅仅是series使用
+    oo.sort_values()  
+        可以用于series或者dataframe
+    自动补全快捷键 tab
+    自动显示函数参数定义   shift+tab
+
+    boolean Index用于过滤数据
+    and     & 
+    or      |
+    not     ~
+
+string handing
+    str.contains()
+    str.stratswith()
+    str.isnumeric()
+
+5.basic ploting
+    import matplotlib.pyplot ad plt 
+    %matplotlib inline
+
+plot type:
+    线形图 plot(kind='line')
+    条形图 plot(kind='bar')
+    barh plot(kind='barh')
+    pie图 plot(kind='pie')
+
+Plot colors
+    plot(color='red')
+    plot(kind='bar',color='blue')
+
+
+figsize
+    plot(kind='bar',color='blue',figsize=(5,5))
+
+colormaps
+
+seaborn basic plotting
+    seaborn.countplot()
+    import seaborn as sns
+    sns.countplot(x='Medal',data=oo,hue='Gender')
+    使用渐进色,调色板
+    sns.countplot(x='Medal',data=oo,hue='Gender',palette='bwr')
+    x轴排序
+    sns.countplot(x='Medal',data=oo,hue='Gender',palette='bwr',order=['gold','silver','bronze'])
+
+
+Index
+    set_index() 
+    set_index(inplace=True)
+    reset_index(inplace=True)
+    sort_index()
+    loc[] 通过index label选择
+    iloc[] 通过int 型的index选择
+    iloc[1234]
+    iloc[[1234,3456,2345]]
+    iloc[1:3]
+
+Group By
+    oo.group('NOC')
+    list(oo.group('NOC'))查看group内内容
+    for g,value in oo.group('NOC'):
+        print(g)
+        print(value)
+    value是dataframe类型
+
+    Group.size()
+    Group.count()
+    Group.first() Group.last()
+    Group.head()  Group.tail()
+    Group.mean()
+    Group.max()   Group.min()
+
+    agg 聚合多种计算方式
+
+Reshape
+    Group.unstack()
+    Group.stack()
+
+Data Visualization
+    #热力图
+    import seaborn as sns
+    sns.heatmap(dataframe)
+
+    #Create Own colormaps
+    from matplotlib.colors import ListedColormap
+    sns.color_palette() 默认填充颜色
+    sns.palplot(sns.color_palette())查看默认填色板
+
+    自定义填色板
+    my_gsb= ['#dbb40c','#c5c9c7','#a87900']
+    sns.palplot(sns.color_palette(my_gsb))
+
+    使用自定义填色板
+    dataframe.plot(kind='bar',colormap=my_gsb)
+
+完成课程
+
+
+
+
+
+
+
+
+
+
+
+
+
