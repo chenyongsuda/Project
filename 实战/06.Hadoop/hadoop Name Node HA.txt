@@ -1,0 +1,386 @@
+JournalNode实现NameNode(Active和Standby)数据的共享
+Hadoop2.0中，2个NameNode的数据其实是实时共享的。新HDFS采用了一种共享机制，Quorum Journal Node（JournalNode）集群或者Nnetwork File System（NFS）进行共享。
+NFS是操作系统层面的，JournalNode是hadoop层面的，我们这里使用JournalNode集群进行数据共享（这也是主流的做法）。如下图所示，便是JournalNode的架构图。
+
+两个NameNode为了数据同步，会通过一组称作JournalNodes的独立进程进行相互通信。当active状态的NameNode的命名空间有任何修改时，会告知大部分的JournalNodes进程。
+standby状态的NameNode有能力读取JNs中的变更信息，并且一直监控edit log的变化，把变化应用于自己的命名空间。standby可以确保在集群出错时，命名空间状态已经完全同步了
+
+
+1.4 NameNode之间的故障切换
+对于HA集群而言，确保同一时刻只有一个NameNode处于active状态是至关重要的。否则，两个NameNode的数据状态就会产生分歧，可能丢失数据，或者产生错误的结果。
+为了保证这点，这就需要利用使用ZooKeeper了。首先HDFS集群中的两个NameNode都在ZooKeeper中注册，当active状态的NameNode出故障时，
+ZooKeeper能检测到这种情况，它就会自动把standby状态的NameNode切换为active状态。
+
+二.Hadoop（HA）集群的搭建
+2.1 配置详细
+主机名	IP	            NameNode	DataNode	Year	Zookeeper	JournalNode
+mast1	192.168.177.131	是	        是	        否	    是	        是
+mast2	192.168.177.132	是	        是	        否	    是	        是
+mast3	192.168.177.133	否	        是	        是	    是	        是
+
+Zookeeper集群搭建
+[hadoop@Mast1 conf]$ cat zoo.cfg   
+                    # The number of milliseconds of each tick  
+                    tickTime=2000  
+                    # The number of ticks that the initial   
+                    # synchronization phase can take  
+                    initLimit=10  
+                    # The number of ticks that can pass between   
+                    # sending a request and getting an acknowledgement  
+                    syncLimit=5  
+                    # the directory where the snapshot is stored.  
+                    dataDir=/home/hadoop/zookeeper/data  
+                    dataLogDir=/home/hadoop/zookeeper/datalog  
+                    # the port at which the clients will connect  
+                    clientPort=2181  
+                    server.1=mast1:2888:3888    
+                    server.2=mast2:2888:3888    
+                    server.3=mast3:2888:3888   
+
+core.xml
+    <configuration>  
+    <!-- 指定hdfs的nameservice为ns -->  
+    <property>      
+        <name>fs.defaultFS</name>      
+        <value>hdfs://ns</value>      
+    </property>  
+    <!--指定hadoop数据临时存放目录-->  
+    <property>  
+        <name>hadoop.tmp.dir</name>  
+        <value>/home/hadoop/workspace/hdfs/temp</value>  
+    </property>     
+                                
+    <property>      
+        <name>io.file.buffer.size</name>      
+        <value>4096</value>      
+    </property>  
+    <!--指定zookeeper地址-->  
+    <property>  
+        <name>ha.zookeeper.quorum</name>  
+        <value>mast1:2181,mast2:2181,mast3:2181</value>  
+    </property>  
+    </configuration>  
+
+hdfs-site.xml
+    <configuration>  
+        <!--指定hdfs的nameservice为ns，需要和core-site.xml中的保持一致 -->      
+        <property>      
+            <name>dfs.nameservices</name>      
+            <value>ns</value>      
+        </property>    
+        <!-- ns下面有两个NameNode，分别是nn1，nn2 -->  
+        <property>  
+        <name>dfs.ha.namenodes.ns</name>  
+        <value>nn1,nn2</value>  
+        </property>  
+        <!-- nn1的RPC通信地址 -->  
+        <property>  
+        <name>dfs.namenode.rpc-address.ns.nn1</name>  
+        <value>mast1:9000</value>  
+        </property>  
+        <!-- nn1的http通信地址 -->  
+        <property>  
+            <name>dfs.namenode.http-address.ns.nn1</name>  
+            <value>mast1:50070</value>  
+        </property>  
+        <!-- nn2的RPC通信地址 -->  
+        <property>  
+            <name>dfs.namenode.rpc-address.ns.nn2</name>  
+            <value>mast2:9000</value>  
+        </property>  
+        <!-- nn2的http通信地址 -->  
+        <property>  
+            <name>dfs.namenode.http-address.ns.nn2</name>  
+            <value>mast2:50070</value>  
+        </property>  
+        <!-- 指定NameNode的元数据在JournalNode上的存放位置 -->  
+        <property>  
+            <name>dfs.namenode.shared.edits.dir</name>  
+            <value>qjournal://mast1:8485;mast2:8485;mast3:8485/ns</value>  
+        </property>  
+        <!-- 指定JournalNode在本地磁盘存放数据的位置 -->  
+        <property>  
+            <name>dfs.journalnode.edits.dir</name>  
+            <value>/home/hadoop/workspace/journal</value>  
+        </property>  
+        <!-- 开启NameNode故障时自动切换 -->  
+        <property>  
+            <name>dfs.ha.automatic-failover.enabled</name>  
+            <value>true</value>  
+        </property>  
+        <!-- 配置失败自动切换实现方式 -->  
+        <property>  
+                <name>dfs.client.failover.proxy.provider.ns</name>  
+                <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>  
+        </property>  
+        <!-- 配置隔离机制 -->  
+        <property>  
+                <name>dfs.ha.fencing.methods</name>  
+                <value>sshfence</value>  
+        </property>  
+        <!-- 使用隔离机制时需要ssh免登陆 -->  
+        <property>  
+                <name>dfs.ha.fencing.ssh.private-key-files</name>  
+                <value>/home/hadoop/.ssh/id_rsa</value>  
+        </property>  
+        
+        <!-- hdfs与ssh免登陆连接超时时间 -->  
+        <property>  
+            <name>dfs.ha.fencing.ssh.connect-timeout</name>  
+            <value>5000</value>  
+        </property>                    
+        <property>      
+            <name>dfs.namenode.name.dir</name>      
+            <value>file:///home/hadoop/workspace/hdfs/name</value>      
+        </property>      
+        
+        <property>      
+            <name>dfs.datanode.data.dir</name>      
+            <value>file:///home/hadoop/workspace/hdfs/data</value>      
+        </property>      
+        
+        <property>      
+        <name>dfs.replication</name>      
+        <value>2</value>      
+        </property>     
+        <!-- 在NN和DN上开启WebHDFS (REST API)功能,不是必须 -->                                                                      
+        <property>      
+        <name>dfs.webhdfs.enabled</name>      
+        <value>true</value>      
+        </property>      
+    </configuration>  
+
+mapred-site.xml
+    <configuration>  
+    <property>      
+            <name>mapreduce.framework.name</name>      
+            <value>yarn</value>      
+    </property>      
+    </configuration> 
+
+
+yarn-site.xml
+    <configuration>  
+        <!-- 指定nodemanager启动时加载server的方式为shuffle server -->  
+        <property>      
+                <name>yarn.nodemanager.aux-services</name>      
+                <value>mapreduce_shuffle</value>      
+        </property>    
+        <!-- 指定resourcemanager地址 -->  
+        <property>  
+                <name>yarn.resourcemanager.hostname</name>  
+                <value>mast3</value>  
+        </property>   
+    </configuration> 
+
+三.集群的启动
+3.1 启动zookeeper集群
+分别在mast1、mast2、mast3上执行如下命令启动zookeeper集群；
+
+[hadoop@Mast1 bin]$ sh zkServer.sh start  
+                    验证集群zookeeper集群是否启动，分别在mast1、mast2、mast3上执行如下命令验证zookeeper集群是否启动，集群启动成功，
+                    有两个follower节点跟一个leader节点；
+
+[hadoop@Mast1 bin]$ sh zkServer.sh status  
+                    JMX enabled by default  
+                    Using config: /home/hadoop/zookeeper/zookeeper-3.3.6/bin/../conf/zoo.cfg  
+                    Mode: follower  
+3.2 启动journalnode集群
+在mast1上执行如下命令完成JournalNode集群的启动
+
+[hadoop@Mast1 hadoop-2.5.2]$ sbin/hadoop-daemons.sh start journalnode  
+                            执行jps命令，可以查看到JournalNode的java进程pid
+
+3.3 格式化zkfc,让在zookeeper中生成ha节点
+在mast1上执行如下命令，完成格式化
+
+Java代码  收藏代码
+hdfs zkfc –formatZK  
+ （注意，这条命令最好手动输入，直接copy执行有可能会有问题，当时部署时我是蛋疼了许久）
+
+  格式成功后，查看zookeeper中可以看到
+
+Java代码  收藏代码
+[zk: localhost:2181(CONNECTED) 1] ls /hadoop-ha  
+[ns]  
+ 
+3.4 格式化hdfs
+Java代码  收藏代码
+hadoop namenode –format  
+ （注意，这条命令最好手动输入，直接copy执行有可能会有问题）
+
+ 
+
+3.5 启动NameNode
+首先在mast1上启动active节点，在mast1上执行如下命令
+
+[hadoop@Mast1 hadoop-2.5.2]$ sbin/hadoop-daemon.sh start namenode  
+ 在mast2上同步namenode的数据，同时启动standby的namenod,命令如下
+
+#把NameNode的数据同步到mast2上  
+[hadoop@Mast2 hadoop-2.5.2]$ hdfs namenode –bootstrapStandby  
+
+#启动mast2上的namenode作为standby  
+[hadoop@Mast2 hadoop-2.5.2]$ sbin/hadoop-daemon.sh start namenode  
+ 
+
+3.6 启动启动datanode
+在mast1上执行如下命令
+
+[hadoop@Mast1 hadoop-2.5.2]$ sbin/hadoop-daemons.sh start datanode  
+ 
+
+3.7 启动year  
+在作为资源管理器上的机器上启动，我这里是mast3,执行如下命令完成year的启动
+[hadoop@Mast3 hadoop-2.5.2]$ sbin/start-yarn.sh   
+ 
+
+3.8 启动ZKFC
+在mast1上执行如下命令，完成ZKFC的启动
+
+[hadoop@Mast1 hadoop-2.5.2]$ sbin/hadoop-daemons.sh start zkfc  
+全部启动完后分别在mast1,mast2,mast3上执行jps是可以看到下面这些进程的
+
+#mast1上的java PID进程  
+[hadoop@Mast1 hadoop-2.5.2]$ jps  
+2837 NodeManager  
+3054 DFSZKFailoverController  
+4309 Jps  
+2692 DataNode  
+2173 QuorumPeerMain  
+2551 NameNode  
+2288 JournalNode  
+#mast2上的java PID进程  
+[hadoop@Mast2 ~]$ jps  
+2869 DFSZKFailoverController  
+2353 DataNode  
+2235 JournalNode  
+4522 Jps  
+2713 NodeManager  
+2591 NameNode  
+2168 QuorumPeerMain  
+#mast3上的java PID进程  
+[hadoop@Mast3 ~]$ jps  
+2167 QuorumPeerMain  
+2337 JournalNode  
+3506 Jps  
+2457 DataNode  
+2694 NodeManager  
+2590 ResourceManager  
+
+
+查看mast1:50070发现是active
+
+此时在mast1上执行如下命令关闭mast1上的namenode
+[hadoop@Mast1 hadoop-2.5.2]$ sbin/hadoop-daemon.sh stop namenode  
+ 再次查看mast1上的namenode，发现自动切换为active了！证据如下：
+------------------------------------------------------------------------------------------------------------------
+zookeeper相关端口
+
+zookeeper有三个端口
+1、2181：对cline端提供服务
+2、3888：选举leader使用
+3、2888：集群内机器通讯使用（Leader监听此端口）
+
+
+ZooKeeper在Hadoop中的应用
+在Hadoop中，ZooKeeper主要用于实现HA(Hive Availability），包括HDFS的NamaNode和YARN的ResourceManager的HA。同时，
+在YARN中，ZooKeepr还用来存储应用的运行状态。HDFS的NamaNode和YARN的ResourceManager利用ZooKeepr实现HA的原理是一样的，所以本节以YARN为例来介绍。
+从上图可以看出，YARN主要由ResourceManager（RM）、NodeManager（NM）、ApplicationMaster（AM）和Container四部分组成。其中最核心的就是ResourceManager。
+ResourceManager负责集群中所有资源的统一管理和分配，同时接收来自各个节点（NodeManager）的资源汇报信息，并把这些信息按照一定的策略分配给各个应用程序（Application Manager），
+其内部维护了各个应用程序的ApplicationMaster信息、NodeManager信息以及资源使用信息等。
+
+为了实现HA，必须有多个ResourceManager并存（一般就两个），并且只有一个ResourceManager处于Active状态，其他的则处于Standby状态，
+当Active节点无法正常工作（如机器宕机或重启）时，处于Standby的就会通过竞争选举产生新的Active节点。
+
+主备切换
+    下面我们就来看看YARN是如何实现多个ResourceManager之间的主备切换的。
+
+    创建锁节点
+    在ZooKeeper上会有一个/yarn-leader-election/appcluster-yarn的锁节点，所有的ResourceManager在启动的时候，
+    都会去竞争写一个Lock子节点：/yarn-leader-election/appcluster-yarn/ActiveBreadCrumb，该节点是临时节点。
+    ZooKeepr能够为我们保证最终只有一个ResourceManager能够创建成功。创建成功的那个ResourceManager就切换为Active状态，
+    没有成功的那些ResourceManager则切换为Standby状态。
+
+    注册Watcher监听
+    所有Standby状态的ResourceManager都会向/yarn-leader-election/appcluster-yarn/ActiveBreadCrumb节点注册一个节点变更的Watcher监听，
+    利用临时节点的特性，能够快速感知到Active状态的ResourceManager的运行情况。
+
+    主备切换
+    当Active状态的ResourceManager出现诸如宕机或重启的异常情况时，其在ZooKeeper上连接的客户端会话就会失效，
+    因此/yarn-leader-election/appcluster-yarn/ActiveBreadCrumb节点就会被删除。
+    此时其余各个Standby状态的ResourceManager就都会接收到来自ZooKeeper服务端的Watcher事件通知，然后会重复进行步骤1的操作。
+    以上就是利用ZooKeeper来实现ResourceManager的主备切换的过程，实现了ResourceManager的HA。
+
+    HDFS中NameNode的HA的实现原理跟YARN中ResourceManager的HA的实现原理相同。其锁节点为/hadoop-ha/mycluster/ActiveBreadCrumb
+
+
+
+
+
+-------------------------------------------------------------------------------------------------------------------------------------
+配置Resource高可用
+<configuration>
+        <!-- 开启RM高可靠 -->
+        <property>
+                <name>yarn.resourcemanager.ha.enabled</name>
+                <value>true</value>
+        </property>
+        <!-- 指定RM的cluster id -->
+        <property>
+                <name>yarn.resourcemanager.cluster-id</name>
+                <value>cluster1</value>
+        </property>
+        <!-- 指定RM的名字 -->
+        <property>
+                <name>yarn.resourcemanager.ha.rm-ids</name>
+                <value>rm1,rm2</value>
+        </property>
+        <!-- 分别指定RM的地址 -->
+        <property>
+                <name>yarn.resourcemanager.hostname.rm1</name>
+                <value>service1</value>
+        </property>
+        <property>
+                <name>yarn.resourcemanager.hostname.rm2</name>
+                <value>service6</value>
+        </property>
+        <property>
+                <name>yarn.resourcemanager.recovery.enabled</name>
+                <value>true</value>
+        </property>
+
+        <property>
+                <name>yarn.resourcemanager.store.class</name>
+                <value>org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore</value>
+        </property>
+        <!-- 指定zk集群地址 -->
+        <property>
+                <name>yarn.resourcemanager.zk-address</name>
+                <value>service1:2181,service2:2181,service3:2181</value>
+        </property>
+        <property>
+                <name>yarn.nodemanager.aux-services</name>
+                <value>mapreduce_shuffle</value>
+        </property>
+</configuration>
+
+管理命令
+
+yarn rmadmin有一小部分HA特定的命令选项，用来检查RM的健康的或者状态，以及在Active/StandyBy之间切换。HA的这些命令采用RM的服务Id
+（在yarn.resourcemanager.ha.rm-ids 中设置的）作为参数
+$ yarn rmadmin -getServiceState rm1  
+ active  
+  
+ $ yarn rmadmin -getServiceState rm2  
+ standby  
+
+如果自动灾备是启用的，你不能使用手动切换命令。虽然你能通过-forcemanual标识强行覆盖它，这点你需要注意。
+$ yarn rmadmin -transitionToStandby rm1  
+Automatic failover is enabled for org.apache.hadoop.yarn.client.RMHAServiceTarget@1d8299fd  
+Refusing to manually manage HA state, since it may cause  
+a split-brain scenario or other incorrect state.  
+If you are very sure you know what you are doing, please  
+specify the forcemanual flag.  
+
+
