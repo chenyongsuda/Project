@@ -1,0 +1,322 @@
+HADOOP主要配置文件
+core-site.xml   指定HDFS的主节点位置,检查点备份日志,临时文件存放目录
+hdfs-site.xml   指定hdfs参数hdfs副本数
+mapred-site.xml 指定使用的资源管理方式
+yarn-site.xml   指定yarn的ResourceManager地址等等
+hadoop-env.sh   指定环境变量
+
+常用命令
+hadoop-daemon.sh start namenode  
+hadoop-daemon.sh start datanode  
+   
+yarn-daemon.sh start resourcemanager  
+yarn-daemon.sh start nodemanager  
+yarn node -list  
+   
+./hdfs dfsadmin -refreshNodes  重新读取hosts和exclude文件，使新的节点或需要退出集群的节点能够被NameNode重新识别。这个命令在新增节点或注销节点时用到。
+./hdfs dfsadmin -report  查看文件系统的基本信息和统计信息
+  
+hadoop job -list   
+hadoop job -kill jobid //停止一个正在运行的job  
+
+启动数据负载均衡  
+/start-balancer.sh -threshold 5  
+
+常用配置参数：
+    dfs.name.dir
+    Determines where on the local filesystem the DFS name node should store the name table(fsimage). If this is a comma-delimited list of directories then the name table is replicated in all of the directories, for redundancy.
+    这个参数用于确定将HDFS文件系统的元信息保存在什么目录下。
+    如果这个参数设置为多个目录，那么这些目录下都保存着元信息的多个备份。
+    如：
+    <property>
+        <name>dfs.name.dir</name>
+        <value>/pvdata/hadoopdata/name/,/opt/hadoopdata/name/</value>
+    </property>
+
+
+    dfs.data.dir 
+    Determines where on the local filesystem an DFS data node should store its blocks. If this is a comma-delimited list of directories, then data will be stored in all named directories, typically on different devices. Directories that do not exist are ignored.
+    这个参数用于确定将HDFS文件系统的数据保存在什么目录下。
+    我们可以将这个参数设置为多个分区上目录，即可将HDFS建立在不同分区上。
+    如：
+    <property>
+        <name>dfs.data.dir</name>
+        <value>/dev/sda3/hadoopdata/,/dev/sda1/hadoopdata/</value>
+    </property>
+    注：当有多个${dfs.data.dir}时，DataNode顺序地从volumes选择一个FSVolume用来存放block(先放在blocksBeingWritten目录下，写完后再转移到current目录下)
+　　每次写完一个block， curVolume增1。以此实现多个${dfs.data.dir}目录的轮流写。该策略在FSDataSet.FSVolumeSet的getNextVolume()方法中实现。
+    有什么用处呢？
+    dfs.data.dir指的是datanode上数据存放的目录，配置多个可能是因为一个目录下面挂的硬盘不够用，所以多加了几个目录
+
+
+Cases：
+    1.添加节点
+        修改namenode中slaves文件（每次namenode重启会读取这个文件，启动时候可以直接启动新添加节点）
+    2.动态添加删除节点
+        新增加一个节点
+            准备机器及运行环境  
+            1 配置hostname和hosts 环境变量   
+            2 配置无秘钥登录ssh 。ssh-copy-id  
+            3 在各个节点中添加新节点的host。  
+            4 修改namenode中slaves文件（每次namenode重启会读取这个文件，启动时候可以直接启动新添加节点）  
+            5 copy hadoop文件夹到新添加节点的一样文件夹中 。 scp  
+            6 删除新节点中 hadoop中的临时文件夹我的是tmp文件夹（hadoop在配置文件中配置的工作目录）  
+            7 启动datanode ，sbin/hadoop-daemon.sh start datanode在hdfs dfsadmin -refreshNodes刷新节点  
+            hdfs dfsadmin -report或者nameNode50070 查看新添加的节点  
+            8 平衡各个节点中数据块的大小： /start-balancer.sh -threshold 5  
+            
+            9 启动nodeManager，yarn-daemon.sh start nodemanager,通过yarn node -list 查看所有node节点   
+            或者通过 http://resourceManagerhost:8088/ 查看其中节点数目 
+
+        删除一个节点
+            移除节点：最好不要直接停止机器否则可能造成机器数据块丢失   
+            a) 修改hdfs-site，添加exclude字段中的排除的节点  
+                    <property>  
+                        <name>dfs.hosts.exclude</name>  
+                        <value>/web/hadoop-2.5.2/etc/hadoop/datanode-deny.list</value>  
+                </property>  
+            添加文件： datanode-deny.list其中的内容加入需要删除的节点ip或者主机名称   
+            （我自己弄的时候这两个文件同步到集群中所有节点中）  
+            b) 刷新节点状态：  hadoop dfsadmin -refreshNodes  
+            查看节点状态变为：decommission  
+            此时namenode不会与该节点进行hdfs相关通信。也即exclude起到了一个防火墙的作用  
+        
+        删除节点后恢复
+            如果删除后想重新加入：  
+            1）删除datanode-deny.list文件中节点  
+            2）hadoop dfsadmin -refreshNodes  
+            3) 重新新加入的节点datanode 进程   
+
+
+core-site.xml
+    1.hadoop.tmp.dir    表示临时文件存放地址,默认为/tmp/hadoop-${user.name} 但是在/tmp路径下的存储是不安全的，因为linux一次重启，文件就可能被删除,所以要
+                        指定该临时文件的地址
+                        依赖该文件设置的参数-----------------------------------
+                        fs.checkpoint.dir                       ${hadoop.tmp.dir}/dfs/namesecondary     备份名称节点的存放目前录设置
+                        dfs.name.dir                            ${hadoop.tmp.dir}/dfs/name              存贮在本地的名字节点数据镜象的目录,作为名字节点的冗余备份
+                        dfs.data.dir                            ${hadoop.tmp.dir}/dfs/data              数据节点的块本地存放目录
+                        mapred.local.dir                        ${hadoop.tmp.dir}/mapred/local          MR的中介数据文件存放目录
+                        mapred.system.dir                       ${hadoop.tmp.dir}/mapred/system         MR的控制文件存放目录
+                        mapreduce.jobtracker.staging.root.dir   ${hadoop.tmp.dir}/mapred/staging        每个正在运行作业文件的存放区
+                        mapred.temp.dir                         ${hadoop.tmp.dir}/mapred/temp           MR临时共享文件存放区   
+                        fs.s3.buffer.dir                        ${hadoop.tmp.dir}/s3                    S3文件数据的本地存放目录
+
+    2.fs.defaultFS(fs.default.name已经废弃)      表示hdfs路径的逻辑名称
+                        单NameNode节点的话可以直接设置为namenode的地址
+                        如：
+                        <property>
+                            <name>fs.default.name</name>
+                            <value>hdfs://MASTER:9000</value>
+                        </property>
+                        指定了RPC连接接口9000
+                        Include fs.defaultFS/fs.default.name in core-site.xml to allow dfs commands without providing full site name in the command. Running hdfs dfs -ls / instead of hdfs dfs -ls hdfs://hdfs/
+                        This is used to specify the default file system and defaults to your local file system that's why it needs be set to a HDFS address. This is important for client configuration as well so your local configuration file should include this element.
+
+                        如果为集群
+                        若为HA，fs.defaultFS配置成hdfs://cluster1这样的形式就可以。
+                        但需要跟hdfs-site.xml中的dfs.nameservices，dfs.ha.namenodes.<nameservice>等配置相配合让客户端正确的找到当前active的namenode
+                        HA的配置可以参考：https://hadoop.apache.org/docs/r2.7.2/hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html
+                        http://ju.outofmemory.cn/entry/95494
+
+hdfs-site.xml
+    1.dfs.namenode.hosts/dfs.hosts    表示运行进入datanode的列表(动态不需要重启)
+    2.dfs.namenode.hosts.exclude/dfs.hosts.exclude    表示不允许进入datanode的列表(动态不需要重启)
+    3.dfs.namenode.name.dir 表示namenode元数据目录
+    4.dfs.datanode.data.dir 表示datanode数据目录
+    配置NameNode：
+    dfs.namenode.name.dir	在本地文件系统所在的NameNode的存储空间和持续化处理日志	如果这是一个以逗号分隔的目录列表，然 后将名称表被复制的所有目录，以备不时 需。
+    dfs.namenode.hosts/
+    dfs.namenode.hosts.exclude	Datanodes permitted/excluded列表	如有必要，可以使用这些文件来控制允许 数据节点的列表
+    dfs.blocksize	268435456	大型的文件系统HDFS块大小为256MB
+    dfs.namenode.handler.count	100	设置更多的namenode线程，处理从 datanode发出的大量RPC请求
+                                    NameNode可开启的thread number,thread为从NameNode到DataNode的RPC请求。Default值为30(CM，Non CM is 10)
+                                    推荐设置为集群node数量*20 再取log。
+                                    如果设置的太小，当DataNode试图从NameNode上获取block信息时，DataNode log会报“connect refused”
+    ha.zookeeper.quorum 配置HA
+    dfs.journalnode.edits.dir
+    
+    <configuration>
+        <property>
+            <name>dfs.replication</name>
+            <value>1</value>
+            <description>分片数量，伪分布式将其配置成1即可</description>
+        </property>
+        <property>
+            <name>dfs.namenode.name.dir</name>
+            <value>file:/usr/local/hadoop/tmp/namenode</value>
+            <description>命名空间和事务在本地文件系统永久存储的路径</description>
+        </property>
+        <property>
+            <name>dfs.namenode.hosts</name>
+            <value>datanode1, datanode2</value>
+            <description>datanode1, datanode2分别对应DataNode所在服务器主机名</description>
+        </property>
+        <property>
+            <name>dfs.blocksize</name>
+            <value>268435456</value>
+            <description>大文件系统HDFS块大小为256M，默认值为64M</description>
+        </property>
+        <property>
+            <name>dfs.namenode.handler.count</name>
+            <value>100</value>
+            <description>更多的NameNode服务器线程处理来自DataNodes的RPCS</description>
+        </property>
+    </configuration>
+
+    配置DataNode
+    dfs.datanode.data.dir	逗号分隔的一个DataNode上，它应该保存它的块的本地文件系统的路径列表	如果这是一个以逗号分隔的目录列表，那么数据将被存储在所有命名的目录，通常在不同的设备。
+    <configuration>
+        <property>
+            <name>dfs.datanode.data.dir</name>
+            <value>file:/usr/local/hadoop/tmp/datanode</value>
+            <description>DataNode在本地文件系统中存放块的路径</description>
+        </property>
+    </configuration>
+
+mapred-site.xml
+    配置mapreduce：
+        mapreduce.framework.name	yarn	执行框架设置为 Hadoop YARN.
+        mapreduce.map.memory.mb	1536	对maps更大的资源限制的.
+        mapreduce.map.java.opts	-Xmx2014M	maps中对jvm child设置更大的堆大小
+        mapreduce.reduce.memory.mb	3072	设置 reduces对于较大的资源限制
+        mapreduce.reduce.java.opts	-Xmx2560M	reduces对 jvm child设置更大的堆大小
+        mapreduce.task.io.sort.mb	512	更高的内存限制，而对数据进行排序的效率
+        mapreduce.task.io.sort.factor	100	在文件排序中更多的流合并为一次
+        mapreduce.reduce.shuffle.parallelcopies	50	通过reduces从很多的map中读取较多的平行 副本
+    配置mapreduce的JobHistory服务器：
+        maprecude.jobhistory.address	MapReduce JobHistory Server host:port	默认端口号 10020
+        mapreduce.jobhistory.webapp.address	MapReduce JobHistory Server Web UIhost:port	默认端口号 19888
+        mapreduce.jobhistory.intermediate-done-dir	/mr­history/tmp	在历史文件被写入由MapReduce作业
+        mapreduce.jobhistory.done-dir	/mr­history/done	目录中的历史文件是由MR JobHistory Server管理
+        <configuration>
+            <property>
+                <name> mapreduce.jobhistory.address</name>
+                <value>192.168.1.100:10200</value>
+                <description>IP地址192.168.1.100可替换为主机名</description>
+            </property>
+            <property>
+                <name>mapreduce.jobhistory.webapp.address</name>
+                <value>192.168.1.100:19888</value>
+                <description>IP地址192.168.1.100可替换为主机名</description>
+            </property>
+            <property>
+                <name>mapreduce.jobhistory.intermediate-done-dir</name>
+                <value>/usr/local/hadoop/mr­history/tmp</value>
+                <description>在历史文件被写入由MapReduce作业</description>
+            </property>
+            <property>
+                <name>mapreduce.jobhistory.done-dir</name>
+                <value>/usr/local/hadoop/mr­history/done</value>
+                <description>目录中的历史文件是由MR JobHistoryServer管理</description>
+            </property>
+        </configuration>
+
+yarn-site.xml
+    配置ResourceManager 和 NodeManager:
+    yarn.resourcemanager.address	客户端对ResourceManager主机通过 host:port 提交作业	host:port
+    yarn.resourcemanager.scheduler.address	ApplicationMasters 通过ResourceManager主机访问host:port跟踪调度程序获资源	host:port
+    yarn.resourcemanager.resource-tracker.address	NodeManagers通过ResourceManager主机访问host:port	host:port
+    yarn.resourcemanager.admin.address	管理命令通过ResourceManager主机访问host:port	host:port
+    yarn.resourcemanager.webapp.address	ResourceManager web页面host:port.	host:port
+    yarn.resourcemanager.scheduler.class	ResourceManager 调度类（Scheduler class）	CapacityScheduler（推荐），FairScheduler（也推荐），orFifoScheduler
+    yarn.scheduler.minimum-allocation-mb	每个容器内存最低限额分配到的资源管理器要求	以MB为单位
+    yarn.scheduler.maximum-allocation-mb	资源管理器分配给每个容器的内存最大限制	以MB为单位
+    yarn.resourcemanager.nodes.include-path/
+    yarn.resourcemanager.nodes.exclude-path	NodeManagers的permitted/excluded列表	如有必要，可使用这些文件来控制允许NodeManagers列表
+    <configuration>
+        <property>
+            <name>yarn.resourcemanager.address</name>
+            <value>192.168.1.100:8081</value>
+            <description>IP地址192.168.1.100也可替换为主机名</description>
+        </property>
+        <property>
+            <name>yarn.resourcemanager.scheduler.address</name>
+            <value>192.168.1.100:8082</value>
+            <description>IP地址192.168.1.100也可替换为主机名</description>
+        </property>
+        <property>
+            <name>yarn.resourcemanager.resource-tracker.address</name>
+            <value>192.168.1.100:8083</value>
+            <description>IP地址192.168.1.100也可替换为主机名</description>
+        </property>
+        <property>
+            <name>yarn.resourcemanager.admin.address</name>
+            <value>192.168.1.100:8084</value>
+            <description>IP地址192.168.1.100也可替换为主机名</description>
+        </property>
+        <property>
+            <name>yarn.resourcemanager.webapp.address</name>
+            <value>192.168.1.100:8085</value>
+            <description>IP地址192.168.1.100也可替换为主机名</description>
+        </property>
+        <property>
+            <name>yarn.resourcemanager.scheduler.class</name>
+            <value>FairScheduler</value>
+            <description>常用类：CapacityScheduler、FairScheduler、orFifoScheduler</description>
+        </property>
+        <property>
+            <name>yarn.scheduler.minimum</name>
+            <value>100</value>
+            <description>单位：MB</description>
+        </property>
+        <property>
+            <name>yarn.scheduler.maximum</name>
+            <value>256</value>
+            <description>单位：MB</description>
+        </property>
+        <property>
+            <name>yarn.resourcemanager.nodes.include-path</name>
+            <value>nodeManager1, nodeManager2</value>
+            <description>nodeManager1, nodeManager2分别对应服务器主机名</description>
+        </property>
+    </configuration>
+
+    配置NodeManager
+    yarn.nodemanager.resource.memory-mb	givenNodeManager即资源的可用物理内存，以MB为单位	定义在节点管理器总的可用资源，以提供给运行容器
+    yarn.nodemanager.vmem-pmem-ratio	最大比率为一些任务的虚拟内存使用量可能会超过物理内存率	每个任务的虚拟内存的使用可以通过这个比例超过了物理内存的限制。虚拟内存的使用上的节点管理器任务的总量可以通过这个比率超过其物理内存的使用
+    yarn.nodemanager.local-dirs	数据写入本地文件系统路径的列表用逗号分隔	多条存储路径可以提高磁盘的读写速度
+    yarn.nodemanager.log-dirs	本地文件系统日志路径的列表逗号分隔	多条存储路径可以提高磁盘的读写速度
+    yarn.nodemanager.log.retain-seconds	10800	如果日志聚合被禁用。默认的时间（以秒为单位）保留在节点管理器只适用日志文件
+    yarn.nodemanager.remote-app-log-dir	logs	HDFS目录下的应用程序日志移动应用上完成。需要设置相应的权限。仅适用日志聚合功能
+    yarn.nodemanager.remote-app-log-dir-suffix	logs	后缀追加到远程日志目录。日志将被汇总到yarn.nodemanager.remote­app­logdir/{user}/${thisParam} 仅适用日志聚合功能。
+    yarn.nodemanager.aux-services	mapreduce-shuffle	Shuffle service 需要加以设置的Map Reduce的应用程序服务
+
+    <configuration>
+        <property>
+            <name>yarn.nodemanager.resource.memory-mb</name>
+            <value>256</value>
+            <description>单位为MB</description>
+        </property>
+        <property>
+            <name>yarn.nodemanager.vmem-pmem-ratio</name>
+            <value>90</value>
+            <description>百分比</description>
+        </property>
+        <property>
+            <name>yarn.nodemanager.local-dirs</name>
+            <value>/usr/local/hadoop/tmp/nodemanager</value>
+            <description>列表用逗号分隔</description>
+        </property>
+        <property>
+            <name>yarn.nodemanager.log-dirs</name>
+            <value>/usr/local/hadoop/tmp/nodemanager/logs</value>
+            <description>列表用逗号分隔</description>
+        </property>
+        <property>
+            <name>yarn.nodemanager.log.retain-seconds</name>
+            <value>10800</value>
+            <description>单位为S</description>
+        </property>
+        <property>
+            <name>yarn.nodemanager.aux-services</name>
+            <value>mapreduce-shuffle</value>
+            <description>Shuffle service 需要加以设置的MapReduce的应用程序服务</description>
+        </property>
+    </configuration>
+
+
+Web Interface：
+    NameNode	http://nn_host:port/	默认端口号50070
+    ResourceManager	http://rm_host:port/	默认端口号8088
+    MapReduce JobHistory Server	http://jhs_host:port/	默认端口号19888
+

@@ -1,0 +1,10 @@
+如何进行硬件选择？
+一般Hadoop节点分成管理节点（master node）和工作节点（work node）。
+管理节点上跑NameNode,Standby NameNode,ResourceManager，SecondaryNameNode
+工作节点上跑DataNode,NodeManager,impala server进程。
+
+
+不推荐部署在虚拟化的主机上，因为虚拟化会带了很多不确定性，
+比如虚拟的三个server,实际的存储可能在一个物理server上，给hdfs的block备份带来风险
+
+
