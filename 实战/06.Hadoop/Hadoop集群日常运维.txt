@@ -1,0 +1,124 @@
+
+（一）备份namenode的元数据
+    namenode中的元数据非常重要，如丢失或者损坏，则整个系统无法使用。因此应该经常对元数据进行备份，最好是异地备份。
+    1、将元数据复制到远程站点
+    （1）以下代码将secondary namenode中的元数据复制到一个时间命名的目录下，然后通过scp命令远程发送到其它机器
+        #!/bin/bash
+        export dirname=/mnt/tmphadoop/dfs/namesecondary/current/`date +%y%m%d%H`
+        if [ ! -d ${dirname} ]
+        then
+        mkdir  ${dirname}
+        cp /mnt/tmphadoop/dfs/namesecondary/current/*  ${dirname}
+        fi
+        scp -r ${dirname} slave1:/mnt/namenode_backup/
+        rm -r ${dirname}
+    （2）配置crontab，定时执行此项工作
+        0 0,8,14,20 * * * bash /mnt/scripts/namenode_backup_script.sh
+
+    2、在远程站点中启动一个本地namenode守护进程，尝试加载这些备份文件，以确定是否已经进行了正确备份。
+    对于重要的数据，不能完全依赖HDFS，而是需要进行备份，注意以下几点
+    （1）尽量异地备份
+    （2）如果使用distcp备份至另一个hdfs集群，则不要使用同一版本的hadoop，避免hadoop自身导致数据出错。
+
+（三）文件系统检查
+    定期在整个文件系统上运行HDFS的fsck工具，主动查找丢失或者损坏的块。
+    建议每天执行一次。
+    [jediael@master ~]$ hadoop fsck /
+    ……省略输出（若有错误，则在此外出现，否则只会出现点，一个点表示一个文件）……
+    .........Status: HEALTHY
+    Total size:    14466494870 B
+    Total dirs:    502
+    Total files:   1592 (Files currently being written: 2)
+    Total blocks (validated):      1725 (avg. block size 8386373 B)
+    Minimally replicated blocks:   1725 (100.0 %)
+    Over-replicated blocks:        0 (0.0 %)
+    Under-replicated blocks:       648 (37.565216 %)
+    Mis-replicated blocks:         0 (0.0 %)
+    Default replication factor:    2
+    Average block replication:     2.0
+    Corrupt blocks:                0
+    Missing replicas:              760 (22.028986 %)
+    Number of data-nodes:          2
+    Number of racks:               1
+    FSCK ended at Sun Mar 01 20:17:57 CST 2015 in 608 milliseconds
+    
+    The filesystem under path '/' is HEALTHY
+
+    （1）若hdfs-site.xml中的dfs.replication设置为3，而实现上只有2个datanode，则在执行fsck时会出现以下错误；
+    /hbase/Mar0109_webpage/59ad1be6884739c29d0624d1d31a56d9/il/43e6cd4dc61b49e2a57adf0c63921c09:  Under replicated blk_-4711857142889323098_6221. Target Replicas is 3 but found 2 replica(s).
+    注意，由于原来的dfs.replication为3，后来下线了一台datanode，并将dfs.replication改为2，但原来已创建的文件也会记录dfs.replication为3，从而出现以上错误，并导致 Under-replicated blocks:       648 (37.565216 %)。
+
+    （2）fsck工具还可以用来检查一个文件包括哪些块，以及这些块分别在哪等
+        [jediael@master conf]$ hadoop fsck /hbase/Feb2621_webpage/c23aa183c7cb86af27f15d4c2aee2795/s/30bee5fb620b4cd184412c69f70d24a7 -files -blocks -racks
+        FSCK started by jediael from /10.171.29.191 for path /hbase/Feb2621_webpage/c23aa183c7cb86af27f15d4c2aee2795/s/30bee5fb620b4cd184412c69f70d24a7 at Sun Mar 01 20:39:35 CST 2015
+        /hbase/Feb2621_webpage/c23aa183c7cb86af27f15d4c2aee2795/s/30bee5fb620b4cd184412c69f70d24a7 21507169 bytes, 1 block(s):  Under replicated blk_7117944555454804881_3655. Target Replicas is 3 but found 2 replica(s).
+        0. blk_7117944555454804881_3655 len=21507169 repl=2 [/default-rack/10.171.94.155:50010, /default-rack/10.251.0.197:50010]
+        
+        Status: HEALTHY
+        Total size:    21507169 B
+        Total dirs:    0
+        Total files:   1
+        Total blocks (validated):      1 (avg. block size 21507169 B)
+        Minimally replicated blocks:   1 (100.0 %)
+        Over-replicated blocks:        0 (0.0 %)
+        Under-replicated blocks:       1 (100.0 %)
+        Mis-replicated blocks:         0 (0.0 %)
+        Default replication factor:    2
+        Average block replication:     2.0
+        Corrupt blocks:                0
+        Missing replicas:              1 (50.0 %)
+        Number of data-nodes:          2
+        Number of racks:               1
+        FSCK ended at Sun Mar 01 20:39:35 CST 2015 in 0 milliseconds
+    
+（四）均衡器
+    随时时间推移，各个datanode上的块分布来越来越不均衡，这将降低MR的本地性，导致部分datanode相对更加繁忙。
+    均衡器是一个hadoop守护进程，它将块从忙碌的DN移动相对空闲的DN，同时坚持块复本放置策略，将复本分散到不同的机器、机架。
+
+    建议定期执行均衡器，如每天或者每周。
+
+    (1)通过以下命令运行均衡器
+    [jediael@master log]$ start-balancer.sh
+    starting balancer, logging to /var/log/hadoop/hadoop-jediael-balancer-master.out
+    查看日志如下：
+    [jediael@master hadoop]$ pwd
+    /var/log/hadoop
+    [jediael@master hadoop]$ ls
+    hadoop-jediael-balancer-master.log  hadoop-jediael-balancer-master.out
+    [jediael@master hadoop]$ cat hadoop-jediael-balancer-master.log
+    2015-03-01 21:08:08,027 INFO org.apache.hadoop.net.NetworkTopology: Adding a new node: /default-rack/10.251.0.197:50010
+    2015-03-01 21:08:08,028 INFO org.apache.hadoop.net.NetworkTopology: Adding a new node: /default-rack/10.171.94.155:50010
+    2015-03-01 21:08:08,028 INFO org.apache.hadoop.hdfs.server.balancer.Balancer: 0 over utilized nodes:
+    2015-03-01 21:08:08,028 INFO org.apache.hadoop.hdfs.server.balancer.Balancer: 0 under utilized nodes:
+    （2）均衡器将每个DN的使用率与整个集群的使用率接近，这个“接近”是通过-threashold参数指定的，默认是10%。
+    （3）不同节点之间复制数据的带宽是受限的，默认是1MB/s，可以通过hdfs-site.xml文件中的dfs.balance.bandwithPerSec属性指定（单位是字节）。
+
+（五）datanode块扫描器
+    每个datanode均会运行一个块扫描器，定期检测本节点上的所有块，若发现存在错误（如检验和错误），则通知namenode，然后由namenode发起数据重新创建复本或者修复。
+    扫描周期由dfs.datanode.scan.period.hours指定，默认为三周（504小时）。
+    通过地址以下地址查看扫描信息：
+    （1）http://datanote:50075/blockScannerReport
+    列出总体的检测情况
+
+    Total Blocks                 :   1919
+    Verified in last hour        :      4
+    Verified in last day         :    170
+    Verified in last week        :    535
+    Verified in last four weeks  :    535
+    Verified in SCAN_PERIOD      :    535
+    Not yet verified             :   1384
+    Verified since restart       :    559
+    Scans since restart          :     91
+    Scan errors since restart    :      0
+    Transient scan errors        :      0
+    Current scan rate limit KBps :   1024
+    Progress this period         :    113%
+    Time left in cur period      :  97.14%
+
+    （2）http://123.56.92.95:50075/blockScannerReport?listblocks
+    列出所有的块及最新验证状态
+    blk_8482244195562050998_3796 : status : ok     type : none   scan time : 0               not yet verified
+    blk_3985450615149803606_7952 : status : ok     type : none   scan time : 0               not yet verified
+    尚未验证的情况如上。各字段意义可参考权威指南P379
+ 
+ 

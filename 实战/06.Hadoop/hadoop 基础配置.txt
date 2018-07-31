@@ -132,9 +132,40 @@ hdfs-site.xml
                                     NameNode可开启的thread number,thread为从NameNode到DataNode的RPC请求。Default值为30(CM，Non CM is 10)
                                     推荐设置为集群node数量*20 再取log。
                                     如果设置的太小，当DataNode试图从NameNode上获取block信息时，DataNode log会报“connect refused”
+    #####################################
+    dfs.blockreport.initialDelay 
+        datanode启动后第一次报告自己的block信息的时间是在(0,$(dfs.blockreport.initialDelay ))之间的一个随机数 initTime，
+        然后从initTime（不同datanode上的这个随即肯定是不一样的）开始每隔dfs.blockreport.intervalMsec ，该datanode会向namenode报告自己的所有block的信息。
+        如果没有initTime，多有datanode都从启动的那一刻开始发，这样会造成大量数据发往nn，造成堵塞 。是以用此参数来控制 。
+
+    dfs.blockreport.intervalMsec Datanode会定期将当前该结点上所有的BLOCK信息报告给Namenode
+    举例：  在日常维护hadoop集群的过程中发现这样一种情况：
+            某个节点由于网络故障或者DataNode进程死亡，被NameNode判定为死亡，
+            HDFS马上自动开始数据块的容错拷贝；
+            当该节点重新添加到集群中时，由于该节点上的数据其实并没有损坏，
+            所以造成了HDFS上某些block的备份数超过了设定的备份数。
+            通过观察发现，这些多余的数据块经过很长的一段时间才会被完全删除掉，
+            那么这个时间取决于什么呢？
+            该时间的长短跟数据块报告的间隔时间有关(该dfs.blockreport.intervalMsec参数)
+    dfs.datanode.directoryscan.interval datanode进行内存和磁盘数据集块校验，更新内存中的信息和磁盘中信息的不一致情况，默认6小时
+    举例：   这个时间表示磁盘数据如果不一致后,同datanode内存数据同步的时间.
+            dfs.blockreport.intervalMsec和dfs.datanode.directoryscan.interval这两个参数决定namenode发觉的时间.如果私自删除一些block数据,首先
+            要等dfs.datanode.directoryscan.interval本地datanode觉察然后要等dfs.blockreport.intervalMsec来同步给namenode,或者重启集群的时候初始化
+            的时候会自动检查.
+            参考：https://www.cnblogs.com/prayer21/p/4819789.html HDFS中datanode节点block损坏后的自动恢复过程
+
+    ***注意每次Datanode发送增量blockReport时间是10*heartbeat
+    
+    #####################################
+    heartbeat.recheck.interval        
+    dfs.heartbeat.interval  Datanode心跳发送时间
+        HeartbeatManager会启动一个Daemon线程heartbeatthread，每5秒活动一次，其中每heartbeatRecheckInterval（默认5分钟）秒做一次心跳检测；这个过程会调用datanodemanager去检查datanode的lastupdate，
+        如果超过heartbeatExpireInterval（= 2 * heartbeatRecheckInterval + 10 * 1000 *heartbeatIntervalSeconds（默认3秒钟））则认为datanode已经dead，从heartbeatmanager,blockmanager和networktopology中删除该datanode的信息；
+
+
     ha.zookeeper.quorum 配置HA
     dfs.journalnode.edits.dir
-    
+
     <configuration>
         <property>
             <name>dfs.replication</name>

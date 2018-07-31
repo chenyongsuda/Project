@@ -1,0 +1,31 @@
+记一次HDFS的block corrupt事件
+
+还有最后两天班，明天晚上回家过年了，可是CDH突然报了一个block missing的错误，用 hdfs fsck /检查了一下，我们的块一共有500W个，missing了将近100W个，天呐，不过由于Hdfs的replication的机制，只要不是3份全丢就可以修复，这样，绝大部分的块都修复了，但是还是有3000多个块是3份都丢失了，3份全丢后，状态就为corrupt，直接导致小时报和日报收到影响，很多用户hive和impala查询直接报错了。
+我和少华还有兆国赶紧去查找原因，先看了下CDH上关于HDFS的告警信息，发现有个failover controller的告警，you去看了下丢失了块，发现块文件仍然在盘上没有丢，但是namenode已经无法感知到块的存在了，不知道什么原因。
+我们先根据hdfs fsck / 的结果看了下corupt block所在的文件，发现大部分文件是小于128M的，由于我们的block大小设置为128M，所以小于128M的文件都只占用一个块，block文件和源文件是一样的，减小用户受到的影响，我们先把那些丢失块的文件在hdfs上面move到另一个目录，然后记录下文件的所有信息，包括：（权限列表，owner,group等）。然后用脚本把小于128M的文件的块拷贝一份改成原来文件的名称重新put上去，然后用split命令去多进程的批量进行chown和chmod，（少华脚本玩的确实6，对上面文本处理时的，sed,awk这些命令每部都很繁琐，又加上循环，用的不熟很容易就出错，高危操作啊。。。）之后用户再去用到这部分数据的时候已经正常了。
+因为我们仅仅是把这些文件MOVE走了，所以fsck还是会检测corrupt block，不要紧的，此时检测到文件的路径已经是我们move后的路径了。后面还剩下大于128M的文件没有去修复，这个有点麻烦了，这些文件在磁盘中已经被分割为多个块了，如果要修复的话，需要把这些块文件手动拼接为一个文件重新上传，我们随便看了下其余的文件中的一个，将近100个G，七八百个块，N个文件，还是很麻烦的。
+于是我们又重新去找原因，先说下相关的原理：
+重点来了：现在把这个步骤细化一下：
+1.datanode首先去dfs.datanode.data.dir这个参数配置的目录们下去寻找块，正常情况下每个目录里面会有N个块文件，还会有每个块对应的meta文件， 如：blk_1141150594和blk_1141150594_67410808.meta
+2.DATANODE会根据找到的这个meta文件去记录对应block的信息并向namenode去汇报
+3.收到datanode的汇报以后，namenode把信息记录在blocksmap里面
+
+NameNode作为HDFS中文件目录和文件分配的管理者，它保存的最重要信息，就是下面两个映射：
+文件名=>数据块
+数据块=>DataNode列表
+
+其中，文件名=>数据块保存在磁盘上（持久化）；但NameNode上不保存数据块=>DataNode列表，该列表是通过DataNode上报建立起来的。
+参考blockmaps的介绍：http://www.cnblogs.com/ggjucheng/archive/2013/02/04/2889386.html （简单易懂）
+晚上看到一篇博文，也是同样的错误，他是刚好触发了NAMENODE的双活切换，然后出现这个问题。
+Datanode增量汇报该block-datanode给 namenode（切换后的active namenode）的时候，edit log还没从JournalNode同步过来，这时在namenode中已经有了block-datanode的映射（从刚才datanode的report中来），但是还没有block-file（从edits文件里面来）的映射，导致namenode认为这个块不属于任何文件，定义为该块为invalidate block。这个在后台日志可以查到（后台standby没有完全变成activenamenode之前，会出现包含 invalidate block 的后台日志。）
+这个是网上的哥们 遇到的问题，怎么验证我们也是这个问题呢？
+让datanode重新去report一下呗，用这个命令：hdfs dfsadmin [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
+如：hdf dfsadmin datanode1:50020 加-incremental这个参数就是增量report，不加就是全量report
+我们执行了这个命令，不过corrupt block的数量仍然没有减少，所以不是这个原因。
+最终少华发现，我们datanode上配的dfs.datanode.data.dir这个参数中,/data1这个目录没了，估计是被误操作删掉了，导致datanode根本不回去/data1下去感知块文件，所以导致出现了这个问题。
+辛苦少华了，处理问题到深夜，第二天一早还要赶飞机。
+这个事件后，我发现，有时候反向的过程中忽略了一些步骤，导致无法查出问题专治这类问题，正向查一遍可能就查出了。
+我们昨天忽略了一步，就是找出每一个块文件的路径、统计一下，如果做了的话看到都在/data1这个目录下，肯定能发现问题所在
+现在想想
+不过这次解决问题的过程中真的学习了很多hdfs的内部机制。
+格式有点乱，后面修改一下，晚上回家过年了。

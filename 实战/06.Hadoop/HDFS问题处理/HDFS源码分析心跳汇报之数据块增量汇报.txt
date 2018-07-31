@@ -1,0 +1,344 @@
+
+在《HDFS源码分析心跳汇报之BPServiceActor工作线程运行流程》一文中，我们详细了解了数据节点DataNode周期性发送心跳给名字节点NameNode的BPServiceActor工作线程，了解了它实现心跳的大体流程：
+
+1、与NameNode握手：
+        1.1、第一阶段：获取命名空间信息并验证、设置；
+        1.2、第二阶段：DataNode注册；
+
+2、周期性调用sendHeartBeat()方法发送心跳信息，并处理来自心跳响应中的命令；
+3、调用reportReceivedDeletedBlocks()方法发送数据库增量汇报：包括正在接收的、已接收的和已删除的数据块；
+4、调用blockReport()方法周期性进行数据块汇报，并处理返回的相关命令。
+
+本文，我们重点讲解下其中的第三步：调用reportReceivedDeletedBlocks()方法发送数据库增量汇报：包括正在接收的、已接收的和已删除的数据块。
+首先，这个数据块增量汇报是什么情况下发生的呢？在DataNode与NameNode握手并注册后实现心跳的offerService()方法的while循环内，有这么一段代码，如下：
+// 如果标志位sendImmediateIBR为true，或者数据块增量汇报时间已到，
+// 数据块增量汇报时间间隔是心跳时间间隔的100倍，默认情况下是5分钟
+
+if (sendImmediateIBR ||
+    (startTime - lastDeletedReport > dnConf.deleteReportInterval)) {
+    // 调用reportReceivedDeletedBlocks()方法发送数据块增量汇报
+    reportReceivedDeletedBlocks();
+    
+    // 设置上次数据块增量汇报时间lastDeletedReport为startTime
+    lastDeletedReport = startTime;
+}
+
+
+首先，这个sendImmediateIBR是一个标志位，它标识着是否立即发送一个数据块增量汇报，在BPServiceActor工作线程初始化时默认为false。而数据块增量汇报是否发送，这里有两个条件，只要满足其中一个即可发送数据块增量汇报：
+1、是否立即发送一个数据块增量汇报的标志位sendImmediateIBR为true；
+2、数据块增量汇报的时间间隔已到：数据块增量汇报的时间间隔是心跳时间间隔的100倍，默认情况下是5分钟。
+
+在讲解reportReceivedDeletedBlocks()方法前，我们先看BPServiceActor工作线程的一个成员变量，定义如下：
+/**
+* Between block reports (which happen on the order of once an hour) the
+* DN reports smaller incremental changes to its block list. This map,
+* keyed by block ID, contains the pending changes which have yet to be
+* reported to the NN. Access should be synchronized on this object.
+* 
+* 在数据块汇报（通常一小时一次）之间，DataNode会汇报其数据块列表的增量变化情况。
+* 这个Map，包含尚未汇报给NameNode的DataNode上数据块正在发生的变化。
+* 访问它必须使用synchronized关键字。
+*/
+private final Map<DatanodeStorage, PerStoragePendingIncrementalBR>
+pendingIncrementalBRperStorage = Maps.newHashMap();
+先说下这个pendingIncrementalBRperStorage变量对应的数据结构，它是一个Map，key为DatanodeStorage类型，value为PerStoragePendingIncrementalBR类型。而这个PerStoragePendingIncrementalBR类型在其内部封装了一个叫做pendingIncrementalBR的HashMap，key为blockId，value为ReceivedDeletedBlockInfo，ReceivedDeletedBlockInfo对Block做了一层封装了，它标识了对应Block在DataNode上的状态BlockStatus，BlockStatus是一个枚举类，包含的Block状态分别有正在接收的数据块RECEIVING_BLOCK(1)、已经接收的数据块RECEIVED_BLOCK(2)、已被删除的数据块DELETED_BLOCK(3)三种状态。
+也就是说，pendingIncrementalBRperStorage实际上存储了DataNode上每个DatanodeStorage到对应的增量数据块集合的映射关系，而这个增量数据块，包含正在接收的、已接受的和已删除的。
+
+在数据块汇报（通常一小时一次）之间，DataNode会汇报其数据块列表的增量变化情况，这个是作为一个小的（smaller）汇报进行的。这个Map，包含尚未汇报给NameNode的DataNode上数据块正在发生的变化，访问它必须使用synchronized关键字。而这个数据块增量汇报，其主要目的就应该是尽早让名字节点NameNode了解数据节点DataNode上数据块的变化情况，而不是通过正常的每小时一次的数据块汇报来告知名字节点，那样的话对于整个文件系统来说，是很被动的一见事。
+好了，我们再看下reportReceivedDeletedBlocks()方法，它是完成数据块增量汇报的核心方法，代码如下：
+
+/**
+* Report received blocks and delete hints to the Namenode for each
+* storage.
+*
+* @throws IOException
+*/
+private void reportReceivedDeletedBlocks() throws IOException {
+
+// Generate a list of the pending reports for each storage under the lock
+
+// 创建一个存储StorageReceivedDeletedBlocks的ArrayList列表reports，
+// 大小为pendingIncrementalBRperStorage的大小
+// StorageReceivedDeletedBlocks是对DatanodeStorage和ReceivedDeletedBlockInfo数组的一个封装，
+// 实际上就是将pendingIncrementalBRperStorage由Map转换为List列表形式
+ArrayList<StorageReceivedDeletedBlocks> reports =
+new ArrayList<StorageReceivedDeletedBlocks>(pendingIncrementalBRperStorage.size());
+
+// 使用synchronized对pendingIncrementalBRperStorage进行同步：
+synchronized (pendingIncrementalBRperStorage) {
+
+// 遍历pendingIncrementalBRperStorage
+for (Map.Entry<DatanodeStorage, PerStoragePendingIncrementalBR> entry :
+    pendingIncrementalBRperStorage.entrySet()) {
+
+// 取出每个DatanodeStorage、PerStoragePendingIncrementalBR进行处理
+final DatanodeStorage storage = entry.getKey();
+final PerStoragePendingIncrementalBR perStorageMap = entry.getValue();
+
+// 如果perStorageMap中存在发生变化的数据块：
+if (perStorageMap.getBlockInfoCount() > 0) {
+    // Send newly-received and deleted blockids to namenode
+    // 发送新接收的或者已删除的数据块ID给NameNode
+    
+    // 从perStorageMap中获得ReceivedDeletedBlockInfo数组
+    ReceivedDeletedBlockInfo[] rdbi = perStorageMap.dequeueBlockInfos();
+    
+    // 将根据DatanodeStorage和ReceivedDeletedBlockInfo数组构造的StorageReceivedDeletedBlocks加入reports列表
+    reports.add(new StorageReceivedDeletedBlocks(storage, rdbi));
+}
+}
+
+// 立即汇报的标志位sendImmediateIBR设置为false
+sendImmediateIBR = false;
+}
+
+if (reports.size() == 0) {// reports大小为0的话，直接返回null
+// Nothing new to report.
+return;
+}
+
+// Send incremental block reports to the Namenode outside the lock
+
+// 发送是否成功的标志位success初始化为false
+boolean success = false;
+try {
+
+// 通过NameNode代理的blockReceivedAndDeleted()方法，将新接收的或者已删除的数据块汇报给NameNode，汇报的信息包括：
+// 1、数据节点注册信息DatanodeRegistration；
+// 2、数据块池ID；
+// 3、需要汇报的数据块及其状态信息列表StorageReceivedDeletedBlocks；
+bpNamenode.blockReceivedAndDeleted(bpRegistration,
+    bpos.getBlockPoolId(),
+    reports.toArray(new StorageReceivedDeletedBlocks[reports.size()]));
+
+// 发送是否成功的标志位success设置为true
+success = true;
+} finally {
+if (!success) {// 汇报不成功的话
+synchronized (pendingIncrementalBRperStorage) {
+    for (StorageReceivedDeletedBlocks report : reports) {
+    // If we didn't succeed in sending the report, put all of the
+    // blocks back onto our queue, but only in the case where we
+    // didn't put something newer in the meantime.
+        
+    // 将数据块再放回到perStorageMap
+    PerStoragePendingIncrementalBR perStorageMap =
+        pendingIncrementalBRperStorage.get(report.getStorage());
+    perStorageMap.putMissingBlockInfos(report.getBlocks());
+    
+    // 立即汇报的标志位sendImmediateIBR设置为true
+    sendImmediateIBR = true;
+    }
+}
+}
+}
+}
+
+
+
+这个reportReceivedDeletedBlocks()方法的大致处理流程如下：
+1、创建一个存储StorageReceivedDeletedBlocks的ArrayList列表reports：
+        大小为pendingIncrementalBRperStorage的大小。StorageReceivedDeletedBlocks是对DatanodeStorage和ReceivedDeletedBlockInfo数组的一个封装，实际上就是将pendingIncrementalBRperStorage由Map转换为List列表形式；
+2、使用synchronized对pendingIncrementalBRperStorage进行同步，遍历pendingIncrementalBRperStorage：
+        2.1、取出每个DatanodeStorage、PerStoragePendingIncrementalBR进行处理；
+        2.2、如果perStorageMap中存在发生变化的数据块，发送新接收的或者已删除的数据块ID给NameNode：
+                2.2.1、从perStorageMap中获得ReceivedDeletedBlockInfo数组；
+                2.2.3、将根据DatanodeStorage和ReceivedDeletedBlockInfo数组构造的StorageReceivedDeletedBlocks加入reports列表；
+
+3、立即汇报的标志位sendImmediateIBR设置为false；
+4、reports大小为0的话，直接返回null；
+5、发送是否成功的标志位success初始化为false；
+6、通过NameNode代理bpNamenode的blockReceivedAndDeleted()方法，将新接收的或者已删除的数据块汇报给NameNode，汇报的信息包括：
+        6.1、数据节点注册信息DatanodeRegistration；
+        6.2、数据块池ID；
+        6.3、需要汇报的数据块及其状态信息列表StorageReceivedDeletedBlocks；
+
+7、 发送是否成功的标志位success设置为true；
+8、汇报不成功的话，遍历reports：
+
+        8.1、将数据块再放回到perStorageMap；
+
+        8.2、立即汇报的标志位sendImmediateIBR设置为true。
+
+针对上述流程，我们先说下是否应立即汇报增量数据块信息的标志位sendImmediateIBR。当BPServiceActor工作线程创建时，这个标志位默认为false，即不会立即发送数据块增量汇报，而是周期性的到期才会发送。而当该发送数据块增量汇报时，无论标志位之前为true还是false，统一设置为false，因为此时数据块增量汇报已经发送了，下次没必要再立即发送了。而只有当数据块增量汇报不成功时，该标志位才会被设置为true，以便下次循环直接发送之前未成功的数据块增量汇报，而不用管数据块增量汇报的时间间隔是否到期。这个标志位就是为了在数据块增量汇报失败的情况下，下次循环中能立即发送出去，以便让NameNode及时了解DataNode数据块情况。
+
+那么，数据块增量汇报是如何发送给NameNode的呢？我们先看下NameNode在DataNode上的代理bpNamenode，它的定义如下：
+
+DatanodeProtocolClientSideTranslatorPB bpNamenode;
+它是BPServiceActor线程中一个DatanodeProtocolClientSideTranslatorPB类型的变量，也就意味着每个与NameNode通讯的BPServiceActor工作线程，
+都持有一个NameNode的代理，其初始化是在BPServiceActor工作线程与NameNode连接时完成的，
+我们看下DatanodeProtocolClientSideTranslatorPB类中完成数据块增量汇报的blockReceivedAndDeleted()方法，
+
+代码如下：
+@Override
+public void blockReceivedAndDeleted(DatanodeRegistration registration,
+String poolId, StorageReceivedDeletedBlocks[] receivedAndDeletedBlocks)
+throws IOException {
+BlockReceivedAndDeletedRequestProto.Builder builder = 
+BlockReceivedAndDeletedRequestProto.newBuilder()
+.setRegistration(PBHelper.convert(registration))
+.setBlockPoolId(poolId);
+for (StorageReceivedDeletedBlocks storageBlock : receivedAndDeletedBlocks) {
+StorageReceivedDeletedBlocksProto.Builder repBuilder = 
+    StorageReceivedDeletedBlocksProto.newBuilder();
+repBuilder.setStorageUuid(storageBlock.getStorage().getStorageID());  // Set for wire compatibility.
+repBuilder.setStorage(PBHelper.convert(storageBlock.getStorage()));
+for (ReceivedDeletedBlockInfo rdBlock : storageBlock.getBlocks()) {
+repBuilder.addBlocks(PBHelper.convert(rdBlock));
+}
+builder.addBlocks(repBuilder.build());
+}
+try {
+
+// 通过实现了DatanodeProtocolPB接口的blockReceivedAndDeleted()方法发送的
+// rpcProxy最终加载的是参数rpc.engine.DatanodeProtocolPB配置的类
+rpcProxy.blockReceivedAndDeleted(NULL_CONTROLLER, builder.build());
+} catch (ServiceException se) {
+throw ProtobufHelper.getRemoteException(se);
+}
+}
+而rpcProxy最终加载的是参数rpc.engine.DatanodeProtocolPB配置的类，实际上也就是DatanodeProtocolServerSideTranslatorPB类，由它负责向NamNode发送RPC请求，而NameNode对应RPC请求处理的方法在NameNodeRpcServer类中的blockReceivedAndDeleted()方法，代码如下：
+@Override // DatanodeProtocol
+public void blockReceivedAndDeleted(DatanodeRegistration nodeReg, String poolId,
+StorageReceivedDeletedBlocks[] receivedAndDeletedBlocks) throws IOException {
+verifyRequest(nodeReg);
+metrics.incrBlockReceivedAndDeletedOps();
+if(blockStateChangeLog.isDebugEnabled()) {
+blockStateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: "
+    +"from "+nodeReg+" "+receivedAndDeletedBlocks.length
+    +" blocks.");
+}
+for(StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
+
+// 最终遍历StorageReceivedDeletedBlocks数组，针对每个StorageReceivedDeletedBlocks，
+// 调用FSNamesystem的processIncrementalBlockReport()方法进行处理
+namesystem.processIncrementalBlockReport(nodeReg, r);
+}
+}
+最终遍历StorageReceivedDeletedBlocks数组，针对每个StorageReceivedDeletedBlocks，调用FSNamesystem的processIncrementalBlockReport()方法进行处理。ok，继续追踪，如下：
+public void processIncrementalBlockReport(final DatanodeID nodeID,
+final StorageReceivedDeletedBlocks srdb)
+throws IOException {
+<span style="white-space:pre">	</span>  
+<span style="white-space:pre">	</span>// 典型的写锁模式
+<span style="white-space:pre">	</span>  
+<span style="white-space:pre">	</span>// 获取写锁
+writeLock();
+try {
+<span style="white-space:pre">	</span>
+// 调用BlockManager的processIncrementalBlockReport()方法处理数据块增量汇报
+blockManager.processIncrementalBlockReport(nodeID, srdb);
+} finally {
+<span style="white-space:pre">	</span>
+// 释放写锁
+writeUnlock();
+}
+}
+
+
+FSNamesystem的processIncrementalBlockReport()方法是典型的一个读写锁中写锁模式，获取写锁，try模块中处理业务逻辑，finally模块中释放写锁。而业务逻辑的处理，则是通过调用BlockManager的processIncrementalBlockReport()方法来完成的。FSNamesystem相当于名字节点NameNod门面模式中的门面，由它负责一切文件系统操作相关的处理。而BlockManager则是名字节点NameNode中针对所有block状态保持、变更处理等的大管家，我们会在后续文章后陆续介绍这两个重要的变量。
+好吧，我们先看下BlockManager的processIncrementalBlockReport()方法，代码如下：
+
+/**
+* The given node is reporting incremental information about some blocks.
+* This includes blocks that are starting to be received, completed being
+* received, or deleted.
+* 
+* This method must be called with FSNamesystem lock held.
+*/
+public void processIncrementalBlockReport(final DatanodeID nodeID,
+final StorageReceivedDeletedBlocks srdb) throws IOException {
+assert namesystem.hasWriteLock();
+int received = 0;
+int deleted = 0;
+int receiving = 0;
+final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
+if (node == null || !node.isAlive) {
+blockLog
+    .warn("BLOCK* processIncrementalBlockReport"
+        + " is received from dead or unregistered node "
+        + nodeID);
+throw new IOException(
+    "Got incremental block report from unregistered or dead node");
+}
+
+DatanodeStorageInfo storageInfo =
+node.getStorageInfo(srdb.getStorage().getStorageID());
+if (storageInfo == null) {
+// The DataNode is reporting an unknown storage. Usually the NN learns
+// about new storages from heartbeats but during NN restart we may
+// receive a block report or incremental report before the heartbeat.
+// We must handle this for protocol compatibility. This issue was
+// uncovered by HDFS-6094.
+storageInfo = node.updateStorage(srdb.getStorage());
+}
+
+// 取出每个ReceivedDeletedBlockInfo进行处理
+for (ReceivedDeletedBlockInfo rdbi : srdb.getBlocks()) {
+switch (rdbi.getStatus()) {
+case DELETED_BLOCK:// 如果是已被删除的数据块
+    
+// 调用removeStoredBlock()方法在NameNode中移除node对应数据块元信息
+removeStoredBlock(rdbi.getBlock(), node);
+
+// 计数器deleted加1
+deleted++;
+
+break;
+case RECEIVED_BLOCK:// 如果是已接收的数据块
+    
+// 调用addBlock()方法在NameNode中添加数据块元信息
+addBlock(storageInfo, rdbi.getBlock(), rdbi.getDelHints());
+
+// 计数器received加1
+received++;
+break;
+case RECEIVING_BLOCK:// 如果是正在接收的数据块
+    
+// 计数器receiving加1
+receiving++;
+
+// 调用processAndHandleReportedBlock()方法在NameNode中处理正在接收的数据块
+processAndHandleReportedBlock(storageInfo, rdbi.getBlock(),
+                                ReplicaState.RBW, null);
+break;
+default:
+String msg = 
+    "Unknown block status code reported by " + nodeID +
+    ": " + rdbi;
+blockLog.warn(msg);
+assert false : msg; // if assertions are enabled, throw.
+break;
+}
+if (blockLog.isDebugEnabled()) {
+blockLog.debug("BLOCK* block "
+    + (rdbi.getStatus()) + ": " + rdbi.getBlock()
+    + " is received from " + nodeID);
+}
+}
+blockLog.debug("*BLOCK* NameNode.processIncrementalBlockReport: " + "from "
++ nodeID + " receiving: " + receiving + ", " + " received: " + received
++ ", " + " deleted: " + deleted);
+}
+
+
+整个逻辑非常清晰，取出每个ReceivedDeletedBlockInfo进行处理：
+1、如果是已被删除的数据块：
+        1.1、调用removeStoredBlock()方法在NameNode中移除node对应数据块元信息；
+        1.2、计数器deleted加1；
+
+2、如果是已接收的数据块：
+        2.1、调用addBlock()方法在NameNode中添加数据块元信息；
+        2.2、计数器received加1；
+
+3、如果是正在接收的数据块：
+    3.1、计数器receiving加1；
+    3.2、调用processAndHandleReportedBlock()方法在NameNode中处理正在接收的数据块。
+
+至于NameNode的BlockManager到底是何如处理的，我们留到以后分析NameNode和BlockManager时再做详细分析吧！
+
+这里做个简单总结：
+数据块增量汇报是负责向NameNode发送心跳信息工作线程BPServiceActor中周期性的一个工作，
+它负责向NameNode及时汇报DataNode节点上数据块的变化情况，比如数据块正在接收、已接收或者已被删除。它的工作周期要小于正常的数据块汇报，
+目的就是为了能够让NameNode及时掌握DataNode上数据块变化情况，以便HDFS系统运行正常，略显机智！而且，当数据块增量汇报不成功时，
+下一个循环会接着立即发送数据块增量汇报，而不是等其下一个周期的到来，这显示了HDFS良好的容错性，是一个值得我们借鉴的设计方法。

@@ -1,0 +1,51 @@
+HDFS Namenode启动过程
+Namenode保存文件系统元数据镜像，namenode在内存及磁盘（fsimage和editslog）上分别存在一份元数据镜像文件，内存中元数据镜像保证了hdfs文件系统文件访问效率，磁盘上的元数据镜像保证了hdfs文件系统的安全性。
+namenode在磁盘上的两类文件组成：
+fsimage文件：保存文件系统至上次checkpoint为止目录和文件元数据。
+edits文件：保存文件系统从上次checkpoint起对hdfs的所有操作记录日志信息。
+fsimage和editlog文件可以在本地文件系统看到，如下图：
+image
+首次安装格式化（format）主要作用是在本地文件系统生成fsimage文件。
+1、首此启动hdfs过程：
+启动namenode：
+读取fsimage生成内存中元数据镜像。
+启动datanode：
+向namenode注册；
+向namenode发送blockreport。
+启动成功后，client可以对HDFS进行目录创建、文件上传、下载、查看、重命名等操作，更改namespace的操作将被记录在edits文件中。
+
+2、之后启动HDFS文件系统过程：
+启动namenode：
+读取fsimage元数据镜像文件，加载到内存中。
+读取editlog日志文件，加载到内存中，使当前内存中元数据信息与上次关闭系统时保持一致。然后在磁盘上生成一份同内存中元数据镜像相同的fsimage文件，同时生成一个新的null的editlog文件用于记录以后的hdfs文件系统的更改。
+
+启动datanode：
+向namenode注册；
+向namenode发送blockreport。
+启动成功后，client可以对HDFS进行目录创建、文件上传、下载、查看、重命名等操作，更改namespace的操作将被记录在editlog文件中。
+
+3、SecondaryNameNode
+辅助namenode，不能代替namenode。
+SecondaryNameNode的主要作用是用于合并fsimage和editlog文件。在没有SecondaryNameNode守护进程的情况下，从namenode启动开始至namenode关闭期间所有的HDFS更改操作都将记录到editlog文件，这样会造成巨大的editlog文件，所带来的直接危害就是下次启动namenode过程会非常漫长。
+在启动SecondaryNameNode守护进程后，每当满足一定的触发条件（每3600s、文件数量增加100w等），SecondaryNameNode都会拷贝namenode的fsimage和editlog文件到自己的目录下，首先将fsimage加载到内存中，然后加载editlog文件到内存中合并fsimage和editlog文件为一个新的fsimage文件，然后将新的fsimage文件拷贝回namenode目录下。并且声称新的editlog文件用于记录DFS的更改。
+
+4、安全模式
+在启动namenode至所有datanode启动完成前的阶段成为安全模式。在安全模式下，client只能读取部分HDFS文件信息，不允许client对HDFS的任何更改操作，比如创建目录、上传文件、删除文件、重命名文件等。
+namenode推出安全模式条件需要满足以下条件：
+datanodes blocks/total blocks >= 99.999% + 30s（缓冲时间） 此时安全模式才会推出
+
+Secondary namenode工作流程：
+1）secondary通知namenode切换edits文件
+2）secondary通过http请求从namenode获得fsimage和edits文件
+3）secondary将fsimage载入内存，然后开始合并edits
+4）secondary将新的fsimage发回给namenode
+5）namenode用新的fsimage替换旧的fsimage
+Secondary namenode工作流程通过一张图可以表示为：
+clip_image003
+
+手工维护安全模式指令：
+bin/hdfs dfsadmin -safemode <enter | leave | get | wait>
+
+例如：
+[hadoop@db01 ~]$ hdfs dfsadmin -safemode get
+Safe mode is OFF
