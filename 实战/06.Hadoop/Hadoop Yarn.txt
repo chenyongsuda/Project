@@ -1,0 +1,153 @@
+Hadoop MapReduceV1
+    角色：
+    JobTracker          管理哪些程序跑在哪个机器,Job的失败重启
+    TaskTracker         监控机器的资源
+
+    1.首先用户程序 (JobClient) 提交了一个 job，job 的信息会发送到 Job Tracker 中，Job Tracker 是 Map-reduce 框架的中心，
+        他需要与集群中的机器定时通信 (heartbeat), 需要管理哪些程序应该跑在哪些机器上，需要管理所有 job 失败、重启等操作。
+    2.TaskTracker 是 Map-reduce 集群中每台机器都有的一个部分，他做的事情主要是监视自己所在机器的资源情况。
+    3.TaskTracker 同时监视当前机器的 tasks 运行状况。
+        TaskTracker 需要把这些信息通过 heartbeat 发送给 JobTracker，
+        JobTracker 会搜集这些信息以给新提交的 job 分配运行在哪些机器上。上图虚线箭头就是表示消息的发送 - 接收的过程。
+
+    问题：
+    主要的问题集中如下：
+        JobTracker 是 Map-reduce 的集中处理点，存在单点故障。
+        JobTracker 完成了太多的任务，造成了过多的资源消耗，当 map-reduce job 非常多的时候，会造成很大的内存开销，潜在来说，
+            也增加了 JobTracker fail 的风险，这也是业界普遍总结出老 Hadoop 的 Map-Reduce 只能支持 4000 节点主机的上限。
+        在 TaskTracker 端，以 map/reduce task 的数目作为资源的表示过于简单，没有考虑到 cpu/ 内存的占用情况，
+            如果两个大内存消耗的 task 被调度到了一块，很容易出现 OOM。
+        在 TaskTracker 端，把资源强制划分为 map task slot 和 reduce task slot, 如果当系统中只有 map task 或者只有 reduce task 的时候，
+            会造成资源的浪费，也就是前面提过的集群资源利用的问题。
+        源代码层面分析的时候，会发现代码非常的难读，常常因为一个 class 做了太多的事情，代码量达 3000 多行，，造成 class 的任务不清晰，
+            增加 bug 修复和版本维护的难度。
+        从操作的角度来看，现在的 Hadoop MapReduce 框架在有任何重要的或者不重要的变化 ( 例如 bug 修复，性能提升和特性化 ) 时，
+            都会强制进行系统级别的升级更新。更糟的是，它不管用户的喜好，强制让分布式集群系统的每一个用户端同时更新。
+            这些更新会让用户为了验证他们之前的应用程序是不是适用新的 Hadoop 版本而浪费大量时间。
+
+Hadoop MapReduceV2
+    角色：
+    ResourceManager     对资源的需求进行调度的,启动ApplicationMaster
+    ApplicationMaster   向调度器索要适当的资源容器，运行任务，跟踪应用程序的状态和监控它们的进程，处理任务的失败原因。
+    NodeManager         监控应用程序的资源使用情况, 
+
+
+    重构根本的思想是将 JobTracker 两个主要的功能分离成单独的组件，这两个功能是资源管理和任务调度 / 监控。
+    新的资源管理器全局管理所有应用程序计算资源的分配，每一个应用的 ApplicationMaster 负责相应的调度和协调。
+    一个应用程序无非是一个单独的传统的 MapReduce 任务或者是一个 DAG( 有向无环图 ) 任务。
+    ResourceManager 和每一台机器的节点管理服务器能够管理用户在那台机器上的进程并能对计算进行组织。
+
+    事实上，每一个应用的 ApplicationMaster 是一个详细的框架库，它结合从 ResourceManager 获得的资源和 NodeManager 协同工作来运行和监控任务。
+
+    上图中 ResourceManager 支持分层级的应用队列，这些队列享有集群一定比例的资源。从某种意义上讲它就是一个纯粹的调度器，
+    它在执行过程中不对应用进行监控和状态跟踪。同样，它也不能重启因应用失败或者硬件错误而运行失败的任务。
+
+    ResourceManager 是基于应用程序对资源的需求进行调度的 ; 每一个应用程序需要不同类型的资源因此就需要不同的容器。
+    资源包括：内存，CPU，磁盘，网络等等。可以看出，这同现 Mapreduce 固定类型的资源使用模型有显著区别，它给集群的使用带来负面的影响。
+    资源管理器提供一个调度策略的插件，它负责将集群资源分配给多个队列和应用程序。调度插件可以基于现有的能力调度和公平调度模型。
+
+    NodeManager 是每一台机器框架的代理，是执行应用程序的容器，监控应用程序的资源使用情况 (CPU，内存，硬盘，网络 ) 并且向调度器汇报。
+    每一个应用的 ApplicationMaster 的职责有：向调度器索要适当的资源容器，运行任务，跟踪应用程序的状态和监控它们的进程，处理任务的失败原因。
+
+    新旧 Hadoop MapReduce 框架比对
+        让我们来对新旧 MapReduce 框架做详细的分析和对比，可以看到有以下几点显著变化：
+
+        首先客户端不变，其调用 API 及接口大部分保持兼容，这也是为了对开发使用者透明化，使其不必对原有代码做大的改变 ( 详见 2.3 Demo 代码开发及详解)，但是原框架中核心的 JobTracker 和 TaskTracker 不见了，取而代之的是 ResourceManager, ApplicationMaster 与 NodeManager 三个部分。
+
+        我们来详细解释这三个部分，首先 ResourceManager 是一个中心的服务，它做的事情是调度、启动每一个 Job 所属的 ApplicationMaster、另外监控 ApplicationMaster 的存在情况。细心的读者会发现：Job 里面所在的 task 的监控、重启等等内容不见了。这就是 AppMst 存在的原因。ResourceManager 负责作业与资源的调度。接收 JobSubmitter 提交的作业，按照作业的上下文 (Context) 信息，以及从 NodeManager 收集来的状态信息，启动调度过程，分配一个 Container 作为 App Mstr
+
+        NodeManager 功能比较专一，就是负责 Container 状态的维护，并向 RM 保持心跳。
+
+        ApplicationMaster 负责一个 Job 生命周期内的所有工作，类似老的框架中 JobTracker。但注意每一个 Job（不是每一种）都有一个 ApplicationMaster，它可以运行在 ResourceManager 以外的机器上。
+
+        Yarn 框架相对于老的 MapReduce 框架什么优势呢？我们可以看到：
+
+        这个设计大大减小了 JobTracker（也就是现在的 ResourceManager）的资源消耗，并且让监测每一个 Job 子任务 (tasks) 状态的程序分布式化了，更安全、更优美。
+        在新的 Yarn 中，ApplicationMaster 是一个可变更的部分，用户可以对不同的编程模型写自己的 AppMst，让更多类型的编程模型能够跑在 Hadoop 集群中，可以参考 hadoop Yarn 官方配置模板中的 mapred-site.xml 配置。
+        对于资源的表示以内存为单位 ( 在目前版本的 Yarn 中，没有考虑 cpu 的占用 )，比之前以剩余 slot 数目更合理。
+        老的框架中，JobTracker 一个很大的负担就是监控 job 下的 tasks 的运行状况，现在，这个部分就扔给 ApplicationMaster 做了，而 ResourceManager 中有一个模块叫做 ApplicationsMasters( 注意不是 ApplicationMaster)，它是监测 ApplicationMaster 的运行状况，如果出问题，会将其在其他机器上重启。
+        Container 是 Yarn 为了将来作资源隔离而提出的一个框架。这一点应该借鉴了 Mesos 的工作，目前是一个框架，仅仅提供 java 虚拟机内存的隔离 ,hadoop 团队的设计思路应该后续能支持更多的资源调度和控制 , 既然资源表示成内存量，那就没有了之前的 map slot/reduce slot 分开造成集群资源闲置的尴尬情况。
+
+
+    新增配置
+        Yarn-site.xml	
+            The address of the applications manager interface in the RM		    Yarn.resourcemanager.address
+            The address of the scheduler interface		                        Yarn.resourcemanager.scheduler.address
+            The address of the RM web application		                        Yarn.resourcemanager.webapp.address
+            The address of the resource tracker interface		                Yarn.resourcemanager.resource-tracker.address
+
+        配置举例
+            <configuration> 
+                <property> 
+                <name>fs.defaultFS</name> 
+                <value>hdfs://192.168.137.8:9100</value> 
+                </property> 
+            </configuration>
+
+        hdfs-site.xml
+            <configuration> 
+                <property> 
+                <name>dfs.namenode.name.dir</name> 
+                <value>/hadoop/dfs/name</value> 
+                <description>  </description> 
+                </property> 
+                
+                <property> 
+                <name>dfs.datanode.data.dir</name> 
+                <value>/hadoop/dfs/data</value> 
+                <description> </description> 
+                </property> 
+                
+                <property> 
+                <name>dfs.replication</name> 
+                <value>2</value> 
+                </property> 
+            </configuration>
+        
+        mapred-site.xml 
+            <configuration> 
+                <property> 
+                <name>mapreduce.framework.name</name> 
+                <value>Yarn</value> 
+                </property> 
+            </configuration>
+
+        Yarn-site.xml
+            <?xml version="1.0"?> 
+            <configuration> 
+                <!-- Site specific YARN configuration properties -->
+                <property> 
+                <name>Yarn.nodemanager.aux-services</name> 
+                <value>mapreduce.shuffle</value> 
+                </property> 
+                <property> 
+                <description>The address of the applications manager interface in the RM.</description> 
+                <name>Yarn.resourcemanager.address</name> 
+                <value>192.168.137.8:18040</value> 
+                </property> 
+                
+                <property> 
+                <description>The address of the scheduler interface.</description> 
+                <name>Yarn.resourcemanager.scheduler.address</name> 
+                <value>192.168.137.8:18030</value> 
+                </property> 
+                
+                <property> 
+                <description>The address of the RM web application.</description> 
+                <name>Yarn.resourcemanager.webapp.address</name> 
+                <value>192.168.137.8:18088</value> 
+                </property> 
+                
+                <property> 
+                <description>The address of the resource tracker interface.</description> 
+                <name>Yarn.resourcemanager.resource-tracker.address</name> 
+                <value>192.168.137.8:8025</value> 
+                </property> 
+            </configuration>
+
+        http://192.168.137.8:50070  HDFS 监控web页面 core-site.xml 中配置 dfs.namenode.http-address
+        http://192.168.137.8:18088  ResourceManager 的 Web 端口 Yarn-site.xml 配置文件中 Yarn.resourcemanager.webapp.address 配置项
+        我们可以看到 Yarn 框架接受到客户端请求 , 如上图所示 ID 为 application_1346564668712_0003 的 job 已经是 accepted 状态
+        我们点击该 ID 的链接进入到该 application 的 Map-Reduce 处理监控页面，
+        该界面中有动态分配的 ApplicationMaster 的 Web 跟踪端口可以监视 MapReduce 程序的步骤细节
+        
