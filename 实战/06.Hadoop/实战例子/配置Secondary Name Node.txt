@@ -1,0 +1,53 @@
+配置将SeconddaryNameNode运行在另外一台机器上
+HDFS的一次运行实例是通过在namenode机器上的$HADOOP_HOME/bin/start-dfs.sh(或者start-all.sh)脚本来启动的。这个脚本会在运行该脚本的机器上启动namenode进程，
+而slaves机器上都会启动DataNode进程，slave机器的列表保存在conf/slaves文件中，
+一行一台机器。并且会在另外一台机器上启动一个snn进程，这台机器由conf/masters文件指定。
+所以，这里需要严格注意，conf/masters文件中指定的机器，并不是说jobtracker或者namenode进程要运行在这台机器上，
+因为这些进程是运行在launch bin/start-dfs.sh或者bin/start-mapred.sh(start-all.sh)的机器上的。
+所以，master这个文件名是非常的令人混淆的，应该叫做secondaries会比较合适。然后通过以下步骤：
+1、将所有想要运行secondarynamenode进程的机器写到masters文件中，一行一台。
+2、修改在masters文件中配置了的机器上的conf/hdfs-site.xml文件，加上如下内容：
+<property>
+  <name>dfs.secondary.http.address</name>
+  <value>192.168.1.152:50090</value>
+  ##如果secondarynamenode为多个话可以设置为0.0.0.0:50090
+</property>
+<property>
+  <name>dfs.http.address</name>
+  <value>192.168.1.151:50070</value>
+</property>
+
+core-site.xml：这里有2个参数可配置，但一般来说我们不做修改。fs.checkpoint.period表示多长时间记录一次hdfs的镜像。默认是1小时。fs.checkpoint.size表示一次记录多大的size，默认64M。
+<property>
+    <name>fs.checkpoint.period</name>
+    <value>3600</value>
+    <description>The number of seconds between two periodic checkpoints.</description>
+</property>
+<property>
+    <name>fs.checkpoint.size</name>
+    <value>67108864</value>
+    <description>The size of the current edit log (in bytes) that triggers a periodic checkpoint even if the fs.checkpoint.period hasn't expired.  </description>
+</property>
+<property>
+    <name>fs.checkpoint.dir</name>
+    <value>/app/user/hdfs/namesecondary</value>
+    <description>Determines where on the local filesystem the DFS secondary namenode should store the temporary images to merge.If this is a comma-delimited list of directories then the image is replicated in all of the directories for redundancy.</description>
+</property>
+
+3、配置检查。配置完成之后，我们需要检查一次是否成功。我们可以通过查看运行secondarynamenode的机器上文件目录来确定是否成功配置。
+三、恢复
+    1、配置完成后，如何恢复。首先我们kill掉namenode进程，然后将hadoop.tmp.dir目录下的数据删除掉。制造master挂掉情况。
+    2、在配置参数dfs.name.dir指定的位置建立一个空文件夹；把检查点目录的位置赋值给配置参数fs.checkpoint.dir；启动namenode，并加上-importCheckpoint。
+    3、启动namenode的时候采用hadoop namenode -importCheckpoint.
+
+四、Secondarynamenode的启动和停止
+启动：
+   bin/hadoop-daemons.sh --config conf/ --hosts masters start secondarynamenode
+停止：
+   bin/hadoop-daemons.sh --config conf/ --hosts masters stop secondarynamenode
+
+五、总结
+    1、secondarynamenode可以配置多个，master文件里面多写几个就可以。
+    2、千万记得如果要恢复数据是需要手动拷贝到namenode机器上的，不是自动的。
+    3、镜像备份的周期时间是可以修改的，如果不想一小时备份一次，可以改时间短点。
+ 

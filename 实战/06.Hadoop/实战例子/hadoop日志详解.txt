@@ -1,0 +1,114 @@
+配置如下：
+core-site.xml
+    <configuration>
+            <property>
+                    <name>fs.default.name</name>
+                    <value>hdfs://vm01:9000</value>
+                    <final>true</final>
+            </property>
+            <property>
+                    <name>hadoop.tmp.dir</name>
+                    <value>/appl/data</value>
+            </property>
+    </configuration>
+
+hdfs-site.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+        <property>
+           <name>dfs.replication</name>
+           <value>2</value>
+        </property>
+</configuration>
+
+mapred-site.xml
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+        <configuration>
+        <property>
+               <name>mapreduce.framework.name</name>
+               <value>yarn</value>
+        </property>
+</configuration>
+
+yarn-site.xml
+<?xml version="1.0"?>
+        <configuration>
+           <property>
+                <name>yarn.resourcemanager.hostname</name>
+                <value>vm01</value>
+           </property>
+           <property>
+                <name>yarn.nodemanager.aux-services</name>
+                <value>mapreduce_shuffle</value>
+           </property>
+</configuration>
+
+
+
+启动hadoop
+[root@vm02 logs]# start-all.sh
+This script is Deprecated. Instead use start-dfs.sh and start-yarn.sh
+Starting namenodes on [vm02]
+vm02: starting namenode, logging to /appl/hadoop-2.7.7/logs/hadoop-root-namenode-vm02.out
+vm03: starting datanode, logging to /appl/hadoop-2.7.7/logs/hadoop-root-datanode-vm03.out
+vm04: starting datanode, logging to /appl/hadoop-2.7.7/logs/hadoop-root-datanode-vm04.out
+Starting secondary namenodes [0.0.0.0]
+0.0.0.0: starting secondarynamenode, logging to /appl/hadoop-2.7.7/logs/hadoop-root-secondarynamenode-vm02.out
+starting yarn daemons
+starting resourcemanager, logging to /appl/hadoop-2.7.7/logs/yarn-root-resourcemanager-vm02.out
+vm04: starting nodemanager, logging to /appl/hadoop-2.7.7/logs/yarn-root-nodemanager-vm04.out
+vm03: starting nodemanager, logging to /appl/hadoop-2.7.7/logs/yarn-root-nodemanager-vm03.out
+
+hadoop集群中的日志文件
+    一、master服务器上的日志
+        1、保存在master服务器上的日志有以下四类。注意，tasktracker与datanode上的部分日志会保存在master中，方便出现问题时定位至具体服务器。
+        2、master中主要有2种日志，分别以log与out作后缀，其中每一个守护进程都会产生这2个日志，如jobtracker/ namenode/ tasktracker/ datanode
+            均会分别产生这2个日志文件。这2个文件均是每天生成一个。
+        3、log日志文件通过log4j记录的，大部分应用程序的日志消息都写到该日志文件中，故障诊断的首要步骤即为检查该文件。【此日志文件最重要】
+        out日志文件记录标准输出和标准错误日志，由于大多日志均使用log4j输出至log日志文件中，因此此文件很小或者为空。系统仅保留最新的5个日志。
+        4、这2类日志的命名均包含用户名称、守护进程名称和本地主机名等信息。
+
+遇到一个问题：
+    ResourceManager启动不了
+    查看日志：Caused by: java.io.IOException: Failed on local exception: java.net.SocketException: Unresolved address; Host Details : local host is: "vm01"; destination host is: (unknown):0;
+    看了下yarn配置文件发现启动resourcemanager的机器配置为了vm01修改为vm02问题解决
+    还有一点请注意：
+    Namenode和ResourceManger如果不是同一台机器，不能在NameNode上启动 yarn，应该在ResouceManager所在的机器上启动yarn。
+
+推送数据时候的问题：
+     hadoop fs -put /appl/123.txt / hadoop fs -put /appl/123.txt /
+     出现错误
+     18/08/03 13:41:20 WARN hdfs.DFSClient: DataStreamer Exception
+     org.apache.hadoop.ipc.RemoteException(java.io.IOException): File /123.txt._COPYING_ could only be replicated to 0 nodes instead of minReplication (=1).
+    问题原因：datanode日志显示连接到vm01:9000出错
+    好像配置错了
+    原先：
+        core-site.xml
+        <configuration>
+                <property>
+                        <name>fs.default.name</name>
+                        <value>hdfs://vm01:9000</value>
+                        <final>true</final>
+                </property>
+                <property>
+                        <name>hadoop.tmp.dir</name>
+                        <value>/appl/data</value>
+                </property>
+        </configuration>
+    修改为：
+        core-site.xml
+        <configuration>
+                <property>
+                        <name>fs.default.name</name>
+                        <value>hdfs://vm02:9000</value>
+                        <final>true</final>
+                </property>
+                <property>
+                        <name>hadoop.tmp.dir</name>
+                        <value>/appl/data</value>
+                </property>
+        </configuration>
+    
+    
