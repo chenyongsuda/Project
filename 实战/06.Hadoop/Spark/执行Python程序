@@ -1,0 +1,50 @@
+spark基本的提交语句：
+./bin/spark-submit \ --class <main-class> \ --master <master-url> \ --deploy-mode <deploy-mode> \ --conf <key>=<value> \ ... # other options <application-jar> \ [application-arguments]
+参数的含义:
+--class: 主函数所在的类。
+--master: master的url，后面会解释 (e.g. spark://23.195.26.187:7077)
+--deploy-mode: 部署driver在本地还是集群的一个work节点上，这也是client模式与cluster模式的区别。默认是client的模式。
+--conf:用 key=value形式指定参数，如果包含空格那么要用双引号引起来，例如“key=value”
+application-jar:jar包的路径.该路径必须在集群内全局可见。 例如： hdfs:// path 或者 file:// 这个path必须是所有节点都存在。.
+application-arguments: 传递给main函数 参数，如java main方法中的args[].
+
+关于默认配置文件：
+spark-submit会默认读取conf/spark-defaults.conf 里面设置 配置。
+
+常用 提交模式：
+第一种：client模式
+适合于有专门的getway机器与集群位于同一网段，这种模式下，spark-submit提交后driver直接启动昨晚集群的一个client。集群的输出会返回到client端的console上。这种模式很适合spark-shell。
+
+第二种：如果提交的机器远离spark集群的worker机器，最好使用cluster模式，该模式能够减少网络传输的错误。目前standalone模式并不支持py的这种方式。
+
+关于master url的指定方法：
+local	本地worker线程中运行spark，完全没有并行
+local[K]	在本地work线程中启动K个线程运行spark
+local[*]	启动与本地work机器的core个数想通的线程数来运行spark
+spark://HOST:PORT	连接指定的standalone集群的master，默认7077端口
+mesos://HOST:PORT	连接到mesos集群，默认5050端口。如果mesos使用了zk，那么也可以mesos://zk://.... 加 --deploy-mode cluster这种形式。
+yarn	使用yarn的cluster或者yarn的client模式连接。取决于--deploy-mode参数，集群的位置需要使用hadoop的配置或者yarn的配置中去寻找。
+
+提交Python 程序举例
+./bin/spark-submit  --master spark://192.168.8.128:7077 $SPARK_HOME/examples/src/main/python/wordcount.py /DataAnalyst.csv
+或者加参数 每个执行器512m 2 cores
+./bin/spark-submit  --master spark://192.168.8.128:7077 --executor-memory 512m --executor-cores 2 $SPARK_HOME/examples/src/main/python/wordcount.py /DataAnalyst.csv
+
+或者提交给yarn来管理任务
+./bin/spark-submit  --master yarn --deploy-mode cluster --executor-memory 512m --executor-cores 2 $SPARK_HOME/examples/src/main/python/wordcount.py /DataAnalyst.csv
+./bin/spark-submit  --master yarn --deploy-mode client --executor-memory 512m --executor-cores 2 $SPARK_HOME/examples/src/main/python/wordcount.py /DataAnalyst.csv
+
+Spark基于YARN的两种部署方式
+yarn-client
+yarn-cluster
+ 1. yarn-client
+在这种模式下，Spark driver在客户机上运行，然后向YARN申请运行exeutor以运行Task，即Driver和YARN是分开的，Driver程序作为YARN集群的一个客户端，这是一种CS模式
+ 2. yarn-cluster
+这种模式下，Spark driver将作为一个ApplicationMaster在YARN集群中先启动，然后再由ApplicationMaster向RM申请资源启动executor以运行Task。也就是说，在这种部署方式下，Driver程序运行在YARN集群上
+
+在YARN中部署Spark应用程序时，可以使用Spark的bin/spark-submit提交Spark应用程序。在YARN上部署Spark应用程序的时候，不需要象Standalone、Mesos一样提供URL作为master参数的值，因为Spark应用程序可以在hadoop的配置文件里面获取相关的信息，所以只需要简单以yarn-cluster或yarn-client指定给master就可以了。因此，因为Spark需要从hadoop(或者具体的yarn相关的配置)的配置文件中获取相关的信息，
+所以需要配置环境变量HADOOP_CONF_DIR或者YARN_CONF_DIR。
+所在在上面的配置再加一个配置项到conf/spark-env.sh中，同时在/etc/profile中也添加一行
+
+Java代码  收藏代码
+export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop  
