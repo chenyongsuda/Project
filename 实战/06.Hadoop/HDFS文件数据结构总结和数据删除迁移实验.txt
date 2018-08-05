@@ -1,0 +1,157 @@
+HDFS文件系统如何查看文件对应的block
+    1.文件与block的信息被保存在什么文件中？
+    2.如何查看整个目录树？
+    3.可以通过什么方式查看文件与block的对应关系？
+
+（1）文件分割后，会有一个  文件 --> block的映射，这个映射是持久化到硬盘中的，具体的映射关系表是在FSNamesystem.java中构建的（该部分的构建使用的是FSDirectory.java的功能，filename - blockset）；
+有了文件到块的映射表就可以通过文件找到blocklist；
+（2）datanode的选取，hadoop有它本身的机制，一般来说，datanode默认是三个，选取的是不同机架的datanode，同机架里选一台，另一个机架里选取两台（安全性等考虑）；
+（3）block写入datanodes，选取的三个datanode，比如说是A、B、C，先写给A，A再写给B，B再写给C；然后B收到C的写入成功，A收到B的写入成功，然后告诉namenode 和 client写入成功；
+（4）真正写的并不是block，而是比block更小的好像是chunk ， 还包括有各种校验。
+
+
+上面说一个大体的过程，下面详细介绍一下，也就是从原理角度来理解。其实这里面有一个问题，我们能否通过命令来查看一个文件的所组成的block，
+它应该具有Java api,但是对于shell 命令，目前还没有发现。所以如果我们想查看一个文件所处的block，可以提取BlocksMap的信息。
+(
+    查看普通文件的块信息：
+        shell 命令有的为：hdfs fsck /DataAnalyst.csv -files -blocks -locations
+    查看文件中损坏的块（-list-corruptfileblocks）
+        hdfs fsck /hivedata/warehouse/liuxiaowen.db/lxw_product_names/ -list-corruptfileblocks
+    
+)
+
+具体大家想可以详细看看他们的原理
+
+NameNode节点是就是HDFS的大脑。想了解HDFS文件系统，必须了解大脑结构。 咱们就从NameNode节点开始。NameNode类中，关于HDFS文件系统的存储和管理都交给了FSNamesystem负责。下面介绍一下FSNamesystem的逻辑组成和类图。
+1. FSNameSystem层次结构
+    一些概念 
+    INode:  它用来存放文件及目录的基本信息：名称，父节点、修改时间，访问时间以及UGI信息等。 
+    INodeFile: 继承自INode，除INode信息外，还有组成这个文件的Blocks列表，重复因子，Block大小 
+    INodeDirectory：继承自INode，此外还有一个INode列表来组成文件或目录树结构 
+    Block(BlockInfo)：组成文件的物理存储，有BlockId，size ，以及时间戳 
+    *BlocksMap: 保存数据块到INode和DataNode的映射关系 
+    *FSDirectory：保存文件树结构，HDFS整个文件系统是通过FSDirectory来管理 
+    FSImage：保存的是文件系统的目录树 
+    FSEditlog:  文件树上的操作日志 
+    FSNamesystem: HDFS文件系统管理 
+
+我们都知道，在NameNode内存中存在两张很重要的映射表： 
+   1. 文件系统的命名空间(文件目录树) 主要是 文件和Block映射关系 (保存在FSDirectory) 
+   2. Block 和 INodeFile & DataNode的映射关系 (保存在FSNamesystem) 
+
+我们的文件对应的block id映射信息存在BlocksMap中，那么BlocksMap存在什么位置？BlocksMap存放于fsimage文件中。
+fsimage在什么位置：首先对于hadoop1.x是由hdfs-site.xml中hadoop.tmp.dir来配置的
+
+BlocksMap
+从以上fsimage中加载如namenode内存中的信息中可以很明显的看出，在fsimage中，并没有记录每一个block对应到哪几个datanodes的对应表信息，
+而只是存储了所有的关于namespace的相关信息。而真正每个block对应到datanodes列表的信息在hadoop中并没有进行持久化存储，而是在所有datanode启动时，每个datanode对本地磁盘进行扫描，将本datanode上保存的block信息汇报给namenode，namenode在接收到每个datanode的块信息汇报后，将接收到的块信息，以及其所在的datanode信息等保存在内存中。HDFS就是通过这种块信息汇报的方式来完成 block -> datanodes list的对应表构建。Datanode向namenode汇报块信息的过程叫做blockReport，而namenode将block -> datanodes list的对应表信息保存在一个叫BlocksMap的数据结构中。
+
+BlocksMap实际上就是一个Block对象对BlockInfo对象的一个Map表，其中Block对象中只记录了 blockid，block大小以及时间戳信息，这些信息在fsimage中都有记录。而BlockInfo是从Block对象继承而来，因此除了 Block对象中保存的信息外，还包括代表该block所属的HDFS文件的INodeFile对象引用以及该block所属datanodes列表的信息（即上图中的DN1，DN2，DN3，该数据结构会在下文详述）。
+因此在namenode启动并加载fsimage完成之后，实际上BlocksMap中的key，也就是Block对象都已经加载到 BlocksMap中，每个key对应的value(BlockInfo)中，
+除了表示其所属的datanodes列表的数组为空外，其他信息也都已经成功加载。所以可以说：fsimage加载完毕后，BlocksMap中仅缺少每个块对应到其所属的datanodes list的对应关系信息。
+所缺这些信息，就是通过上文提到的从各datanode接收blockReport来构建。当所有的datanode汇报给namenode的blockReport处理完毕后，BlocksMap整个结构也就构建完成
+
+===================================================================================================================================
+节点汇报分为增量汇报和全量汇报(brokeReport)
+增量汇报：
+    数据块增量汇报的时间间隔已到：数据块增量汇报的时间间隔是心跳时间间隔的100倍，默认情况下是5分钟
+    dfs.heartbeat.interval配置项配置，默认是3秒
+
+全量汇报:
+    可以配置如下参数：
+    dfs.blockreport.intervalMsec ：datanode向namenode报告块信息的时间间隔，默认6小时
+    dfs.datanode.directoryscan.interval：datanode进行内存和磁盘数据集块校验，更新内存中的信息和磁盘中信息的不一致情况，默认6小时
+    如果参数dfs.datanode.scan.period.hours未配置，或者配置为0，说明数据块校验功能已关闭；
+
+    单纯的模拟了其中一个数据块损坏的情况，数据块损坏后，在该节点执行directoryscan之前（dfs.datanode.directoryscan.interval决定），都不会发现损坏，在向namenode报告数据块信息之前（dfs.blockreport.intervalMsec决定），都不会恢复数据块，当namenode收到块信息后才会采取恢复措施
+    真实的情况肯定会更复杂，可以从这个简单的过程中了解开头所说的两个参数。
+
+    hdfs dfsadmin [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]全量或者增量Report 加上incremental就是增量报告不加就是全量
+
+实验测试：
+    1.把某个节点的数据和元数据移动到上层目录后浏览http页面的反应.页面没反应显示正常.
+    以为/appl/data/dfs/data/current/BP-862102049-192.168.8.128-1531076101529/current/finalized/subdir0/subdir0/下的原数据
+
+    使用：
+    hdfs fsck /DataAnalyst.csv -files -blocks -locations
+    显示也是正常的.
+    在namenode使用出发全量report的命令：
+    [root@vm01 ~]# hdfs dfsadmin -triggerBlockReport 192.168.8.131:50020
+    Triggering a full block report on 192.168.8.131:50020.
+
+    namenode日志显示：
+    2018-08-05 19:16:02,829 INFO BlockStateChange: BLOCK* processReport 0x5d684b1ef14: from storage DS-f88899c4-36e3-4e0f-bdb5-91e75e0a14fa node DatanodeRegistration(192.168.8.131:50010, datanodeUuid=25f50406-468d-4b40-b51b-a75eafc2be91, infoPort=50075, infoSecurePort=0, ipcPort=50020, storageInfo=lv=-56;cid=CID-595a7602-d4ba-42a5-9bd6-4417f82866cc;nsid=2037647626;c=0), blocks: 1, hasStaleStorage: false, processing time: 0 msecs
+
+    好像这样也不行,NameNode没反应出来VM04的副本已经丢失,可能这个命令值汇报VM04内存的状态,实际上需要先将硬盘上的数据和内存中同步.暂时没有找到手动同步的方式.
+    现在试试重启数据节点.重启后也不行,数据丢失的现象没显示出来.
+    可见只重启数据节点不会进行磁盘检查.
+
+    2.重启集群测试
+        重启集群试下：
+        发现被删掉的VM04上的block数据回来了.
+    
+
+    3.通过修改配置实现快速check
+        <property>
+        <name>dfs.blockreport.intervalMsec</name>
+            <value>180000</value>
+            <description>Determines block reporting interval in milliseconds.</description>
+        </property>
+        <property>
+        <name>dfs.datanode.directoryscan.interval</name>
+            <value>180</value>    
+        </property>
+        都配置为3分钟
+        然后再删掉vm04的数据等几分钟
+        郁闷发现等了10分钟了log显示
+        2018-08-05 21:16:30,836 WARN org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetImpl: Block file in volumeMap 
+        /appl/data/dfs/data/current/BP-862102049-192.168.8.128-1531076101529/current/finalized/subdir0/subdir0/blk_1073741825 does not exist. 
+        Updating it to the file found during scan /appl/data/dfs/data/current/BP-862102049-192.168.8.128-1531076101529/current/finalized/subdir0/blk_1073741825
+        原来我只已到了上层目录还是被他找到了,NB够智能的,我把它删掉吧.
+
+        下面日志：
+        2018-08-05 21:28:30,834 INFO org.apache.hadoop.hdfs.server.datanode.DirectoryScanner: BlockPool BP-862102049-192.168.8.128-1531076101529 Total blocks: 0, missing metadata files:1, missing block files:1, missing blocks in memory:0, mismatched blocks:0
+        2018-08-05 21:28:30,834 WARN org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetImpl: Removed block 1073741825 from memory with missing block file on the disk
+        这就对了嘛
+        在下一次report触发时候发给namenode
+        然后namenode发现少了一个block就拷贝一个到新的电脑中
+        2018-08-05 21:30:36,475 INFO BlockStateChange: BLOCK* ask 192.168.8.130:50010 to replicate blk_1073741825_1001 to datanode(s) 192.168.8.129:50010
+        2018-08-05 21:30:38,603 INFO BlockStateChange: BLOCK* addStoredBlock: blockMap updated: 192.168.8.129:50010 is added to blk_1073741825_1001 size 1774366
+        2018-08-05 21:30:58,938 INFO BlockStateChange: BLOCK* processReport 0xd34379a9730: from storage DS-ee97f759-af9d-4aac-bd75-3bfae14ec3fb node DatanodeRegistration(192.168.8.130:50010, datanodeUuid=f7a3849f-4894-4e91-9a15-211a2fe969a7, infoPort=50075, infoSecurePort=0, ipcPort=50020, storageInfo=lv=-56;cid=CID-595a7602-d4ba-42a5-9bd6-4417f82866cc;nsid=2037647626;c=0), blocks: 1, hasStaleStorage: false, processing time: 0 msecs
+        2018-08-05 21:31:01,955 INFO BlockStateChange: BLOCK* processReport 0xd35a8cdc2f2: from storage DS-cc9acf5b-e292-4d5d-8738-df766aa453df node DatanodeRegistration(192.168.8.129:50010, datanodeUuid=f741605c-f639-4e08-ad89-e2f74c7a3fb0, infoPort=50075, infoSecurePort=0, ipcPort=50020, storageInfo=lv=-56;cid=CID-595a7602-d4ba-42a5-9bd6-4417f82866cc;nsid=2037647626;c=0), blocks: 1, hasStaleStorage: false, processing time: 0 msecs
+
+    测试完成
+    结论：当数据文件损坏的话,需要等待数据节点上报情况给namenode后namenode才能统计相应情况,给出相应对策.
+          或者就重启集群来初始化.
+          hdfs dfsadmin -triggerBlockReport 192.168.8.131:50020用来将数据节点的内存的数据汇报给namenode但是如果不checkdisk的话数据是不同步的没啥用途.
+          重启datanode也没什么用,貌似内存数据会缓存.我试试删了整个数据节点data目录.再试试
+          重启后发现副本转移到其他机器了.
+
+          要了解具体的机制还需要去了解下文件存储的方式
+          [root@vm03 data]# tree
+                            .
+                            ├── dfs
+                            │   └── data
+                            │       ├── current
+                            │       │   ├── BP-862102049-192.168.8.128-1531076101529
+                            │       │   │   ├── current
+                            │       │   │   │   ├── dfsUsed
+                            │       │   │   │   ├── finalized
+                            │       │   │   │   │   └── subdir0
+                            │       │   │   │   │       └── subdir0
+                            │       │   │   │   ├── rbw
+                            │       │   │   │   └── VERSION
+                            │       │   │   ├── scanner.cursor
+                            │       │   │   └── tmp
+                            │       │   └── VERSION
+                            │       └── in_use.lock
+                            └── nm-local-dir
+                                ├── filecache
+                                ├── nmPrivate
+                                └── usercache
+        
+
+
+
+
+        
