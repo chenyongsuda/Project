@@ -1,0 +1,127 @@
+1.配置文件中
+ /appl/hadoop/etc/hadoop/slaves
+ 表示启动时候初始化那些数据节点,如果后期加入新节点对这个没啥影响,如果需要下次集群重启这些新加入的节点也需要,哪就需要在slaves里面也加入
+
+HDFS查看集群情况
+hdfs dfsadmin -report
+
+YARN查看集群情况
+yarn node -list
+
+对hdfs负载设置均衡，因为默认的数据传输带宽比较低，可以设置为64M，即
+hdfs dfsadmin -setBalancerBandwidth 67108864即可
+
+默认balancer的threshold为10%，即各个节点与集群总的存储使用率相差不超过10%，我们可将其设置为5%
+sbin/start-balancer.sh -threshold 5
+
+命令动态增加减少：
+    动态增加节点命令方式:
+    hadoop-daemon.sh start datanode
+    yarn-daemon.sh start nodemanager
+
+    动态关闭节点命令方式：
+    hadoop-daemon.sh stop datanode
+    yarn-daemon.sh stop nodemanager
+好处：可以找几台机器装上环境,启动后自动指向集群,就进入集群了.
+缺点:   1.别人的机器，然后配置的时候指向了NN，这时候NN没有做判断岂不是把数据也有可能写到host4上面？这对数据安全性影响很大。所以可以在hdfs-site.xml里面加限制,
+        2.停止的时候是按照slaves的配置停止机器的,不会停止你动态加的机器的.除非你将动态新增的机器也加入slaves集群.
+
+通过配置上下线黑白名单(不重启集群条件下动态添加减少节点)：
+    hdfs-site.xml
+        <property>
+            <name>dfs.hosts</name>
+            <value>/appl/hadoop/etc/hadoop/slaves</value>
+        </property>
+        <property>
+            <name>dfs.hosts.exclude</name>
+            <value>/appl/hadoop/etc/hadoop/datanode-deny.list</value>
+        </property>
+
+    动态添加节点的话：
+        在上面配置的路径中/appl/hadoop/etc/hadoop/slaves添加一个新节点
+        然后使用命令 hadoop dfsadmin -refreshNodes 刷新这两个配置文件
+        查看网站上namenode信息为：
+        Node	Last contact	Admin State	Capacity	Used	Non DFS Used	Remaining	Blocks	Block pool used	Failed Volumes	Version
+        vm02:50010 (192.168.8.129:50010)	2	In Service	13.39 GB	1.72 MB	3.38 GB	10.01 GB	1	1.72 MB (0.01%)	0	2.7.5
+        vm03:50010 (192.168.8.130:50010)	2	In Service	13.39 GB	1.72 MB	3.15 GB	10.23 GB	1	1.72 MB (0.01%)	0	2.7.5
+        vm04:50010 (192.168.8.131:50010)	Fri Aug 03 2018 23:29:31 GMT+0800 (中国标准时间)	Dead	-	-	-	-	-	-	-	-
+
+        主要是新机器里面datanode和resourcenode没启动,配置完不会自动启动的,本来就是先在数据节点手动启动在配置增加需要动态增加的节点.
+        hadoop-daemon.sh start datanode
+        yarn-daemon.sh start nodemanager
+        启动完查看集群状态-----------完全正常了OK解决问题
+        Node	Last contact	Admin State	Capacity	Used	Non DFS Used	Remaining	Blocks	Block pool used	Failed Volumes	Version
+        vm04:50010 (192.168.8.131:50010)	1	In Service	13.39 GB	1.72 MB	3.14 GB	10.25 GB	1	1.72 MB (0.01%)	0	2.7.5
+        vm02:50010 (192.168.8.129:50010)	0	In Service	13.39 GB	1.72 MB	3.38 GB	10.01 GB	1	1.72 MB (0.01%)	0	2.7.5
+        vm03:50010 (192.168.8.130:50010)	0	In Service	13.39 GB	1.72 MB	3.15 GB	10.23 GB	1	1.72 MB (0.01%)	0	2.7.5
+
+    动态删除节点：
+        在上面配置的路径中/appl/hadoop/etc/hadoop/datanode-deny.list添加一个带停用节点比如VM02
+        然后使用命令 hadoop dfsadmin -refreshNodes 刷新这两个配置文件
+        Node	Last contact	Admin State	Capacity	Used	Non DFS Used	Remaining	Blocks	Block pool used	Failed Volumes	Version
+        vm04:50010 (192.168.8.131:50010)	1	In Service	13.39 GB	1.72 MB	3.14 GB	10.25 GB	1	1.72 MB (0.01%)	0	2.7.5
+        vm02:50010 (192.168.8.129:50010)	1	Decommission In Progress	13.39 GB	12 KB	3.38 GB	10.01 GB	0	12 KB (0%)	0	2.7.5
+        vm03:50010 (192.168.8.130:50010)	0	In Service	13.39 GB	1.72 MB	3.15 GB	10.23 GB	1	1.72 MB (0.01%)	0	2.7.5
+
+        发现这个节点出现Decommission In Progress 正在退役中,将其中的数据转移到其他节点后就完成了变成Decommissioned状态了.
+        可以手动停掉数据节点的服务或者不停也没事.
+        
+
+实验一：本来有VM01 VM02 VM03 拷贝VM03=>VM04 VM03=>VM05
+    启动VM04试试
+    发现HDFS中VM03没了VM04取而代之
+    再启动VM03
+    发现HDFS中VM04没了VM03取而代之
+
+    日志里发现错误：
+    org.apache.hadoop.ipc.RemoteException(org.apache.hadoop.hdfs.protocol.UnregisteredNodeException): Data node DatanodeRegistration
+    好像是因为拷贝的旧数据没删除,删除VM04 VM05的旧数据重新启动发现问题解决.
+
+    观察yarn的管理界面发现有VM03有两个.查询资料发现别人重启node也会有这个问题
+    发现有任务被分配到这个假的节点上导致任务被hang住
+    过几分钟这个假的节点会自动消失.
+    现在也没啥好办法待以后精通了看看是否可以有什么命令刷新下实时状态,待解决.
+
+实验二：启动VM01-05, 干掉VM04看下效果
+    正常开启后：
+    Node	Last contact	Admin State	Capacity	Used	Non DFS Used	Remaining	Blocks	Block pool used	Failed Volumes	Version
+    vm04:50010 (192.168.8.131:50010)	1	In Service	13.39 GB	1.72 MB	3.14 GB	10.25 GB	1	1.72 MB (0.01%)	0	2.7.5
+    vm02:50010 (192.168.8.129:50010)	1	In Service	13.39 GB	17.67 KB	3.38 GB	10.01 GB	0	17.67 KB (0%)	0	2.7.5
+    vm03:50010 (192.168.8.130:50010)	1	In Service	13.39 GB	1.71 MB	3.15 GB	10.23 GB	1	1.71 MB (0.01%)	0	2.7.5
+    vm05:50010 (192.168.8.132:50010)	1	In Service	13.39 GB	8 KB	3.15 GB	10.24 GB	0	8 KB (0%)	0	2.7.5
+
+    停掉VM05的数据服务和Yarn服务后：
+    Node	Last contact	Admin State	Capacity	Used	Non DFS Used	Remaining	Blocks	Block pool used	Failed Volumes	Version
+    vm04:50010 (192.168.8.131:50010)	1	In Service	13.39 GB	1.72 MB	3.14 GB	10.25 GB	1	1.72 MB (0.01%)	0	2.7.5
+    vm02:50010 (192.168.8.129:50010)	1	In Service	13.39 GB	17.67 KB	3.38 GB	10.01 GB	0	17.67 KB (0%)	0	2.7.5
+    vm03:50010 (192.168.8.130:50010)	1	In Service	13.39 GB	1.71 MB	3.15 GB	10.23 GB	1	1.71 MB (0.01%)	0	2.7.5
+    vm05:50010 (192.168.8.132:50010)	85	In Service	13.39 GB	8 KB	3.15 GB	10.24 GB	0	8 KB (0%)	0	2.7.5
+
+    发现vm05的Last contact为85表示最后一次通信到现在85个时间单位了,具体多少是秒还是啥的以后再查吧.
+    因为DataNode每次启动时都会向NameNode汇报，NameNode会记录下它的访问时间，然后NameNode用当前访问时间减去上次访问时间，就得出LastContact的值，也就是多长时间未访问。
+    又由于实际环境中经常存在网络问题造成短暂掉线，所以NameNode会等待一段时间（默认等10分钟）之后，才会将它视为死节点。所以，为了防止数据丢失所以在实际中副本数一般会设为2以上（默认为3）
+    ，当某个节点死掉以后，可以通过副本找回数据。
+
+    重新启动VM05的datanode进程：hadoop-daemon.sh start datanode
+    现在再次通过主节点的Web接口来看看运行情况：变为了0
+
+
+
+
+
+
+
+
+
+====================================================================================NameNode启动
+当Hadoop的NameNode节点启动时，会进入安全模式阶段。
+　　（1）在此阶段，DataNode会向NameNode上传它们数据块的列表，让 NameNode得到块的位置信息，并对每个文件对应的数据块副本进行统计。当最小副本条件满足时，即一定比例的数据块都达到最小副本数，系统就会退出安全模式，而这需要一定的延迟时间。
+　　（2）当最小副本条件未达到要求时，就会对副本数不足的数据块安排DataNode进行复制，直至达到最小副本数。而在安全模式下，系统会处于只读状态，NameNode不会处理任何块的复制和删除命令。
+
+那么，如何判断HDFS是否处于安全模式呢？hadoop dfsadmin -safemode get
+如何手动进入和离开安全模式呢？hadoop dfsadmin -safemode enter/leave
+进入安全模式后，再向HDFS上传或修改文件会出现什么情况？一个提示“正在处于安全模式”的异常
+
+
+
+
