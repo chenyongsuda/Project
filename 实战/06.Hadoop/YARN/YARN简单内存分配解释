@@ -54,3 +54,21 @@ In YARN, you should use the mapreduce configs, not the mapred ones. EDIT: This c
 What you are configuring is actually how much you want to request, not what is the max to allocate.
 The max limits are configured with the java.opts settings listed above.
 Finally, you may want to check this other SO question that describes a similar problem (and solution).
+
+
+yarn.nodemanager.resource.memory-mb默认值为-1，代表着YARN的NodeManager占总内存的80%。也就是说加入我们的机器为64GB内存，出去非YARN进程需要的20%内存，我们大概需要64*0.8≈51GB，在分配的时候，单个任务可以申请的默认最小内存为1G，任务量大的话可最大提高到8GB。
+    在生产场景中，简单的配置，一般情况下：yarn.nodemanager.resource.memory-mb直接设置成我们需要的值，且要是最大和最小内存需求的整数倍；（一般Container容器中最小内存为4G，最大内存为16G）
+
+    假如：64GB的机器内存，我们有51GB的内存可用于NodeManager分配，根据上面的介绍，我们可以直接将yarn.nodemanager.resource.memory-mb值为48GB，然后容器最小内存为4GB，最大内存为16GB，也就是在当前的NodeManager节点下，我们最多可以有12个容器，最少可以有3个容器。
+
+    CPU配置
+
+    此处的CPU指的是虚拟的CPU（CPU virtual core），之所以产生虚拟CPU（CPU vCore）这一概念，是因为物理CPU的处理能力的差异，为平衡这种差异，就引入这一概念。
+
+    yarn.nodemanager.resource.cpu-vcores表示能够分配给Container的CPU核数，默认配置为-1，代表值为8个虚拟CPU，推荐该值的设置和物理CPU的核数数量相同，若不够，则需要调小该值。
+
+    yarn.scheduler.minimum-allocation-vcores的默认值为1，表示每个Container容器在处理任务的时候可申请的最少CPU个数为1个。
+
+    yarn.scheduler.maximum-allocation-vcores的默认值为4，表示每个Container容器在处理任务的时候可申请的最大CPU个数为4个。
+
+PS：以上内容是小编我学习的理解，以上所示的参数为配置过程中基本的参数，如果想配置更为合理，资源利用率更高，可参考小编转载的两篇文章，初学者，如有错误请指出，谢谢。
