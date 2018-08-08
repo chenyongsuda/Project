@@ -1,0 +1,61 @@
+在学习Hadoop  YARN—Hadoop 2.0新引入的通用资源管理系统过程中，总会遇到Container这一概念，由于中文资料的缺乏，很多人对Container这一概念仍非常的模糊。它与Linux Container是什么关系，它是否能像Linux Container那样为任务提供一个隔离环境?它代表计算资源，还是仅仅是一个任务处理进程？本文将尝试介绍Container这一概念。
+在学习Container之前，大家应先了解YARN的基本架构、工作流程。比如，大家应该了解一个应用程序的运行过程如下：
+
+步骤1：用户将应用程序提交到ResourceManager上；
+步骤2：ResourceManager为应用程序ApplicationMaster申请资源，并与某个NodeManager通信，以启动ApplicationMaster；
+步骤3：ApplicationMaster与ResourceManager通信，为内部要执行的任务申请资源，一旦得到资源后，将于NodeManager通信，以启动对应的任务。
+步骤4：所有任务运行完成后，ApplicationMaster向ResourceManager注销，整个应用程序运行结束。
+
+上述步骤中，步骤2~3涉及到资源申请与使用，而这正是Container出现的地方。
+如果你你还不了解YARN的基本架构和工作原理，可阅读我的以下几篇文章：
+
+YARN基本架构，YARN中的基本术语，YARN整套分析文章。
+在YARN中，ResourceManager中包含一个插拔式的组件：资源调度器，它负责资源的管理和调度，是YARN中最核心的组件之一。
+当向资源调度器申请资源，需向它发送一个ResourceRequest列表，其中，每个ResourceRequest描述了一个资源单元的详细需求，而资源调度器则为之返回分配到的资源描述Container。每个ResourceRequest可看做一个可序列化Java对象，包含的字段信息（直接给出了Protocol Buffers定义）如下：
+
+message ResourceRequestProto {
+        optional PriorityProto priority = 1; // 资源优先级
+        optional string resource_name = 2; // 资源名称（期望资源所在的host、rack名称等）
+        optional ResourceProto capability = 3; // 资源量（仅支持CPU和内存两种资源）
+        optional int32 num_containers = 4; // 满足以上条件的资源个数
+        optional bool relax_locality = 5 [default = true];  //是否支持本地性松弛（2.1.0-beta之后的版本新增加的，具体参考我的这篇文章：Hadoop新特性、改进、优化和Bug分析系列3：YARN-392）
+}
+
+从上面定义可以看出，可以为应用程序申请任意大小的资源量（CPU和内存），且默认情况下资源是本地性松弛的，即申请优先级为10，资源名称为“node11”，资源量为<2GB, 1cpu>的5份资源时，如果节点node11上没有满足要求的资源，则优先找node11同一机架上其他节点上满足要求的资源，如果仍找不到，则找其他机架上的资源。而如果你一定要node11上的节点，则将relax_locality置为false。
+
+
+
+发出资源请求后，资源调度器并不会立马为它返回满足要求的资源，而需要应用程序的ApplicationMaster不断与ResourceManager通信，探测分配到的资源，并拉去过来使用。一旦分配到资源后，ApplicatioMaster可从资源调度器那获取以Container表示的资源，Container可看做一个可序列化Java对象，包含的字段信息（直接给出了Protocol Buffers定义）如下：
+
+message ContainerProto {
+        optional ContainerIdProto id = 1; //container id
+        optional NodeIdProto nodeId = 2; //container（资源）所在节点
+        optional string node_http_address = 3;
+        optional ResourceProto resource = 4; //container资源量
+        optional PriorityProto priority = 5; //container优先级
+        optional hadoop.common.TokenProto container_token = 6; //container token，用于安全认证
+}
+
+一般而言，每个Container可用于运行一个任务。ApplicationMaster收到一个或多个Container后，再次将该Container进一步分配给内部的某个任务，一旦确定该任务后，ApplicationMaster需将该任务运行环境（包含运行命令、环境变量、依赖的外部文件等）连同Container中的资源信息封装到ContainerLaunchContext对象中，进而与对应的NodeManager通信，以启动该任务。ContainerLaunchContext包含的字段信息（直接给出了Protocol Buffers定义）如下：
+
+message ContainerLaunchContextProto {
+        repeated StringLocalResourceMapProto localResources = 1; //Container启动以来的外部资源
+        optional bytes tokens = 2;
+        repeated StringBytesMapProto service_data = 3;
+        repeated StringStringMapProto environment = 4; //Container启动所需的环境变量
+        repeated string command = 5; //Container内部运行的任务启动命令，如果是MapReduce的话，Map/Reduce Task启动命令就在该字段中
+        repeated ApplicationACLMapProto application_ACLs = 6;
+}
+
+每个ContainerLaunchContext和对应的Container信息（被封装到了ContainerToken中）将再次被封装到StartContainerRequest中，也就是说，ApplicationMaster最终发送给NodeManager的是StartContainerRequest，每个StartContainerRequest对应一个Container和任务。
+总结上述可知，Container的一些基本概念和工作流程如下：
+（1）  Container是YARN中资源的抽象，它封装了某个节点上一定量的资源（CPU和内存两类资源）。它跟Linux Container没有任何关系，仅仅是YARN提出的一个概念（从实现上看，可看做一个可序列化/反序列化的Java类）。
+（2）  Container由ApplicationMaster向ResourceManager申请的，由ResouceManager中的资源调度器异步分配给ApplicationMaster；
+（3） Container的运行是由ApplicationMaster向资源所在的NodeManager发起的，Container运行时需提供内部执行的任务命令（可以使任何命令，比如java、Python、C++进程启动命令均可）以及该命令执行所需的环境变量和外部资源（比如词典文件、可执行文件、jar包等）。
+
+另外，一个应用程序所需的Container分为两大类，如下：
+（1） 运行ApplicationMaster的Container：这是由ResourceManager（向内部的资源调度器）申请和启动的，用户提交应用程序时，可指定唯一的ApplicationMaster所需的资源；
+（2） 运行各类任务的Container：这是由ApplicationMaster向ResourceManager申请的，并由ApplicationMaster与NodeManager通信以启动之。
+以上两类Container可能在任意节点上，它们的位置通常而言是随机的，即ApplicationMaster可能与它管理的任务运行在一个节点上。
+
+Container是YARN中最重要的概念之一，懂得该概念对于理解YARN的资源模型至关重要，希望本文对学习Container这一概念有所帮助。
