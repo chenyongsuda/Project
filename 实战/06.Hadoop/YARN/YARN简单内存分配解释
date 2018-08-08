@@ -41,6 +41,21 @@ yarn会在contaner中启动一个jvm来执行task任务。mapreduce.{map|reduce}
 理论上，{map|reduce}.java.opts设置的最大堆内存要比{map|reduce}.memory.mb小。一般设置为一般设置为0.75倍的memory.mb即可；
 因为在yarn container这种模式下，JVM进程跑在container中，需要为java code等非JVM的内存使用预留些空间。 
 
+内存分配增量/规整因子/incrementMemory
+为了易于管理资源和调度资源，Hadoop YARN内置了资源规整化算法，它规定了最小可申请资源量、最大可申请资源量和资源规整化因子，规整化因子是用来规整化应用程序资源的，应用程序申请的资源如果不是该因子的整数倍，则将被修改为最小的整数倍对应的值，公式为ceil(a/b)*b，其中a是应用程序申请的资源，b为规整化因子。对于规整化因子，不同调度器不同，具体如下： 
+FIFO和Capacity Scheduler，规整化因子等于最小可申请资源量，不可单独配置。 
+Fair Scheduler：规整化因子通过参数yarn.scheduler.increment-allocation-mb和yarn.scheduler.increment-allocation-vcores设置，默认是1024和1。 
+通过以上介绍可知，应用程序申请到资源量可能大于资源申请的资源量，比如YARN的最小可申请资源内存量为1024，规整因子是1024，
+如果一个应用程序申请1500内存，则会得到2048内存，如果规整因子是512，则得到1536内存。
+对于56G内存的NM来说，如果全部跑map则56/3大约跑18个container 
+大概了解完以上的参数之后，mapreduce.map.java.opts和mapreduce.map.memory.mb参数之间，有什么联系呢？ 
+通过上面的分析，我们知道如果一个yarn的container超除了heap设置的大小，这个task将会失败，
+我们可以根据哪种类型的container失败去相应增大mapreduce.{map|reduce}.memory.mb去解决问题。 
+但同时带来的问题是集群并行跑的container的数量少了，所以适当的调整内存参数对集群的利用率的提升尤为重要。
+
+
+如下图：map container的内存(“mapreduce.map.memory.mb”)被设置为1536mb 。但是AM会为其申请了2048m的内存，因为am的最小分配单位/增量（yarn.scheduler.minimum-allocation-mb）被设置为1024，也就是以1GB为单位往上加。这是一种逻辑上的分配，这个值被NodeManager用来监控该进程内存资源的使用率，如果mapTask的堆内存使用率超过了2048MB，NM将会把这个task给杀掉。
+
 
 
 Each machine in our cluster has 48 GB of RAM. Some of this RAM should be >reserved for Operating System usage. On each node, we’ll assign 40 GB RAM for >YARN to use and keep 8 GB for the Operating System
