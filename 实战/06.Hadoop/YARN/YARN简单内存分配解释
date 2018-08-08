@@ -1,0 +1,56 @@
+mapreduce on yarn简单内存分配解释
+关于mapreduce程序运行在yarn上时内存的分配一直是一个让我蒙圈的事情，单独查任何一个资料都不能很好的理解透彻。于是，最近查了大量的资料，综合各种解释，终于理解到了一个比较清晰的程度，在这里将理解的东西做一个简单的记录，以备忘却。
+首先，先将关于mapreduce和yarn关于内存分配的参数粘贴上:
+yarn.scheduler.minimum-allocation-mb
+yarn.scheduler.maximum-allocation-mb
+yarn.nodemanager.resource.memory-mb
+yarn.nodemanager.vmem-pmem-ratio
+yarn.scheduler.increment-allocation-mb
+mapreduce.map.memory.mb
+mapreduce.reduce.memory.mb
+mapreduce.map.java.opts
+mapreduce.reduce.java.opts
+个人认为，针对mapreduce任务，这些参数只有放在一起学习才能真正理解，如果单独考虑，理解不清晰。下面开始详细讲解。
+一、理解参数yarn.nodemanager.resource.memory-mb,yarn.nodemanager.vmem-pmem-ratio
+yarn.nodemanager.resource.memory-mb很简单，就是你的这台服务器节点上准备分给yarn的内存;
+yarn.nodemanager.vmem-pmem-ratio网上解释都是"每使用1MB物理内存，最多可用的虚拟内存数，默认2.1"，但是目前我还是不太理解其作用是什么，有知道的朋友希望能详细解释下。
+二、理解参数yarn.scheduler.minimum-allocation-mb和yarn.scheduler.maximum-allocation-mb
+都知道，在yarn上运行程序时每个task都是在独立的Container中运行的，单个Container可以申请的最小和最大内存的限制就是这两个参数，注意，并不是这两个参数决定单个Container申请内存的大小，而仅仅是限制的一个范围。
+三、理解yarn的内存规整化因子和内存规整化算法
+先不说和哪个参数有关，单纯理解这一概念。举例:
+假如规整化因子b=512M，上述讲的参数yarn.scheduler.minimum-allocation-mb为1024，yarn.scheduler.maximum-allocation-mb为8096，然后我打算给单个map任务申请内存资源(mapreduce.map.memory.mb):
+申请的资源为a=1000M时，实际得到的Container内存大小为1024M(小于yarn.scheduler.minimum-allocation-mb的话自动设置为yarn.scheduler.minimum-allocation-mb);
+申请的资源为a=1500M时，实际得到的Container内存大小为1536M，计算公式为:ceiling(a/b)*b，即ceiling(a/b)=ceiling(1500/512)=3,3*512=1536。此处假如b=1024，则Container实际内存大小为2048M
+也就是说Container实际内存大小最小为yarn.scheduler.minimum-allocation-mb值，然后增加时的最小增加量为规整化因子b，最大不超过yarn.scheduler.maximum-allocation-mb
+四、理解mapreduce.map.memory.mb、mapreduce.reduce.memory.mb
+"三"中提到的"打算给单个map任务申请内存资源"也就是a,其实就是指的"mapreduce.map.memory.mb"或"mapreduce.reduce.memory.mb"，注意其值不要超过yarn.scheduler.maximum-allocation-mb
+五、理解mapreduce.map.java.opts、mapreduce.reduce.java.opts
+以map任务为例，Container其实就是在执行一个脚本文件，而脚本文件中，会执行一个 Java 的子进程，这个子进程就是真正的 Map Task，mapreduce.map.java.opts 其实就是启动 JVM 虚拟机时，传递给虚拟机的启动参数，而默认值 -Xmx200m 表示这个 Java 程序可以使用的最大堆内存数，一旦超过这个大小，JVM 就会抛出 Out of Memory 异常，并终止进程。而 mapreduce.map.memory.mb 设置的是 Container 的内存上限，这个参数由 NodeManager 读取并进行控制，当 Container 的内存大小超过了这个参数值，NodeManager 会负责 kill 掉 Container。在后面分析 yarn.nodemanager.vmem-pmem-ratio 这个参数的时候，会讲解 NodeManager 监控 Container 内存（包括虚拟内存和物理内存）及 kill 掉 Container 的过程。
+也就是说，mapreduce.map.java.opts一定要小于mapreduce.map.memory.mb
+mapreduce.reduce.java.opts同mapreduce.map.java.opts一样的道理。
+六、理解规整化因子指的是哪个参数
+"三"中提到的规整化因子也就是b，具体指的是哪个参数和yarn使用的调度器有关，一共有三种调度器:capacity scheduler（默认调度器）、fair scheduler和fifo scheduler
+当使用capacity scheduler或者fifo scheduler时，规整化因子指的就是参数yarn.scheduler.minimum-allocation-mb，不能单独配置，即yarn.scheduler.increment-allocation-mb无作用;
+当使用fair scheduler时，规整化因子指的是参数yarn.scheduler.increment-allocation-mb
+至此，关于yarn和mapreduce的任务内存配置问题讲完了，这也是我目前理解的层次。
+
+
+Each machine in our cluster has 48 GB of RAM. Some of this RAM should be >reserved for Operating System usage. On each node, we’ll assign 40 GB RAM for >YARN to use and keep 8 GB for the Operating System
+
+For our example cluster, we have the minimum RAM for a Container (yarn.scheduler.minimum-allocation-mb) = 2 GB. We’ll thus assign 4 GB for Map task Containers, and 8 GB for Reduce tasks Containers.
+
+In mapred-site.xml:
+mapreduce.map.memory.mb: 4096
+mapreduce.reduce.memory.mb: 8192
+
+Each Container will run JVMs for the Map and Reduce tasks. The JVM heap size should be set to lower than the Map and Reduce memory defined above, so that they are within the bounds of the Container memory allocated by YARN.
+In mapred-site.xml:
+mapreduce.map.java.opts: -Xmx3072m
+mapreduce.reduce.java.opts: -Xmx6144m
+
+The above settings configure the upper limit of the physical RAM that Map and Reduce tasks will use.
+To sum it up:
+In YARN, you should use the mapreduce configs, not the mapred ones. EDIT: This comment is not applicable anymore now that you've edited your question.
+What you are configuring is actually how much you want to request, not what is the max to allocate.
+The max limits are configured with the java.opts settings listed above.
+Finally, you may want to check this other SO question that describes a similar problem (and solution).
