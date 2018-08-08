@@ -72,3 +72,13 @@ yarn.nodemanager.resource.memory-mb默认值为-1，代表着YARN的NodeManager�
     yarn.scheduler.maximum-allocation-vcores的默认值为4，表示每个Container容器在处理任务的时候可申请的最大CPU个数为4个。
 
 PS：以上内容是小编我学习的理解，以上所示的参数为配置过程中基本的参数，如果想配置更为合理，资源利用率更高，可参考小编转载的两篇文章，初学者，如有错误请指出，谢谢。
+
+
+    mapreduce.map.memory.mb = (1~2倍) * yarn.scheduler.minimum-allocation-mb
+　　mapreduce.reduce.memory.mb = (1~4倍) * yarn.scheduler.minimum-allocation-mb
+
+　　1. mapred.child.java.opts = -XmxTm(T数字要小于map和reduce的设置value)
+　　2. mapreduce.map.java.opts=-Xmx(<mapreduce.map.memory.mb)m
+　　   mapreduce.reduce.java.opts=-Xmx(<mapreduce.reduce.memory.mb)m
+
+　　总结：最终运行参数给定的jvm堆大小必须小于参数指定的map和reduce的memory大小，最好为70%以下。
