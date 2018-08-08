@@ -34,6 +34,14 @@ mapreduce.reduce.java.opts同mapreduce.map.java.opts一样的道理。
 当使用fair scheduler时，规整化因子指的是参数yarn.scheduler.increment-allocation-mb
 至此，关于yarn和mapreduce的任务内存配置问题讲完了，这也是我目前理解的层次。
 
+在hadoop2及以上版本中，map和reduce task 是运行在container中的。mapreduce.{map|reduce}.memory.mb 
+被yarn用来设置container的内存大小。如果container的内存超限，会被yarn杀死。在container中，为了执行map和reduce task，
+yarn会在contaner中启动一个jvm来执行task任务。mapreduce.{map|reduce}.java.opts用来设置container启动的jvm相关参数，
+通过设置Xmx来设置map 或者reduce task的最大堆内存。 
+理论上，{map|reduce}.java.opts设置的最大堆内存要比{map|reduce}.memory.mb小。一般设置为一般设置为0.75倍的memory.mb即可；
+因为在yarn container这种模式下，JVM进程跑在container中，需要为java code等非JVM的内存使用预留些空间。 
+
+
 
 Each machine in our cluster has 48 GB of RAM. Some of this RAM should be >reserved for Operating System usage. On each node, we’ll assign 40 GB RAM for >YARN to use and keep 8 GB for the Operating System
 
