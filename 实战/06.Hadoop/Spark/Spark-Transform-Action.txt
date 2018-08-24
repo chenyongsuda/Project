@@ -1,1 +1,29 @@
-1.
+1.Transform
+Map          ：t -> v 返回任意一个类型 输入每一行数据,输出另一个数据  不变更partition个数
+       假设一个rdd有10个元素，分成3个分区。如果使用map方法，map中的输入函数会被调用10次；而使用mapPartitions方法的话，其输入函数会只会被调用3次，每个分区调用1次。
+       
+FLATMAP      ：T -> list 必须返回一个list
+
+mapPartitions ：Iterator<INT> -> Iterator<?> map的一个变种，它们都可进行分区的并行处理。
+              两者的主要区别是调用的粒度不一样：map的输入变换函数是应用于RDD中每个元素，而mapPartitions的输入函数是应用于每个分区。
+
+FILTER       ：T -> ture/false
+
+集合操作
+并交叉
+UNION
+
+INTERSECTION
+
+DISTINCT
+
+合并
+GROUPBYKEY
+
+REDUCEBYKEY
+
+AGGREGATEBYKEY
+
+SORTBYKEY
+
+JOIN
