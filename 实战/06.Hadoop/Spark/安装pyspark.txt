@@ -1,0 +1,51 @@
+JDK安装配置
+JDK 版本需要在 1.8 
+下载地址：http://www.oracle.com/technetwork/java/javase/downloads/index.html 
+配置环境变量 
+添加变量 JAVA_HOME 值为jdk目录 
+在path 追加 ;%JAVA_HOME%\bin;%JAVA_HOME%\jre\bin; 
+
+
+Scala安装配置
+Scala download 下载对应scala 版本 【注意：Scala 1.6.2版本只能使用Spark 2.10各个版本；Scala 2.10.6 可适配Spark1.3.0到1.6.2】 
+windows 下直接下载msi 直接运行 会自动写入到path 
+
+
+Spark安装配置
+spark download 安装spark 
+
+
+Hadoop安装配置
+hadoop 2.6.4 download 
+下载hadoop解压之后 
+设置环境变量 
+添加 HADOOP_HOME 值为hadoop解压目录 
+添加path ;%HADOOP_HOME%\bin
+
+下载2.6版本hadoop 会缺少winutils.exe 
+
+
+四.【将pyspark文件放到python文件夹下、使用winutils.exe修改权限】
+1，将spark所在目录下（比如我的是D:\Software\spark-2.2.0-bin-hadoop2.7\python）的pyspark文件夹拷贝到python文件夹下（我的是D:\Program Files\python3.5.3\Lib\site-packages）
+具体目录要看大家自己安装的时候是放在哪的！
+
+2，安装py4j库
+一般的在cmd命令行下 pip install py4j 就可以。若是没有将pip路径添加到path中，就将路径切换到python的Scripts中，然后再 pip install py4j 来安装库。
+
+3，修改权限
+将winutils.exe文件放到Hadoop的bin目录下（我的是D:\Software\hadoop-2.7.3\bin），然后以管理员的身份打开cmd，然后通过cd命令进入到Hadoop的bin目录下，然后执行以下命令：
+winutils.exe chmod 777 c:\tmp\Hive  命令行使用管理员模式
+
+注意：1，cmd一定要在管理员模式下！cmd一定要在管理员模式下！cmd一定要在管理员模式下！
+
+     2，‘C:\tmp\hive’，一般按照上面步骤进行了之后会自动创建的，一般是在Hadoop的安装目录下出现。但是若没有也不用担心，自己在c盘下创建一个也行。
+关闭命令行窗口，重新打开命令行窗口，输入命令：pyspark
+
+1.目前在使用win7和win10下的python版本3.5,3.6都是可以的~~
+
+运行
+spark-submit ./word_count.py ./1.txt ./2
+或者使用pycharm直接运行就好了
+
+
+
