@@ -1,0 +1,57 @@
+业务场景：计算门店商品的新增客户量计算
+
+from os.path import expanduser, join, abspath
+from pyspark.sql.functions import pandas_udf, PandasUDFType
+from pyspark.sql.types import *
+from pyspark.sql import SparkSession
+from pyspark.sql import Row
+
+import numpy as np
+import pandas as pd
+
+schema = StructType([StructField("city", StringType(), True),\
+          StructField("family", StringType(), True),\
+          StructField("index", LongType(), True),\
+          StructField("item", StringType(), True),\
+          StructField("members", DoubleType(), True)])
+
+@pandas_udf(schema, PandasUDFType.GROUPED_MAP)
+def normalize(sourceDf):
+    result = []
+    cities = sourceDf["city_code"].unique()
+    families = sourceDf["family_code"].unique()
+    for family in families:
+        for city in cities:
+            destDf = sourceDf[(sourceDf["city_code"]==city)&(sourceDf["family_code"]==family)].pivot(index='member_id',columns='item_code',values='value')
+            itemIndex = 0
+            memberSum = 0
+            while len(destDf) > 0:
+                sumS = destDf.sum()
+                maxitemCode = str(sumS.idxmax())
+                maxSize = sumS[sumS.idxmax()]
+                memberSum += maxSize
+                itemIndex += 1
+                result.append({'city': city,'family': family,'index': itemIndex,'item': maxitemCode, 'members': memberSum})
+                destDf=destDf[destDf[maxitemCode] != 1].drop(columns=[maxitemCode])
+            for colName in destDf.columns:
+                itemIndex += 1
+                result.append({'city': city,'family': family,'index': itemIndex,'item': maxitemCode, 'members': memberSum})
+            return pd.DataFrame(result,columns=['city','family','index','item','members'])
+
+if __name__ == "__main__":
+    warehouse_location = abspath('spark-warehouse')
+    spark = SparkSession \
+        .builder \
+        .appName("Python Spark Typo Review Calculation") \
+        .config("spark.sql.warehouse.dir", warehouse_location) \
+        .enableHiveSupport() \
+        .getOrCreate()
+    spark.conf.set("spark.sql.execution.arrow.enabled", "true")
+    cities=spark.sql("SELECT city_code,count(1) cnt FROM pos.typo_monthly_data_final group by city_code order by 2 desc").collect()
+    for city in cities:
+        sql="SELECT * FROM pos.typo_monthly_data_final where city_code='{0}'".format(city["city_code"])
+        print(sql)
+        paramDf=spark.sql(sql)
+        resultDf=paramDf.groupby("family_code").apply(normalize)
+        resultDf.write.mode("append").format("parquet").partitionBy("city").saveAsTable("pos.typo_monthly_data_result")
+    spark.stop()
