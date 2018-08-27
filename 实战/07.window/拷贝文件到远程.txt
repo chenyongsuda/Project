@@ -1,0 +1,25 @@
+
+@echo off
+title "copy files to other machine"
+color 03
+mode con cols=80 lines=30
+
+
+set DEST_FOLDER=c$\bbb
+set USER_DOMAIN_NAME=chdom\c4its
+set SOURCE_DIR=c:\test
+set USER_NAME=c4its
+set PWD=Chin@2ol5
+
+echo "Little Benny Game Start:"
+
+for /f  "tokens=1 delims= " %%i in (%SOURCE_DIR%\abc.txt) do (
+    echo "Little Benny Happy In The The House:  %%i"
+    net use \\%%i\ipc$ %PWD% /user:%USER_NAME%
+    xcopy  "%SOURCE_DIR%\*.*" "\\%%i\%DEST_FOLDER%\"  /e/s/d/y
+    net use \\%%i\ipc$ /delete
+    echo "Little Benny Happy End:  %%i"
+)
+
+echo Copy finish!!!
+pause
