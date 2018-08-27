@@ -1,0 +1,28 @@
+
+通过psexec工具将本地软件拷贝到远程并安装
+
+@echo off
+title "copy files to other machine"
+color 03
+mode con cols=80 lines=30
+
+set SOURCE_DIR=c:\test
+set USER_NAME=c4its
+set PWD=Chin@2ol5
+
+echo "Little Benny Game Start:"
+psexec.exe -accepteula
+
+for /f  "tokens=1 delims= " %%i in (%SOURCE_DIR%\abc.txt) do (
+    echo "=======================%%i===========================: "
+    echo "Little Benny Happy In The The House:  %%i"
+    cmdkey.exe /add:%%i /user:%%i\%USER_NAME% /pass:%PWD%
+    psexec -u chdom\%USER_NAME% -p Chin@2ol5 -c \\%%i %SOURCE_DIR%\ccmsetup.exe
+    cmdkey.exe /delete:%%i
+    echo "Little Benny Happy End:  %%i"
+    echo "=======================END===========================: "
+    echo ""
+)
+
+echo Copy finish!!!
+pause
