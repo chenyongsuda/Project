@@ -27,3 +27,72 @@ AGGREGATEBYKEY
 SORTBYKEY
 
 JOIN
+
+通过Generic Transformation创建
+定义
+
+rdd_size = rdd.getNumPartitions()
+other_rdd_size = rdd.getNumPartitions()
+
+filter(), map(), flatMap(), distinct()partition数量等于parent RDD的数量。
+rdd.union(other_rdd)partition数量等于rdd_size + other_rdd_size
+rdd.intersection(other_rdd) partition数量等于max(rdd_size, other_rdd_size)
+rdd.subtract(other_rdd) partition数量等于rdd_size
+rdd.cartesian(other_rdd) partition数量等于rdd_size * other_rdd_size
+
+通过Key-based Transformation创建
+什么是key-based？key-based指的是执行transformation的rdd都必须是pair rdd，在pyspark中，并没有pair rdd这个类型，一个rdd要成为有效的pair rdd， 只需要rdd中的每条记录满足k, v = kv，也就是只要是一个支持迭代，且一共含有两个元素的对象即可，可以是(k, v) ，也可以是[k, v]， 也可以是自定义类型等。
+
+在默认的情况下：
+
+reduceByKey(), foldByKey(), combineByKey(), groupByKey() partition数量等于parent rdd的数量， 使用HashPartitioner，允许自己指定hash函数
+sortByKey() partition数量等于parent rdd的数量，使用RangePartitioner
+mapValues(), flatMapValues() partition数量等于parent rdd的数量，使用parent rdd的partitioner，这两个函数接收的parent rdd必须为pair rdd， 确保执行完以后保持原有partition不变
+join(), leftOuterJoin(), rightOuterJoin() partition数量取决于相关的两个rdd， 使用HashPartitioner
+
+三、自定义partition数量
+在使用HashPartitioner的transformation的函数中，可以通过numPartitions与partitionFunc改变默认的partition数量以及数据的分布方式。
+
+numPartitions指定结果rdd的partition数量， partitionFunc只要是一个返回一个int数值的函数即可，它决定了一条记录将要被分配的partition的index
+
+# pyspark 源码
+buckets[partitionFunc(k) % numPartitions].append((k, v))
+1
+2
+几个帮助了解partition的API
+# 查看partition数量
+rdd.getNumPartitions()
+
+# 查看所用partitioner
+rdd.partitioner 
+
+# 查看具体数据在每个partition的分布
+rdd.glom().collect()  # 仅适用小量数据， 数据量大慎用
+
+在做试验的时候， 通过rdd.glom().collect()可以看到数据在每个partition的分布情况，有的时候可以看出， 当partition数量多于数据条数，或是数据倾斜的时候，有的partition是空的，所以spark不会因为某个partition是空的就移除它，而每个partition又对应一个task，为空的partition启停任务， 必然引起不必要的资源消耗而影响性能。 所以分配得当的partition数量是非常重要的。
+
+
+Spark任务将一系列RDD（算子）组成一张有向无环图（DAG）。这些RDD之间会有一定的依赖关系，并且根据RDD之间的依赖关系来划分Spark任务的阶段（Stage）。本节就来介绍RDD依赖关系和Stage的相关知识。
+
+1.RDD之间的依赖关系
+在Spark任务链中，子RDD与父RDD之间的依赖关系分为两种：窄依赖（narrow dependency）和宽依赖（wide dependency）。它们的定义如下：
+
+1.1窄依赖
+窄依赖指的是：每一个父RDD的分区Partition最多被子RDD的一个分区Partition使用。下图是一些窄依赖的例子：
+
+常见的窄依赖的算子有：map，filter，union等等。
+1.2宽依赖
+宽依赖指的是：一个父RDD的分区Partition会被多个子RDD的分区Partition使用。下面是一些宽依赖的例子：
+常见的宽依赖的算子有：join，groupBy，reduceBy等等。
+
+2.Spark任务的阶段（Stage）
+DAG（Directed Acyclic Graph）叫做有向无环图。原始的RDD通过一系列的转换就形成了DAG。根据RDD之间的依赖关系的不同可以将DAG划分成不同的阶段Stage。对于窄依赖，分区的转换处理在stage中完成计算；对于宽依赖，由于shuffle的存在，只能在父RDD处理完成后，才能开始接下来的计算。因此宽依赖是换分stage的依据。
+
+划分Stage的具体做法如下：
+先画出各个RDD之间的宽窄依赖关系
+然后去掉所有款依赖的边，保留所有窄依赖的边
+RDD连同窄依赖的边就形成一个Stage
+Stage的顺序按照执行顺序编号
+所以上图中的DAG就划分成3个Stage：Stage1包括RDD A；Stage2包括RDD C、D、E、F；Stage3包括RDD B、G。
+
+划分了阶段能帮助我们更好的理解Spark任务的执行过程。本节就介绍到这里。祝你玩得愉快！
