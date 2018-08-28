@@ -11,3 +11,6 @@ val spark = SparkSession
       .getOrCreate()
     var tc = spark.sparkContext.parallelize(数据).cache()
     
+2.V2.0读取语句
+val file=spark.sparkContext.textFile("file:///home/soyo/桌面/spark编程测试数据/1.txt")
+    val word=file.flatMap(lines=>lines.split(" ")).map(word=>(word,1)).reduceByKey(_+_)
