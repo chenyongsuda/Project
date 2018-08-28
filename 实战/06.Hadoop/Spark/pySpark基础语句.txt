@@ -14,3 +14,25 @@ val spark = SparkSession
 2.V2.0读取语句
 val file=spark.sparkContext.textFile("file:///home/soyo/桌面/spark编程测试数据/1.txt")
     val word=file.flatMap(lines=>lines.split(" ")).map(word=>(word,1)).reduceByKey(_+_)
+    
+读取CSV 创建DataFrame
+
+方法一：用pandas辅助
+from pyspark import SparkContext 
+from pyspark.sql import SQLContext 
+import pandas as pd 
+sc = SparkContext()
+sqlContext=SQLContext(sc) 
+df=pd.read_csv(r'game-clicks.csv') 
+sdf=sqlc.createDataFrame(df) 
+
+方法二：纯spark
+val spark = SparkSession.builder.config(conf).getOrCreate()
+val dataFrame = spark.read.format("CSV").option("header","true").load(csvfilePath)
+
+Dataframe 使用SQL必须要registerTempTable
+df_alllist.registerTempTable("items")
+然后使用
+spark.sql("slecet count(*) from items")
+SQL函数返回RDD
+
