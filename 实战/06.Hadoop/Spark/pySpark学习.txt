@@ -1,0 +1,13 @@
+1.初始化
+Spark 2.0以前版本:
+val sparkConf = new SparkConf().setAppName("soyo")
+    val spark = new SparkContext(sparkConf)
+
+Spark 2.0以后版本：（上面的写法兼容）
+直接用SparkSession：
+val spark = SparkSession
+      .builder
+      .appName("soyo")
+      .getOrCreate()
+    var tc = spark.sparkContext.parallelize(数据).cache()
+    
