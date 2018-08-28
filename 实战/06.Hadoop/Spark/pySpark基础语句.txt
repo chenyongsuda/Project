@@ -36,3 +36,18 @@ df_alllist.registerTempTable("items")
 spark.sql("slecet count(*) from items")
 SQL函数返回RDD
 
+
+
+RDD是无模式的数据结构（不像DataFrames）。因此，在使用RDD时，并行化数据集对于Spark来说是完美的。
+>>> data_heterogenous = sc.parallelize([('Ferrari','fast'),{'Porsche':100000},['Spain','visited',4504]]).collect()
+所以，我们可以混合几乎任何东西：一个元组，一个字典，或一个列表。 
+一旦你.collect（）数据集（即，运行一个动作将其返回给驱动程序），你可以像在Python中通常那样访问对象中的数据：
+
+>>> data_heterogenous[1]['Porsche']
+100000
+1
+2
+.collect（）方法将RDD的所有元素返回到驱动程序，并将其作为列表序列化。
+
+
+
