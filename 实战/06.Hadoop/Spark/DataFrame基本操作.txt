@@ -56,7 +56,7 @@ agg
 
 avg
 
-apply
+apply 2.3后增加支持pandas操作的方法,支持pandas 
 
 max
 
@@ -66,4 +66,10 @@ pivot
 
 sum
 
-
+整合后GroupedData类型可用的方法（均返回DataFrame类型）：
+avg(*cols)     ——   计算每组中一列或多列的平均值
+count()          ——   计算每组中一共有多少行，返回DataFrame有2列，一列为分组的组名，另一列为行总数
+max(*cols)    ——   计算每组中一列或多列的最大值
+mean(*cols)  ——  计算每组中一列或多列的平均值
+min(*cols)     ——  计算每组中一列或多列的最小值
+sum(*cols)    ——   计算每组中一列或多列的总和
