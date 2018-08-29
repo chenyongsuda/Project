@@ -51,3 +51,10 @@ RDD是无模式的数据结构（不像DataFrames）。因此，在使用RDD时�
 
 
 
+Pandas和Spark的DataFrame两者互相转换：
+pandas_df = spark_df.toPandas()	spark_df = sqlContext.createDataFrame(pandas_df)
+
+
+
+
+
