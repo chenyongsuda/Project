@@ -1,0 +1,197 @@
+问题：
+I'm a beginner of Spark-DataFrame API.
+I use this code to load csv tab-separated into Spark Dataframe
+
+lines = sc.textFile('tail5.csv')
+parts = lines.map(lambda l : l.strip().split('\t'))
+fnames = *some name list*
+schemaData = StructType([StructField(fname, StringType(), True) for fname in fnames])
+ddf = sqlContext.createDataFrame(parts,schemaData)
+Suppose I create DataFrame with Spark from new files, and convert it to pandas using built-in method toPandas(),
+
+Does it store the Pandas object to local memory?
+Does Pandas low-level computation handled all by Spark?
+Does it exposed all pandas dataframe functionality?(I guess yes)
+Can I convert it toPandas and just be done with it, without so much touching DataFrame API?
+
+
+一些回答：
+Using spark to read in a CSV file to pandas is quite a roundabout method for achieving the end goal of reading a CSV file into memory.
+It seems like you might be misunderstanding the use cases of the technologies in play here.
+Spark is for distributed computing (though it can be used locally). It's generally far too heavyweight to be used for simply reading in a CSV file.
+In your example, the sc.textFile method will simply give you a spark RDD that is effectively a list of text lines. This likely isn't what you want. No type inference will be performed, so if you want to sum a column of numbers in your CSV file, you won't be able to because they are still strings as far as Spark is concerned.
+Just use pandas.read_csv and read the whole CSV into memory. Pandas will automatically infer the type of each column. Spark doesn't do this.
+
+Now to answer your questions:
+Does it store the Pandas object to local memory:
+Yes. toPandas() will convert the Spark DataFrame into a Pandas DataFrame, which is of course in memory.
+Does Pandas low-level computation handled all by Spark
+No. Pandas runs its own computations, there's no interplay between spark and pandas, there's simply some API compatibility.
+Does it exposed all pandas dataframe functionality?
+No. For example, Series objects have an interpolate method which isn't available in PySpark Column objects. There are many many methods and functions that are in the pandas API that are not in the PySpark API.
+Can I convert it toPandas and just be done with it, without so much touching DataFrame API?
+Absolutely. In fact, you probably shouldn't even use Spark at all in this case. pandas.read_csv will likely handle your use case unless you're working with a huge amount of data.
+Try to solve your problem with simple, low-tech, easy-to-understand libraries, and only go to something more complicated as you need it. Many times, you won't need the more complex technology.
+
+Thank you for answering my questions. Actually maybe I'm not being clear enough. I'm a beginner of spark.I'm just testing here to load from csv.I'm required to read data that's too big to handle in memory and do data analysis. So the goal here is to do some data analysis within Hadoop. So when I load data from Hadoop(hive), converting to pandas will load it into local memory? – Napitupulu Jon Mar 24 '15 at 13:59
+and I'm not using hadoop on single machine. I may have to load data with hive from hdfs. If I convert it to pandas, Can I do pandas within distributed systems? – Napitupulu Jon Mar 24 '15 at 14:13
+Ah. I see. Spark DataFrames and Pandas DataFrames share no computational infrastructure. Spark DataFrames emulate the API of pandas DataFrames where it makes sense. If you're looking for something that lets you operate in a pandas like way on the Hadoop ecosystem that additionally lets you go into memory with a pandas DataFrame, check out blaze. – Phillip Cloud Mar 24 '15 at 16:05 
+apart from blaze, sparklingpandas also aims to provide pandas-similar API on Spark DataFrames: github.com/sparklingpandas/sparklingpandas – fanfabbb May 29 '15 at 9:28
+
+Can I read the csv with Pandas DataFrame first then convert it to Spark DataFrame? – rilut Jun 18 '15 at 13:14
+Yes you can pass a pandas DataFrame to HiveContext.createDataFrame. – Phillip Cloud Jun 19 '15 at 12:23
+If I'm not mistaken, the Spark dataframe is not local meaning that (depending on the size of the file) several computing nodes will load parts of the file and therefore hold only parts of the dataframe. Map and Filter functions are then done on that part of the data only. To gather the dataframe onto one local machine you need to use Collect. toPandas seems to do the same. Collect the data and convert it to a Pandas local DataFrame. – Matthias Jul 4 '16 at 18:51
+Hey @PhillipCloud, would you consider modifying your answer to not include the top part, which answers a different question than the OP asked, and also clarifying 'in memory' to differentiate between local (master) memory and distributed (worker) memory? Thanks! – TheProletariat May 29 at 16:39
+
+另一个回答：
+Using some spark context or hive context method (sc.textFile(), hc.sql()) to read data 'into memory' returns an RDD, 
+but the RDD remains in distributed memory (memory on the worker nodes), not memory on the master node. 
+All the RDD methods (rdd.map(), rdd.reduceByKey(), etc) are designed to run in parallel on the worker nodes,
+with some exceptions. For instance, if you run a rdd.collect() method, you end up copying the contents of the rdd from all the worker nodes to the master node memory. 
+Thus you lose your distributed compute benefits (but can still run the rdd methods).
+Similarly with pandas, when you run toPandas(), you copy the data frame from distributed (worker) memory to the local (master) memory and lose most of your distributed compute capabilities. 
+So, one possible workflow (that I often use) might be to pre-munge your data into a reasonable size using distributed compute methods and then convert to a Pandas data frame for the rich feature set. Hope that helps.
+
+总结该方法是用于把RDD拉到本地来转为pandas进行剩余数据的处理的.
+pandas是本地处理的,所以就丢失的分布式计算的特点.
+blaze是涉及到用pandas进行分布式计算的的框架可以了解下
+
+其实在Spark处理的时候可以使用pandas_udf来部分使用pandas的代码加速分布式处理.
+如下：
+
+
+
+
+Introducing Pandas UDF for PySpark
+更新：此博客于 2018 年 2 月 22 日更新，以包含一些更改。
+
+这篇博文在即将发布的 Apache Spark 2.3 版本中引入了 Pandas UDFs(即 Vectorized UDFs) 特性，这大大提高了 Python 中用户定义函数(UDF)的性能和可用性。
+在过去的几年中，Python 已经成为数据科学家的默认语言。像 pandas，numpy，statsmodel 和 scikit-learn 这样的软件包已经获得了广泛的采用并成为主流工具包。同时，Apache Spark 已成为处理大数据的事实标准。为了使数据科学家能够利用大数据的价值，Spark 在 0.7 版中添加了 Python API，并支持user-defined functions。这些用户定义的函数一次只能操作一行，因此会遭遇高序列化和调用开销。因此，许多数据管道在 Java 和 Scala 中定义 UDF，然后从 Python 中调用它们。
+基于 Apache Arrow 构建的 Pandas UDF 为您提供了两全其美的功能 - 完全用 Python 定义低开销，高性能 UDF的能力。
+
+在 Spark 2.3 中，将会有两种类型的 Pandas UDF: 标量(scalar)和分组映射(grouped map)。接下来，我们使用四个示例程序来说明它们的用法：Plus One，累积概率，减去平均值，普通最小二乘线性回归。
+Scalar Pandas UDFs
+Scalar Pandas UDFs 用于向量化标量运算。要定义一个标量 Pandas UDF，只需使用 @pandas_udf 来注释一个 Python 函数，该函数接受 pandas.Series 作为参数并返回另一个相同大小的 pandas.Series。下面我们用两个例子来说明：Plus One 和 Cumulative Probability。
+
+Plus One
+      计算 v + 1 是演示 row-at-a-time UDFs 和 scalar Pandas UDFs 之间差异的简单示例。请注意，在这种情况下内置的列运算符可能执行得更快。
+
+      使用一次一行的 UDF:
+      from pyspark.sql.functions import udf
+
+      # 使用 udf 定义一个 row-at-a-time 的 udf
+      @udf('double')
+      # 输入/输出都是单个 double 类型的值
+      def plus_one(v):
+          return v + 1
+
+      df.withColumn('v2', plus_one(df.v))
+      
+      
+使用 Pandas UDFs:
+      from pyspark.sql.functions import pandas_udf, PandasUDFType
+      # 使用 pandas_udf 定义一个 Pandas UDF
+      @pandas_udf('double', PandasUDFType.SCALAR)
+      # 输入/输出都是 double 类型的 pandas.Series
+
+      def pandas_plus_one(v):
+          return v + 1
+
+      df.withColumn('v2', pandas_plus_one(df.v))
+      上面的例子定义了一次一行的 UDF “plus_one” 和一个执行相同的“加一”计算的 scala Pandas UDF “pandas_plus_one”。除了函数装饰器之外，UDF 的定义是相同的：“udf” vs “pandas_udf”。
+
+      在一次一行的版本中，用户定义的函数接收一个 double 类型的参数 “v” 并将 “v + 1” 的结果作为 double 来返回。在 Pandas 版本中，用户定义函数接收 pandas.Series 类型的参数 “v”，并将 “v + 1” 的结果作为pandas.Series 返回。因为 “v + 1” 是在 pandas.Series 上进行矢量化的，所以 Pandas 版本比 row-at-a-time 的版本快得多。
+
+      请注意，使用 scala pandas UDF 时有两个重要要求:
+
+      输入和输出序列必须具有相同的大小。
+      如何将一列分割为多个 pandas.Series 是Spark的内部的事，因此用户定义函数的结果必须独立于分割。
+      累积概率
+      这个例子展示了 scalar Pandas UDF 更实际的用法：使用 scipy 包计算正态分布 N(0,1) 中值的累积概率。
+
+      import pandas as pd
+      from scipy import stats
+
+      @pandas_udf('double')
+      def cdf(v):
+          return pd.Series(stats.norm.cdf(v))
+
+
+      df.withColumn('cumulative_probability', cdf(df.v))
+      stats.norm.cdf 在标量值和 pandas.Series 上都是可用的，并且此示例也可以使用一次一行的 UDF 编写。与前面的例子类似，Pandas 版本运行速度更快，如后面的“性能比较”部分所示。
+
+Grouped Map Pandas UDFs
+      Python 用户对数据分析中的 split-apply-combine 模式非常熟悉。Grouped Map Pandas UDF 是针对这种情况设计的，它们针对某些组的所有数据进行操作，例如“针对每个日期应用此操作”。
+
+      Grouped Map Pandas UDF 首先根据 groupby 运算符中指定的条件将 Spark DataFrame 分组，然后将用户定义的函数（pandas.DataFrame -> pandas.DataFrame）应用于每个组，并将结果组合并作为新的 Spark DataFrame 返回。
+
+      Grouped map Pandas UDF 使用与 scalar Pandas UDF 使用相同的函数装饰器 pandas_udf，但它们有一些区别：
+
+      用户定义函数的输入:
+      Scalar: pandas.Series
+      Grouped map: pandas.DataFrame
+      用户定义函数的输出:
+
+      Scalar: pandas.Series
+      Grouped map: pandas.DataFrame
+      分组语义:
+
+      Scalar: 无分组语义
+      Grouped map: 由 “groupby” 从句定义
+      输出大小:
+
+      Scalar: 和输入大小一样
+      Grouped map: 任何尺寸
+      函数装饰器中的返回类型:
+
+      Scalar: 一个 DataType，用于指定返回的 pandas.Series 的类型
+      Grouped map: 一个 StructType，用于指定返回的 pandas.DataFrame 中每列的名称和类型
+      接下来，让我们通过两个示例来说明 grouped map Pandas UDF 的使用场景。
+
+      Subtract Mean
+      此示例显示了简单使用 grouped map Pandas UDFs：从组中的每个值中减去平均值。
+
+      @pandas_udf(df.schema, PandasUDFType.GROUPED_MAP)
+      # Input/output are both a pandas.DataFrame
+      def subtract_mean(pdf):
+          return pdf.assign(v=pdf.v - pdf.v.mean())
+
+      df.groupby('id').apply(subtract_mean)
+      在这个例子中，我们从每个组的 v 值中减去 v 的均值。分组语义由 “groupby” 函数定义，即每个输入到用户定义函数的 pandas.DataFrame 具有相同的 “id” 值。这个用户定义函数的输入和输出模式是相同的，所以我们将“df.schema” 传递给装饰器 pandas_udf 来指定模式。
+
+      Grouped map Pandas UDF 也可以作为驱动程序上的独立 Python 函数调用。这对于调试非常有用，例如：
+
+      sample = df.filter(id == 1).toPandas()
+      # Run as a standalone function on a pandas.DataFrame and verify result
+      subtract_mean.func(sample)
+
+      # Now run with Spark
+      df.groupby('id').apply(substract_mean)
+      在上面的示例中，我们首先将 Spark DataFrame 的一个小子集转换为 pandas.DataFrame，然后将 subtract_mean 作为独立的 Python 函数运行。验证函数逻辑后，我们可以在整个数据集上使用 Spark 调用 UDF。
+
+
+
+普通最小二乘线性回归
+      最后一个示例显示了如何使用 statsmodels 为每个组运行 OLS 线性回归。对于每个组，我们根据统计模型 Y = bX + c 计算对于 X = (x1，x2) 的 beta b = (b1，b2)。
+
+      import statsmodels.api as sm
+      # df has four columns: id, y, x1, x2
+
+      group_column = 'id'
+      y_column = 'y'
+      x_columns = ['x1', 'x2']
+      schema = df.select(group_column, *x_columns).schema
+
+      @pandas_udf(schema, PandasUDFType.GROUPED_MAP)
+      # Input/output are both a pandas.DataFrame
+      def ols(pdf):
+          group_key = pdf[group_column].iloc[0]
+          y = pdf[y_column]
+          X = pdf[x_columns]
+            X = sm.add_constant(X)
+          model = sm.OLS(y, X).fit()
+
+          return pd.DataFrame([[group_key] + [model.params[i] for i in   x_columns]], columns=[group_column] + x_columns)
+
+      beta = df.groupby(group_column).apply(ols)
+      此示例演示了 grouped map Pandas UDF 可以与任何任意的 python 函数一起使用：pandas.DataFrame -> pandas.DataFrame。返回的 pandas.DataFrame 可以具有与输入不同的行数和列数。
