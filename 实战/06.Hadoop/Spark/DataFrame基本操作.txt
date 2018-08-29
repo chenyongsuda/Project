@@ -1,0 +1,9 @@
+1.dataframe 去重
+    1）通过SQL 
+      如下：cities=spark.sql("SELECT city_code,count(1) cnt FROM pos.typo_monthly_data_final group by city_code order by 2 desc").collect()
+           for city in cities:
+              sql="SELECT * FROM pos.typo_monthly_data_final where city_code='{0}'".format(city["city_code"])
+              
+     2）通过DF的功能
+        dropDuplicates()
+        
