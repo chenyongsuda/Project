@@ -7,3 +7,63 @@
      2）通过DF的功能
         dropDuplicates()
         
+2.打印schema
+    dataframe.printSchema()
+    
+    root
+     |-- item_code: integer (nullable = true)
+     |-- member_id: integer (nullable = true)
+     |-- value: integer (nullable = true)
+     |-- city_code: string (nullable = true)
+     |-- family_code: integer (nullable = true)
+     
+
+3.显示方法show
+personDF.show()
+
+4.查看name字段的数据
+personDF.select(personDF.col("name")).show
+查看name字段的另一种写法
+personDF.select("name").show
+
+
+5.查看 name 和age字段数据
+personDF.select(col("name"), col("age")).show
+
+6.查询所有的name和age，并将age+1
+personDF.select(col("id"), col("name"), col("age") + 1).show
+也可以这样：
+personDF.select(personDF("id"), personDF("name"), personDF("age") + 1).show
+
+
+7.过滤age大于等于25的
+使用filter方法过滤
+personDF.filter(col("age") >= 25).show
+
+
+8.统计年龄大于30的人数
+personDF.filter(col("age")>30).count()
+
+9.按年龄进行分组并统计相同年龄的人数
+personDF.groupBy("age").count().show
+
+
+10.groupby后可以使用很多聚合方法
+groupby类型为GroupedData有如下方法
+count
+
+agg
+
+avg
+
+apply
+
+max
+
+min
+
+pivot
+
+sum
+
+
