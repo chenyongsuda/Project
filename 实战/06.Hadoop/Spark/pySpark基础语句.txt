@@ -56,7 +56,13 @@ pandas_df = spark_df.toPandas()	spark_df = sqlContext.createDataFrame(pandas_df)
 
 与Spark RDD的相互转换：
 rdd_df = df.rdd	df = rdd_df.toDF()
+注：rdd转df前提是每个rdd的类型都是Row类型
 
 
+数据转RDD装DF
+val ids="1,2,3,4,5"//模拟的id列表
+val data=ids.split(",").toSeq//转化成Seq结构
+val school_table=spark.sparkContext.makeRDD(data).toDF("id")//指定列名
+school_table.createOrReplaceTempView("temp_table")//在spark的内存里面创建一张临时表
 
 
