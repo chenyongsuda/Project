@@ -1,0 +1,95 @@
+1.重复数据处理
+
+例如
+
+spark = SparkSession.builder.appName("dataDeal").getOrCreate()
+df = spark.createDataFrame([
+    (1, 144.5, 5.9, 33, 'M'),
+    (2, 167.2, 5.4, 45, 'M'),
+    (3, 124.1, 5.2, 23, 'F'),
+    (4, 144.5, 5.9, 33, 'M'),
+    (5, 133.2, 5.7, 54, 'F'),
+    (3, 124.1, 5.2, 23, 'F'),
+    (5, 129.2, 5.3, 42, 'M'),
+    ], ['id', 'weight', 'height', 'age', 'gender'])
+上面的数据中存在如下问题：
+有两行id等于3并且完全相同
+
+id为1和4的两行是一样的数据，只是id不同，可以假定为是同一个人的数据
+
+有两行的id等于5，这看上去是一个异常数据，因为他们看上去不像是同一个人的数据
+
+检查是否有重复数据采用.distinct()方法
+print ('Count of rows:{0}'.format(df.count()))
+print ('Count of distinct rows:{0}'.format(df.distinct().count()))
+Count of rows:7
+Count of distinct rows:6
+可以看到返回的两个值不等，一个为6，一个为7.所以，可以判断出我们的数据集中有完全相同的行（即重复的数据）
+
+移除重复的数据采用.dropDuplicates()方法
+#移除重复的数据
+df = df.dropDuplicates()
+#查看去重后的数据
+df.show()
+| id|weight|height|age|gender|
++---+------+------+---+------+
+|  5| 133.2|   5.7| 54|     F|
+|  5| 129.2|   5.3| 42|     M|
+|  1| 144.5|   5.9| 33|     M|
+|  4| 144.5|   5.9| 33|     M|
+|  2| 167.2|   5.4| 45|     M|
+|  3| 124.1|   5.2| 23|     F|
++---+------+------+---+------+
+通过结果可以看出，删除了一行id为3的记录
+
+接着可以通过重复之前的工作检查与id无关的重复数据
+
+#对除id以外的列进行对比
+print ("Count of ids:{0}".format(df.count()))
+print ("Count of distinct ids:{0}".format(df.select([c for c in df.columns if c != 'id']).distinct().count()))
+Count of ids:6
+Count of distinct ids:5
+可以继续使用.dropDuplicates()删除重复数据，但是需要使用subset参数来指定只处理除id以外的列。subset参数指明.dropDuplicates()方法只查找subset参数指定的列
+
+#去掉除id以外其他属性相同的数据
+df = df.dropDuplicates(subset=[c for c in df.columns if c != 'id'])
+df.show()
++---+------+------+---+------+
+| id|weight|height|age|gender|
++---+------+------+---+------+
+|  5| 133.2|   5.7| 54|     F|
+|  1| 144.5|   5.9| 33|     M|
+|  2| 167.2|   5.4| 45|     M|
+|  3| 124.1|   5.2| 23|     F|
+|  5| 129.2|   5.3| 42|     M|
++---+------+------+---+------+
+从结果可以看出，现在的数据没有任何一行是重复的（既没有完全相同的记录也没有除id以外相同的记录）
+
+检测是否有重复的id
+#计算id的总数和id的唯一数
+import pyspark.sql.functions as fn
+df.agg(
+    fn.count('id').alias('count'),
+    fn.countDistinct('id').alias('distinct')
+).show()
++-----+--------+
+|count|distinct|
++-----+--------+
+|    5|       4|
++-----+--------+
+.count()方法和.countDistinct()方法分别计算DataFrame的行数和id的唯一数。.alias()方法可以对返回的列指定一个别名。
+
+从结果中可以看出，总共5条记录，但只有4个唯一id。假设id相同的数据是偶然事件，异常值，则将每一行给定一个唯一的id
+
+#重新给每行分配id
+df.withColumn('new_id',fn.monotonically_increasing_id()).show()
++---+------+------+---+------+-------------+
+| id|weight|height|age|gender|       new_id|
++---+------+------+---+------+-------------+
+|  5| 133.2|   5.7| 54|     F|  25769803776|
+|  1| 144.5|   5.9| 33|     M| 171798691840|
+|  2| 167.2|   5.4| 45|     M| 592705486848|
+|  3| 124.1|   5.2| 23|     F|1236950581248|
+|  5| 129.2|   5.3| 42|     M|1365799600128|
++---+------+------+---+------+-------------+
+.monotonicallymonotonically_increasing_id()方法给每条记录提供一个唯一且递增的id
