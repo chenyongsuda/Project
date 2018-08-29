@@ -65,4 +65,6 @@ val data=ids.split(",").toSeq//转化成Seq结构
 val school_table=spark.sparkContext.makeRDD(data).toDF("id")//指定列名
 school_table.createOrReplaceTempView("temp_table")//在spark的内存里面创建一张临时表
 
-
+registerTempTable is a part of the 1.x API and has been deprecated in Spark 2.0.
+createOrReplaceTempView and createTempView have been introduced in Spark 2.0, as a replacement for registerTempTable.
+Other than that registerTempTable and createOrReplaceTempView functionally equivalent and the former one calls the latter one.
