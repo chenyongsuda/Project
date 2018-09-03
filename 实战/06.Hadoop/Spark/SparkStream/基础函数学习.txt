@@ -1,3 +1,6 @@
+spark流式编程文档
+http://spark.apachecn.org/docs/cn/2.2.0/structured-streaming-programming-guide.html#tab_python_0
+
 1. spark split函数
     from pyspark.sql.functions import split
   
