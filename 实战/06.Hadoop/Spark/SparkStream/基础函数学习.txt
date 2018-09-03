@@ -1,0 +1,36 @@
+1. spark split函数
+    from pyspark.sql.functions import split
+  
+    使用例子
+     """
+      Splits str around pattern (pattern is a regular expression).
+
+      .. note:: pattern is a string represent the regular expression.
+
+      >>> df = spark.createDataFrame([('ab12cd',)], ['s',])
+      >>> df.select(split(df.s, '[0-9]+').alias('s')).collect()
+      [Row(s=[u'ab', u'cd'])]
+      """
+    或者这样用
+    words = lines.select(
+       explode(
+           split(lines.value, " ")
+       ).alias("word")
+    )
+    split函数作用,把DF某一列按照某个规则分开为数组.注意返回的是数组
+    explode函数作用是把数组或者map分解开为一个单词一行
+    使用例子
+    """Returns a new row for each element in the given array or map.
+
+    >>> from pyspark.sql import Row
+    >>> eDF = spark.createDataFrame([Row(a=1, intlist=[1,2,3], mapfield={"a": "b"})])
+    >>> eDF.select(explode(eDF.intlist).alias("anInt")).collect()
+    [Row(anInt=1), Row(anInt=2), Row(anInt=3)]
+
+    >>> eDF.select(explode(eDF.mapfield).alias("key", "value")).show()
+    +---+-----+
+    |key|value|
+    +---+-----+
+    |  a|    b|
+    +---+-----+
+    """
