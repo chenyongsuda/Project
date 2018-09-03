@@ -1,0 +1,47 @@
+在Spark2.x中，Spark Streaming获得了比较全面的升级，称为Structured Streaming，和之前的很不同，功能更强大，效率更高，跟其他的组件整合性也更好。
+2.x同时也解决了DStream的很多问题。
+
+增加了eventTime的概念，在原有基于mini batch处理的基础上，学习了Storm基于每个record的事件处理机制。
+serve using JDBC，可以把SparkStreaming抽象成一个数据库，直接通过jdbc访问数据。
+change queries，在运行时可以变更query，并支持多个query并行运行。
+
+import sys
+from random import random
+from operator import add
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import pandas_udf, PandasUDFType,split,explode
+from pyspark.sql.types import *
+import pyarrow
+import numpy as np
+import pandas as pd
+import datetime
+
+if __name__ == "__main__":
+    spark = SparkSession \
+        .builder \
+        .appName("StructuredNetworkWordCount") \
+        .getOrCreate()
+
+    lines = spark \
+        .readStream \
+        .format("socket") \
+        .option("host", "10.132.250.90") \
+        .option("port", 9999) \
+        .load()
+    
+    words = lines.select(
+        explode(
+            split(lines.value, " ")
+        ).alias("word")
+    )
+
+    # 生成正在运行着的 word count
+    wordCounts = words.groupBy("word").count()
+
+    query = wordCounts \
+        .writeStream \
+        .outputMode("complete") \
+        .format("console") \
+        .start()
+
+    query.awaitTermination()
