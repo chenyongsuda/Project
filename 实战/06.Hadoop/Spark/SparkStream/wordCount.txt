@@ -37,7 +37,9 @@ if __name__ == "__main__":
 
     # 生成正在运行着的 word count
     wordCounts = words.groupBy("word").count()
-
+    # 我们将会把全量的结果打印到控制台，（结果集的输出操作有三种模式，complete mode，append mode和update mode，
+    #  稍后会详细介绍，指定mode使用outputMode(“complete”)），每次结果集更新，都会把所有的结果都打印一次。
+    #  使用start()来启动流式数据计算流程。
     query = wordCounts \
         .writeStream \
         .outputMode("complete") \
@@ -45,3 +47,10 @@ if __name__ == "__main__":
         .start()
 
     query.awaitTermination()
+    
+关于结算结果的输出，有三种模式：
+    outputMode("complete")
+    Complete Mode：输出最新的完整的结果表数据。
+    Append Mode：只输出结果表中本批次新增的数据，其实也就是本批次中的数据；
+    Update Mode（暂不支持）：只输出结果表中被本批次修改的数据；
+    这些Output，可以直接通过连接器（如MySQL JDBC、HBase API等）写入外部存储系统。
