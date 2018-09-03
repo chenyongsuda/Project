@@ -22,7 +22,10 @@ hadoop 2.6.4 download
 添加 HADOOP_HOME 值为hadoop解压目录 
 添加path ;%HADOOP_HOME%\bin
 
+和SPARK_HOME
+
 下载2.6版本hadoop 会缺少winutils.exe 
+https://github.com/steveloughran/winutils
 
 
 四.【将pyspark文件放到python文件夹下、使用winutils.exe修改权限】
