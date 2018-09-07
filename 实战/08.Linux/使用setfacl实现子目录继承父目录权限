@@ -1,0 +1,39 @@
+Linux系统中使用setfacl实现子目录继承父目录权限
+linux下使用setfacl划分权限，需要让子目录继承父目录的权限
+
+linux系统中，文件权限分为：owner（属主） group（属主用户组） other（其他用户）
+如：
+
+drwxrwxr-x 5 qunyingliu qunyingliu 4096 09-02 11:51 IMtest
+
+如果用户xiaoqiang 想对IMtest目录有读写权限，一种是将xiaoqiang用户加入qunyingliu组中,另一种方法就是将other权限改为rw。
+如果想让此目录下的文件或目录继承父目录权限，则每次要执行 chmod -R 目录。
+真得必须这么麻烦吗？当然不是了，我们可以通过setfacl命令来简单实现我们的需求。
+
+    setfacl -R -m u:xiaoqiang:rwx IMtest
+qunyingliu@desktop$
+drwxrwxr-x+ 5 qunyingliu qunyingliu 4096 09-21 11:51 IMtest
+这样xiaoqiang用户就可以操作IMtest目录
+setfacl -d --set u:xiaoqiang:rwx IMtest
+-d是让子目录继承父目录权限
+
+使用getfacl命令查看acl权限
+
+xiaoqiang@desktop$ getfacl IMtest#file: IMtest#owner: qunyingliu #group: qunyingliuuser::rwx
+user:xiaoqiang:rwx
+group::rwx
+mask::rwx
+other::r-x
+default:user::rwx
+default:user:xiaoqiang:rwx
+default:group::rwx
+default:mask:rwx
+default:other::r-x
+ 
+
+setfacl -x u:xiaoqiang IMtest
+去掉用户xiaoqiang的权限
+
+setfacl -b IMtest
+删除IMtest目录的所有的acl权限
+
