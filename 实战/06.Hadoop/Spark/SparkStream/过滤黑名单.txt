@@ -1,0 +1,32 @@
+#coding=utf-8
+
+from pyspark import SparkContext,SparkConf
+from pyspark.streaming import StreamingContext
+from operator import add
+
+
+if __name__ == "__main__":
+    # 192.168.8.128 9999
+    conf = SparkConf()
+    conf.setAppName("sparkstreaming")
+    sc = SparkContext(conf=conf)
+    ssc = StreamingContext(sc, 10)
+
+    blackListRDD = sc.parallelize(['tom', 'alex', 'bob'])
+    sm = ssc.socketTextStream("192.168.8.128", 9999)
+    # get ads click info
+    # 2015 tom
+    # 2016 jack
+    # 2017 marry
+    nameClickDS = sm.map(lambda x: (x.split(" ")[1], x))
+    # marry 2017 marry
+    cleanedDStream = nameClickDS.transform(
+        lambda rdd: rdd.leftOuterJoin(blackListRDD).filter(lambda x: x[1][1] is not None)
+    )
+
+    cleanedDStream.pprint()
+    ssc.start()
+    ssc.awaitTermination()
+    ssc.stop()
+
+
