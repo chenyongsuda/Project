@@ -1,0 +1,13 @@
+1. /etc/ansible/hosts  表示管理的主机列表
+    配置如下
+          192.168.8.129
+          [web]
+          192.168.8.130
+ 使用ping 模块
+ ansible all -m ping 
+ all表示所有机器
+ ansible web -m ping
+ web表示一台机器
+ 
+ 
+ 
