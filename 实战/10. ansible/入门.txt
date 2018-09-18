@@ -10,4 +10,8 @@
  web表示一台机器
  
  
+ 2.配置inventory.cfg 文件代替hosts
+ ansible -i inventory.cfg 使用该配置文件
+ ansible -i inventory.cfg -m shell -a '/bin/echo "hello ansible"'
+ 
  
