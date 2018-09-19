@@ -1,3 +1,12 @@
+0. 全局设置
+        可以设置管理机全局默认用户
+        管理机设置默认远程用户
+        vim /etc/ansible/ansible.cfg
+        remote_user = username
+        
+        可以设置不检查host key
+        host_key_checking = False
+        
 1. /etc/ansible/hosts  表示管理的主机列表
     配置如下
           192.168.8.129
@@ -72,12 +81,49 @@ pam_unix(sshd:auth): check pass; user unknown
 所有初期肯定大批量机器会有一个共同账号.比如root或者其他账号.如果是root的话可以使用ansible分发秘钥.
 下面学习分发秘钥的脚本：
 
+推送单个公钥到远程机器脚本如下
+格式： ssh-copy-id -i ~/.ssh/id_rsa.pub username@[ip,hostname]
+ssh-copy-id -i ~/.ssh/id_rsa.pub username@192.168.100.2
 
+推送大批机器比较麻烦,隐藏用ansible
 
+编辑/etc/ansible/hosts,没有则创建些文件。
 
+格式：【主机名】 【主机地址】 【主机密码】  默认是root用户来进行的
+新版的ansible(2.4) hosts有更新， 用以下方式：
+[tomcat-servers]
+192.168.100.1   ansible_user=tomcat  ansible_ssh_pass="test"
+192.168.100.2   ansible_user=tomcat  ansible_ssh_pass="test"
 
+批量推送公钥到远程机器需要使用authorized_key模块
+authorized_key 模块的简单介绍
+需要使用到的模块：authorized_key，为特定的用户账号添加或删除 SSH authorized keys
 
+帮助文件查看
+ansible-doc authorized_key
+常用选项：
+Options: (= is mandatory)(= 后面的参数是强制要有的)
+- exclusive [default: no]： 是否移除 authorized_keys 文件中其它非指定 key
+= key： SSH public key(s) 可以是字符串或 url，如：https://github.com/username.keys
+- key_options [Default: None]： 附加到 key 中的字符串，该字符串会加到 key 的开头
+- path [Default: (homedir)+/.ssh/authorized_keys]： 指定 authorized_keys 文件存放的位置
+- state (Choices: present, absent) [Default: present]： present 添加指定 key 到 authorized_keys 文件中；absent 从 authorized_keys 文件中移除指定 key
+= user： 指定修改远端服务器上哪个用户的 authorized_keys
+- manage_dir (Choices: yes, no) [Default: yes]： 指定模块是否应该管理 authorized key 文件所在的目录。如果设置为 yes，模块会创建目录，以及设置一个已存在目录的拥有者和权限。如果通过 path 选项，重新指定了一个 authorized key 文件所在目录，那么应该将该选项设置为 no
 
+生成秘钥命令
+ssh-keygen -t rsa -f ~/.ssh/id_rsa
+或者直接
+ssh-keygen -t rsa
+生成后如下：
+Your identification has been saved in /home/test/.ssh/id_rsa.
+Your public key has been saved in /home/test/.ssh/id_rsa.pub.
 
+标准配置：参考https://docs.ansible.com/ansible/latest/modules/authorized_key_module.html
+name: Set authorized key taken from file
+  authorized_key:
+    user: charlie
+    state: present
+    key: "{{ lookup('file', '/home/charlie/.ssh/id_rsa.pub') }}"
 
 
