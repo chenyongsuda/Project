@@ -15,3 +15,27 @@
  ansible -i inventory.cfg -m shell -a '/bin/echo "hello ansible"'
  
  
+3.查看帮助
+ansible --help
+模块帮助
+ansible-doc -s [module]
+
+
+4.普通用户测试
+使用普通用户执行
+ansible all -m ping -o
+会提示：
+The authenticity of host '192.168.8.129 (192.168.8.129)' can't be established.
+ECDSA key fingerprint is SHA256:KKw5CBHsSaU/+iTLjldBQH/pM3w97V+SgJFSs95vHsU.
+ECDSA key fingerprint is MD5:c5:8d:ce:b4:5b:3d:be:45:03:e5:bd:7a:be:22:2a:63.
+Are you sure you want to continue connecting (yes/no)? The authenticity of host '192.168.8.130 (192.168.8.130)' can't be established.
+ECDSA key fingerprint is SHA256:KKw5CBHsSaU/+iTLjldBQH/pM3w97V+SgJFSs95vHsU.
+ECDSA key fingerprint is MD5:c5:8d:ce:b4:5b:3d:be:45:03:e5:bd:7a:be:22:2a:63.
+Are you sure you want to continue connecting (yes/no)? yes
+192.168.8.129 | UNREACHABLE!: Failed to connect to the host via ssh: Warning: Permanently added '192.168.8.129' (ECDSA) to the list of known hosts.
+Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password).
+192.168.8.130 | UNREACHABLE!: Failed to connect to the host via ssh: Host key verification failed.
+
+并失败 由于SSH秘钥没推送到对端主机
+
+
