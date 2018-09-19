@@ -1,0 +1,121 @@
+ansible 用户批量创建与管理
+
+用户创建，用户属性管理，以及批量创建用户
+批量解决用户免密码登录远程被控制机器
+以下是实验使用的 /etc/ansible/hosts 文件
+cat   /etc/ansible/hosts 
+[test]
+192.168.188.109
+[apps]
+192.168.188.110 
+192.168.188.108 
+192.168.188.109 
+192.168.188.111 
+ansible 用户创建
+当然，在 ansible 里可以用很多方法创建用户，例如：
+ansible  test  -m  shell  -a  ‘useradd  apple‘ 
+说明： 这个相当在远程主机中用 shell 命令创建用户，一般不推荐
+其实，ansilbe 提供了一个 user 模块，用于创建和管理用户。
+ansible 官方的user 模块的说明文档。
+例如，创建一个有登录shell 的用户,用户名是 apple：
+ansible  test  -m  user  -a  ‘name=apple  shell=/bin/bash  home=/home/apple  state=present‘
+说明：  name 指定创建的用户名
+             shell   指定用户登录时获得的shell 
+                         home  为用户创建 HOME 目录
+                         state    指定是创建还是删除用户，当 state=absent 时，为删除用户
+如果需要在多台远程主机中创建用户
+如果需要在多台远程主机中创建用户，只需将所有主机添加到一个主机组，再执行一遍上面的命令就可以了
+
+ansible  apps   -m  user  -a  ‘name=apple  shell=/bin/bash  home=/home/apple/  state=present‘
+将所有要操作的远程主机添加到主机组 apps 中。
+如何设置用户密码
+用 ansible 设置用户的密码时，由于需要对传输的密码进行加密，所以要在主机安装python 的passlib 库。
+安装方法与生成密码的方法：
+1. 安装 passlib 要求系统 python 版本在2.7以上。
+2. 利用 pip 安装：
+     pip  install  passlib
+3. 生成的经过加密的密码：
+    例如，我们想给 apple 设置的密码是 123456 ，那么我们在 ansible 命令中，不能直接使用 123456 这样的明
+        文传输，要对 123456 这个字符串进行加密再在 ansible 命令中使用。
+        那么，如何对密码 123456 进行加密呢？
+4. 安装完 passlib 后，生成加密的密码：
+4.1     python 3.x 版本（sha512 加密算法）：
+         [root@centos_7 ~]  python -c ‘from  passlib.hash  import sha512_crypt;  import  getpass;  print (sha512_crypt.encrypt(getpass.getpass()))‘
+Password: 
+$6$rounds=656000$3pLHgWNbPxYGlyvP$VsVlECg4v2Gr35XMzWCtLZyPO.l7Fg240/cGZbTI8qDea8fwY3ERSxAompHqQ4bjIlxeLPgWAUj64FMxunOCt.
+说明： 在 Password 后输入我们的密码"123456"，然后再按enter 键，就会生成经过加密的密码了，$6$round....... 这一串字符
+
+4.2     python 3.x 版本（普通加密算法）：
+     其实就是生成的加密密码短一点：
+         [root@centos_7 ~]  python -c ‘import crypt; print (crypt.crypt("123456","apple"))‘
+apnK4rIpkaoHo
+
+说明： "pnK4rIpkaoHo" 就是生成的经过加密的密码
+
+4.3   python 2.x 版本（sha512 加密算法）：
+     [root@centos_7 ~]  python -c ‘from  passlib.hash  import sha512_crypt;  import  getpass;  print (sha512_crypt.encrypt(getpass.getpass()))‘
+
+4.4  python 2.x 版本（普通加密算法）：
+       [root@centos_7 ~]  python -c ‘import crypt; print (crypt.crypt("123456","apple"))‘
+
+小结： 看到上面列出的4种加密方式，发现，其实python3.x 和 python2.x 版本的区别不大，只是加密算法是用 sha512 还是用普通算法的区别而已。
+
+5.  用ansible 设置用户密码，下面的命令用于修改已经存在的用户的密码也是可以的：
+      ansilbe   apps   -m   user  -a   ‘name=apple  shell=/bin/bash   password=pnK4rIpkaoHo 
+            update_password=always ‘
+          这样，就可以修改密码了。使用了普通加密的密文密码。
+小结：以上为止，就是批量创建用户的方法。并且对用户的密码设置方法做了重点说明，其他关于用户的属性操作，直接参考ansible 官方的user 模块的说明文档，更全面。
+如何批量解决免密码登录远程主机的问题
+在文章的前半部分，已经在多台远程主机上创建了相同的账号了，那么怎么解决登录这些远程主机时，需要用户密码的问题呢？
+一般的办法就是使用公钥密钥对验证的方法。
+一般的原理就是在本地主机创建密钥对（包含公钥和私钥），然后将公钥放到远程主机，私钥留着本地。当本地用户要登录远程主机时，使用私钥登录，如何私钥验证通过了，登录就成功。
+例如，我们前面创建了 apple 用户，怎么样将使得在本地用 apple 用户登录远程的所有主机都不需要输入密码验证呢？解决办法：
+1. 在本地也创建一个 apple 用户,并创建 /home/apple/.ssh/ 目录
+useradd apple -s  /bin/bash  -d  /home/apple/
+
+创建 .ssh 目录
+mkdir   /home/apple/.ssh 
+修改 .ssh 目录的权限
+chmod  700  /home/apple/.ssh
+创建 /home/apple/.ssh/known_hosts 文件
+2. 收集所有远程主机的公钥，保存在上 /home/apple/.ssh/known_hosts 文件。这一步的作用，是为了在后面第一次ssh 连接时，不需要再输密码。
+    收集所有远程主机的 公钥，主要是利用 ssh-keyscan 命令：
+     ssh-keyscan   -f   ip.txt  >> /home/apple/.ssh/known_hosts  # 说明： ip.txt 文件存放所有的远程主机 ip 地址，一行代表一台主机。
+3.创建公钥私钥对：
+一般在对应用户的 /home/apple/.ssh/ 目录下创建。这也不是强制的，因为在ssh 发起连接时，可以指定使用的私钥文件。
+
+ssk-keygen  -t  rsa    一直按回车键就可以了。但要注意生成的 id_rsa 和 id_rsa.pub 存放的路径。
+4. 将公钥推送到所有的远程主机
+我们编写playbook 文件，利用authorized_key 模块就可以快速完成：
+[root@centos_7 roles]   cat ssh-addkey.yml 
+---
+- hosts: apps        # 对apps 组里的所有远程主机
+  gather_facts: False
+  tasks:
+    - name: install sshkey
+      authorized_key: 
+        user: apple
+        key: "{{ lookup(‘file‘, ‘/home/apple/.ssh/id_rsa.pub‘) }}"
+        state: present
+
+说明： 在前面1,2,3步中，我们已经准备好了公私钥对了。推送到远程主机，可以手动推送，或者使用scp 复制到远程主机。但是利用scp 复制之后，还需要修改远程主机上的 /home/apple/.ssh/authorize_keys 文件的权限等等。
+
+ansible 的 authorized_key 模块就自动帮我们做了这些工作。
+
+执行， ansible-playbook   ssh-addkye.yml 
+
+
+5. 结果
+现在，就已经顺利地在所有远程主机上配置了用户apple 的免密码登录了。
+测试：
+[root@centos_7 roles]   ssh -i  /home/apple/.ssh/id_rsa   apple@192.168.188.110   # 用 -i 指定私钥文件
+Last login: Mon Jan 22 14:34:45 2018 from 192.168.188.107
+
+查看 ip 地址：
+[apple@centos_7_02 ~]$ ip addr
+2: eno16777736: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether 00:0c:29:2c:a5:a0 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.188.110/24 brd 192.168.188.255 scope global eno16777736
+       valid_lft forever preferred_lft forever
+    inet6 fe80::20c:29ff:fe2c:a5a0/64 scope link 
+       valid_lft forever preferred_lft forever
