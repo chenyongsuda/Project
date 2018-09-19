@@ -126,4 +126,6 @@ name: Set authorized key taken from file
     state: present
     key: "{{ lookup('file', '/home/charlie/.ssh/id_rsa.pub') }}"
 
+参考其他命令
+ansible foo.example.com -m yum -a "name=httpd state=installed"
 
