@@ -1,1 +1,213 @@
+首先介绍roles的结构
+参考: https://www.cnblogs.com/Peter2014/p/7953781.html
 
+
+1.roles下子目录里必须要有main.yml文件，ansible会自动查询并执行。
+2.roles目录和nginx.yml放在同一级目录中，或者在ansible.cfg中配置roles的查询路径。
+3.如果yml中冒号后引用jinja模板以{{开头，则整行语句需要加上" "，防止yml认为这是个字典。
+[root@localhost app]# tree ansible-playbook
+ansible-playbook
+├── nginx.yml
+└── roles
+    └── nginx                   #这就是在nginx.yml主文件中指定的role
+        ├── defaults
+        │   └── main.yml  低优先级变量
+        ├── vars
+        │   ├── main.yml   高优先级变量
+        ├── files
+        │   ├── compile.sh.j2
+        │   └── nginx-1.6.3.tar.gz
+        ├── handlers
+        │   └── main.yml
+        ├── tasks
+        │   ├── install.yml
+        │   └── main.yml
+        └── templates
+            └── nginx.conf.j2
+ 
+1.defaults中存放默认的变量，可以通过jinja模板调用
+2.files中存放文件、软件包、脚本等内容，可以被copy、unarchive、script等模块调用
+3.handlers中存放依赖任务，可以被notify关键字调用
+4.tasks中存放主任务，ansible会首先进行调用
+5.templates中存放模板文件，模板中可以使用jinja模板调用defaults中定义的变量，被templates模块调用
+
+tasks -----------------------------------------------------------------------------------------------------------
+nginx的安装过程包括创建用户、创建目录、下载安装包、下载依赖包、编译安装、创建软链接、修改配置文件、测试、启动这些环节。
+[root@localhost nginx]# tree tasks/
+tasks/
+├── install.yml
+└── main.yml
+ 
+[root@localhost nginx]# less tasks/main.yml
+ 
+---
+- import_tasks: install.yml
+ 
+#ansible的playbook以---开头，然后使用yml语法编写
+#tasks/main.yml中加载install.yml，include方式不久会被淘汰，这里采用import_tasks关键字
+ 
+[root@localhost nginx]# less tasks/install.yml
+ 
+---
+- name: groupadd nginx   #创建组，存在则忽略，group模块   - name:说明
+  group:                         
+    name: "{{ group }}"
+    gid: 888
+ 
+- name: useradd nginx   #创建用户，存在则忽略，user模块
+  user:
+    name: "{{ user }}"
+    group: "{{ group }}"
+    uid: 888
+    createhome: no
+    shell: /sbin/nologin
+ 
+- name: install pcre-devel  #安装依赖，package模块
+  package:
+    name: pcre-devel
+    state: latest
+ 
+- name: install openssl-devel  #安装依赖,package模块
+  package:
+    name: openssl-devel
+    state: latest
+ 
+- name: create /tools    #创建目录,file模块
+  file:
+    path: /tools
+    state: directory 
+ 
+- name: copy and extract nginx tarball  #解压压缩包，unarchive模块
+  unarchive:
+    src: "{{ tarball_name }}"
+    dest: /tools
+ 
+- name: ./configure         #检查环境，command模块
+  command: ./configure --user={{ user }} --group={{ group }} --prefix=/app/{{ nginx_dir }} --with-http_stub_s
+tatus_module --with-http_ssl_module
+  args:
+    chdir: /tools/{{ nginx_dir }}
+ 
+- name: make    #编译，command模块
+  command: make
+  args:
+    chdir: /tools/{{ nginx_dir }}
+ 
+- name: make install    #安装，command模块
+  command: make install
+  args:
+    chdir: /tools/{{ nginx_dir }}
+ 
+- name: modify nginx configuration   #修改配置文件，template模块
+  template:
+    src: "{{ nginx_configuration }}"
+    dest: /app/{{ nginx_dir }}/conf/nginx.conf
+ 
+- name: make link     #创建软连接，file模块
+  file:
+    src: /app/{{ nginx_dir }}
+    dest: /app/nginx
+    state: link
+ 
+- name: test nginx   #测试nginx配置,command模块
+  command: /app/nginx/sbin/nginx -t
+  notify:              #调用handlers目录下的main.yml
+    - start nginx
+    
+handlers----------------------------------------------------------------------------------------
+[root@localhost nginx]# tree handlers/
+handlers/
+└── main.yml
+ 
+[root@localhost nginx]# less handlers/main.yml
+ 
+---
+- name: start nginx     #notify下面指定的内容在name这里定义
+  command: /app/nginx/sbin/nginx
+ 
+#这里只是演示，实际批量部署不需要nginx -t 这一步
+
+files--------------------------------------------------------------------------------------------------------------
+[root@localhost nginx]# tree files/
+files/
+└── nginx-1.6.3.tar.gz
+ 
+#ansible中unarchive、copy等模块会自动来这里找文件，从而我们不必写绝对路径，只需写文件名
+
+templates-----------------------------------------------------------------------------------------------------------
+[root@localhost nginx]# tree templates/
+templates/
+└── nginx.conf.j2
+ 
+#一般来说，模板文件中都会使用jinja2模板，所以通常我们在模板文件后加上.j2后缀，但不是必须的
+ 
+[root@localhost nginx]# less templates/nginx.conf.j2
+ 
+    server {
+        listen       {{ nginx_port }};    #这里使用jinja模板引用变量
+        server_name  localhost;
+ 
+ 
+#template模块会将模板文件中的变量替换为实际值，然后覆盖到客户机指定路径上
+
+
+defaults-----------------------------------------------------------------------------------------------------------------
+[root@localhost nginx]# tree defaults
+defaults
+└── main.yml
+ 
+[root@localhost nginx]# less defaults/main.yml
+ 
+user: nginx
+group: nginx
+tarball_name: nginx-1.6.3.tar.gz
+nginx_configuration: nginx.conf.j2
+nginx_dir: nginx-1.6.3
+nginx_port: 2223             #这是我们刚才在模板文件中使用的变量
+ 
+#defaults中的变量优先级最低，通常我们可以临时指定变量来进行覆盖
+
+
+执行playbook----------------------------------------------------------------------------------------------------------------
+到了激动人心的时刻，ansible的好处在于什么都不用配，直接就能用，所以这里我们将inventory、nginx.yml、roles目录放在同一级目录ansible-playbook下，便于管理
+#首先看看nginx.yml主文件
+ 
+[root@localhost ansible-playbook]# less nginx.yml
+ 
+---
+- name: deploy nginx
+  hosts: all
+  remote_user: root
+  roles:
+    - nginx
+ 
+#hosts表示选择哪些主机进行部署
+#remote_user表示选择哪个用户进行部署
+#roles表示选择部署什么内容
+ 
+#当然，这里还可以通过字典的方式指定不同的变量
+---
+- name: deploy nginx
+  hosts: all
+  remote_user: root
+  roles:
+    - { role: nginx, nginx_port: 8080 }
+我们进入ansible-playbook目录下，执行 ansible-playbook -i hosts nginx.yml 即可开始部署
+
+[root@localhost ansible-playbook]# ansible-playbook -i hosts nginx.yml
+ 
+TASK [Gathering Facts]   **************************************************************************************
+ok: [172.16.1.10]
+ 
+TASK [nginx : groupadd nginx]  *******************************************************************************
+ok: [172.16.1.10]
+ 
+TASK [nginx : useradd nginx] ********************************************************************************
+ok: [172.16.1.10]
+
+# TASK[]里的内容就是定义在首行name中的提示内容
+# -i 表示自行指定inventory文件
+
+
+========================================================================================================================
+自动化安装软件
