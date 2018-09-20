@@ -1,3 +1,51 @@
 template模块的简单实用
 参考https://docs.ansible.com/ansible/latest/modules/template_module.html?highlight=template
 
+- hosts: web
+  remote_user: root
+  tasks:
+    - name: echo hello word
+      shell: touch '/var/log/text.txt'
+    - name: create a file with file model
+      file:
+        path: /var/log/text02.txt
+        state: touch
+        mode: "u=rw,g=r,o=r"
+      template:
+        src: config.ini
+        dest: /var/log/hello.txt
+        
+在一个name下执行多个动作会出错
+修改为如下：
+- hosts: web
+  remote_user: root
+  tasks:
+    - name: echo hello word
+      shell: touch '/var/log/text.txt'
+    - name: create a file with file model
+      file:
+        path: /var/log/text02.txt
+        state: touch
+        mode: "u=rw,g=r,o=r"
+    - name: copy template
+      template:
+        src: config.ini
+        dest: /var/log/hello.txt
+        
+[root@vm02 ~]# ansible-playbook touch.yaml -f 3
+
+PLAY [web] *********************************************************************
+TASK [Gathering Facts] *********************************************************
+ok: [192.168.56.103]
+TASK [echo hello word] *********************************************************
+ [WARNING]: Consider using file module with state=touch rather than running
+touch
+changed: [192.168.56.103]
+TASK [create a file with file model] *******************************************
+changed: [192.168.56.103]
+TASK [copy template] ***********************************************************
+changed: [192.168.56.103]
+PLAY RECAP *********************************************************************
+192.168.56.103             : ok=4    changed=3    unreachable=0    failed=0
+执行结果成功.
+
