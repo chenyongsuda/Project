@@ -1,0 +1,3 @@
+template模块的简单实用
+参考https://docs.ansible.com/ansible/latest/modules/template_module.html?highlight=template
+
