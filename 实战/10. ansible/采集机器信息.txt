@@ -1,0 +1,41 @@
+1. ansible采集机器基本信息
+ansible web -m setup
+这样查信息太多
+
+2.过滤只查部分信息
+ansible web -m setup -a 'filter=ansible_all_ipv4_addresses'
+[root@vm01 ~]# ansible web -m setup -a 'filter=ansible_all_ipv4_addresses'
+192.168.8.130 | SUCCESS => {
+    "ansible_facts": {
+        "ansible_all_ipv4_addresses": [
+            "192.168.8.130"
+        ]
+    }, 
+    "changed": false
+}
+192.168.8.131 | SUCCESS => {
+    "ansible_facts": {
+        "ansible_all_ipv4_addresses": [
+            "192.168.8.131"
+        ]
+    }, 
+    "changed": false
+}
+支持通配符
+[root@vm01 ~]# ansible web -m setup -a 'filter=ansible_all_ipv4*'
+192.168.8.131 | SUCCESS => {
+    "ansible_facts": {
+        "ansible_all_ipv4_addresses": [
+            "192.168.8.131"
+        ]
+    }, 
+    "changed": false
+}
+192.168.8.130 | SUCCESS => {
+    "ansible_facts": {
+        "ansible_all_ipv4_addresses": [
+            "192.168.8.130"
+        ]
+    }, 
+    "changed": false
+}
