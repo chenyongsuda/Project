@@ -7,6 +7,9 @@
         可以设置不检查host key
         host_key_checking = False
         
+        列出主机列表
+        ansible web --list-host
+        
 1. /etc/ansible/hosts  表示管理的主机列表
     配置如下
           192.168.8.129
@@ -128,4 +131,94 @@ name: Set authorized key taken from file
 
 参考其他命令
 ansible foo.example.com -m yum -a "name=httpd state=installed"
+
+执行命令发生错误
+[test@vm01 root]$ ansible web -m authoried_key -a "user=test state=present key={{lookup('file', '/home/test/.ssh/id_rsa.pub')}}"
+192.168.8.130 | FAILED! => {
+    "msg": "The module authoried_key was not found in configured module paths. Additionally, core modules are missing. If this is a checkout, run 'git pull --rebase' to correct this problem."
+}
+
+其实命令也确少引号
+ansible web -m authoried_key -a "user=test state=present key=\"{{ lookup('file', '/home/test/.ssh/id_rsa.pub') }}\""
+但是还是显示模块未找到.
+不知道为啥重新执行了次可以了
+[test@vm01 root]$ ansible web -m authorized_key -a "user=test state=present key=\"{{ lookup('file', '/home/test/.ssh/id_rsa.pub') }}\""
+192.168.8.130 | SUCCESS => {
+    "changed": true, 
+    "comment": null, 
+    "exclusive": false, 
+    "key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD9y3Ug+upX4cdhA8WAS/RNmNpMLLb8L0wkahUHh6ZJN47PGbH8k3ddh5oi4oGi0+AKa9gbas5xYL8/XkOqOmzCN9FG9FQ6xcHo8PXJuf9DxsjuDP1cruK6tj3aD9eNjTPdLqXW//onr5r8S/sd9ArSr7iBzvDqJ7zURpIZh734iEKyeCSN2A0Kd10nJzfxMak/C/R6Ia8+E75MuElDESByHURUecv0YxrYh5JpNkMjfKQ/RvgmnmvD+Zp7xT3U5Rjx5yMUYL2GeHEPDtnfTjxgrlWSWirUHG3hMWlnkLdUx522gSf9ukXWnteZj11Ku5lyw8N8BynynC0NnG+mD1s/ test@vm01", 
+    "key_options": null, 
+    "keyfile": "/home/test/.ssh/authorized_keys", 
+    "manage_dir": true, 
+    "path": null, 
+    "state": "present", 
+    "unique": false, 
+    "user": "test", 
+    "validate_certs": true
+}
+
+测试下：
+[test@vm01 root]$ ssh test@vm03
+The authenticity of host 'vm03 (192.168.8.130)' can't be established.
+ECDSA key fingerprint is SHA256:KKw5CBHsSaU/+iTLjldBQH/pM3w97V+SgJFSs95vHsU.
+ECDSA key fingerprint is MD5:c5:8d:ce:b4:5b:3d:be:45:03:e5:bd:7a:be:22:2a:63.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added 'vm03' (ECDSA) to the list of known hosts.
+Last login: Thu Sep 20 08:07:09 2018 from vm01
+但是第一次询问加入know hosts
+反正设置了host_key_checking = False应该没问题
+在测试一台机器
+添加机器
+[web]
+192.168.8.130 ansible_ssh_pass='test'
+192.168.8.131 ansible_ssh_pass='test'
+
+执行命令
+[test@vm01 root]$ ansible web  -m authorized_key -a "user=test state=present key=\"{{ lookup('file', '/home/test/.ssh/id_rsa.pub') }}\""
+192.168.8.130 | SUCCESS => {
+    "changed": false, 
+    "comment": null, 
+    "exclusive": false, 
+    "key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD9y3Ug+upX4cdhA8WAS/RNmNpMLLb8L0wkahUHh6ZJN47PGbH8k3ddh5oi4oGi0+AKa9gbas5xYL8/XkOqOmzCN9FG9FQ6xcHo8PXJuf9DxsjuDP1cruK6tj3aD9eNjTPdLqXW//onr5r8S/sd9ArSr7iBzvDqJ7zURpIZh734iEKyeCSN2A0Kd10nJzfxMak/C/R6Ia8+E75MuElDESByHURUecv0YxrYh5JpNkMjfKQ/RvgmnmvD+Zp7xT3U5Rjx5yMUYL2GeHEPDtnfTjxgrlWSWirUHG3hMWlnkLdUx522gSf9ukXWnteZj11Ku5lyw8N8BynynC0NnG+mD1s/ test@vm01", 
+    "key_options": null, 
+    "keyfile": "/home/test/.ssh/authorized_keys", 
+    "manage_dir": true, 
+    "path": null, 
+    "state": "present", 
+    "unique": false, 
+    "user": "test", 
+    "validate_certs": true
+}
+192.168.8.131 | SUCCESS => {
+    "changed": true, 
+    "comment": null, 
+    "exclusive": false, 
+    "key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD9y3Ug+upX4cdhA8WAS/RNmNpMLLb8L0wkahUHh6ZJN47PGbH8k3ddh5oi4oGi0+AKa9gbas5xYL8/XkOqOmzCN9FG9FQ6xcHo8PXJuf9DxsjuDP1cruK6tj3aD9eNjTPdLqXW//onr5r8S/sd9ArSr7iBzvDqJ7zURpIZh734iEKyeCSN2A0Kd10nJzfxMak/C/R6Ia8+E75MuElDESByHURUecv0YxrYh5JpNkMjfKQ/RvgmnmvD+Zp7xT3U5Rjx5yMUYL2GeHEPDtnfTjxgrlWSWirUHG3hMWlnkLdUx522gSf9ukXWnteZj11Ku5lyw8N8BynynC0NnG+mD1s/ test@vm01", 
+    "key_options": null, 
+    "keyfile": "/home/test/.ssh/authorized_keys", 
+    "manage_dir": true, 
+    "path": null, 
+    "state": "present", 
+    "unique": false, 
+    "user": "test", 
+    "validate_certs": true
+}
+
+发现一台不需要修改另一台已经成功.
+
+测试第二台任务,删掉密码
+[web]
+192.168.8.130                        
+192.168.8.131 
+
+[test@vm01 root]$ ansible web -m shell -a "/bin/echo 'hello'"
+192.168.8.130 | SUCCESS | rc=0 >>
+hello
+
+192.168.8.131 | SUCCESS | rc=0 >>
+hello
+
+都成功了.实验搞定.
+
 
