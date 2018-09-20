@@ -1,0 +1,174 @@
+ansible命令包含两种类别
+1.ad-hoc和playbook
+  ad-hoc表示单个命令
+  playbook表示剧本可以包含多步骤命令
+  
+下面来学习下playbook
+playbook中包含很多play,也可以包含一个play
+使用yaml格式
+#YAML格式
+environments:
+    dev:
+        url: http://dev.bar.com
+        name: Developer Setup
+    prod:
+        url: http://foo.bar.com
+        name: My Cool App
+my:
+    servers:
+        - dev.bar.com
+        - foo.bar.com
+可以直观的看到，YAML使用冒号加缩进的方式代表层级（属性）关系，使用短横杠(-)代表数组元素。
+经过这个示例的演示，可以很明显的看到YAML针对properties文件的优异之处。
+
+
+下面学习一个只包含一个play的playbook
+---
+- hosts: webservers
+  vars:
+    http_port: 80
+    max_clients: 200
+  remote_user: root
+  tasks:
+  - name: ensure apache is at the latest version
+    yum:
+      name: httpd
+      state: latest
+  - name: write the apache config file
+    template:
+      src: /srv/httpd.j2
+      dest: /etc/httpd.conf
+    notify:
+    - restart apache
+  - name: ensure apache is running
+    service:
+      name: httpd
+      state: started
+  handlers:
+    - name: restart apache
+      service:
+        name: httpd
+        state: restarted
+   
+------------------------------
+包含多个play
+---
+- hosts: webservers
+  remote_user: root
+
+  tasks:
+  - name: ensure apache is at the latest version
+    yum:
+      name: httpd
+      state: latest
+  - name: write the apache config file
+    template:
+      src: /srv/httpd.j2
+      dest: /etc/httpd.conf
+
+- hosts: databases
+  remote_user: root
+
+  tasks:
+  - name: ensure postgresql is at the latest version
+    yum:
+      name: postgresql
+      state: latest
+  - name: ensure that postgresql is started
+    service:
+      name: postgresql
+      state: started
+
+
+先学一个简单个
+- hosts: webservers
+  remote_user: root
+  tasks:
+  - name: ensure apache is at the latest version
+    yum:
+      name: httpd
+      state: latest
+  - name: write the apache config file
+    template:
+      src: /srv/httpd.j2
+      dest: /etc/httpd.conf
+
+首先建立个hosts针对webservers这些机器,使用root用户执行如下tasks
+包含两个task
+1.安装httpd 最新版本
+2.写apache配置文件
+下面写一个最简单的playbook
+有两个任务：1.用shell创建一个文件 2.创建一个文件
+这两个需要使用两个模块 shell模块和file模块
+shell模块参考
+https://docs.ansible.com/ansible/latest/modules/shell_module.html?highlight=shell
+
+文件模块参考
+https://docs.ansible.com/ansible/latest/modules/file_module.html#file-module
+
+- hosts: web
+  remote_user: root
+  tasks:
+    - name: echo hello word
+      shell: touch '/var/log/text.txt'
+    - name: create a file with file model
+      file:
+        path:/var/log/text02.txt
+        state: touch
+        mode: "u=rw,g=r,o=r"
+        
+创建touch.yaml
+命令检测playbook的语法
+ansible-playbook touch.yaml --syntax-check
+
+
+列出所有任务
+[root@vm02 ~]# ansible-playbook touch.yaml --list-task
+
+playbook: touch.yaml
+
+  play #1 (web): web    TAGS: []
+    tasks:
+      echo hello word   TAGS: []
+      create a file with file model     TAGS: []
+      
+列出针对的机器
+[root@vm02 ~]# ansible-playbook touch.yaml --list-host
+
+playbook: touch.yaml
+
+  play #1 (web): web    TAGS: []
+    pattern: [u'web']
+    hosts (1):
+      192.168.56.103
+
+检查完后可以执行
+ansible-playbook touch.yaml -f 3
+
+可以带上hosts配置如果不使用默认配置的hosts文件的话
+ansible-playbook -i hosts touch.yaml -f 3
+
+执行结果
+[root@vm02 ~]# ansible-playbook touch.yaml -f 3
+
+PLAY [web] *********************************************************************
+
+TASK [Gathering Facts] *********************************************************
+ansible-playbook touch.yaml -f 3ok: [192.168.56.103]
+
+TASK [echo hello word] *********************************************************
+ [WARNING]: Consider using file module with state=touch rather than running
+touch
+
+changed: [192.168.56.103]
+
+TASK [create a file with file model] *******************************************
+changed: [192.168.56.103]
+
+PLAY RECAP *********************************************************************
+192.168.56.103             : ok=3    changed=2    unreachable=0    failed=0
+
+在用shell创建文件的时候显示warning表示让我们都用file模块在做创建文件的操作.
+检查机器里面都已经创建出来了.
+
+实验成功.完美解决
