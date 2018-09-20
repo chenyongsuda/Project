@@ -49,3 +49,212 @@ PLAY RECAP *********************************************************************
 192.168.56.103             : ok=4    changed=3    unreachable=0    failed=0
 执行结果成功.
 
+
+
+看比较标准的项目结构
+参考https://www.cnblogs.com/jsonhc/p/7895399.html
+1、使用template模块在jinja2中引用变量，先来目录结构树
+
+复制代码
+[root@master ansible]# tree
+.
+├── ansible.cfg
+├── hosts
+├── roles
+│   └── temp
+│       ├── tasks
+│       │   └── main.yaml
+│       ├── templates
+│       │   ├── test_if.j2
+│       │   └── test.j2
+│       └── vars
+│           └── main.yaml
+└── work_dir
+    ├── copy_configfile.retry
+    └── copy_configfile.yaml
+复制代码
+打开定义好的变量：
+
+[root@master ansible]# cat roles/temp/vars/main.yaml 
+master_ip: 192.168.101.14
+master_hostname: master
+node1_ip: 192.168.101.15
+node1_hostname: node1
+打开hosts文件查看节点信息：
+
+[root@master ansible]# egrep -v "^#|^$" hosts 
+[nodes]
+192.168.101.14 
+192.168.101.15
+现在通过定义好的变量在templates目录下创建j2文件：
+
+[root@master ansible]# cat roles/temp/templates/test.j2 
+ExecStart=/usr/local/bin/etcd --name {{ master_hostname }} --initial-advertise-peer-urls http://{{ master_ip }}:2380
+查看tasks主任务定义：
+
+[root@master ansible]# cat roles/temp/tasks/main.yaml 
+- name: copy configfile to nodes
+  template:
+    src: test.j2
+    dest: /tmp/test.conf
+查看工作目录下面的执行yaml：
+
+[root@master ansible]# cat work_dir/copy_configfile.yaml 
+- hosts: nodes
+  remote_user: root
+  roles: 
+    - temp
+在tasks目录下面的main.yaml定义使用了template模块，调用templates目录下面的test.j2文件
+
+执行：
+
+[root@master ansible]# ansible-playbook work_dir/copy_configfile.yaml
+然后在两个节点查看：
+
+[root@master ~]# cat /tmp/test.conf     
+ExecStart=/usr/local/bin/etcd --name master --initial-advertise-peer-urls http://192.168.101.14:2380
+[root@node1 ~]# cat /tmp/test.conf
+ExecStart=/usr/local/bin/etcd --name master --initial-advertise-peer-urls http://192.168.101.14:2380
+可以看见在各个节点的tem目录下面的文件都用变量替换了
+
+ 
+
+2、使用template模块调用的j2文件使用{% if %} {% endif %}进行控制：
+
+[root@master ansible]# cat roles/temp/templates/test_if.j2 
+{% if ansible_hostname == master_hostname %}
+ExecStart=/usr/local/bin/etcd --name {{ master_hostname }} --initial-advertise-peer-urls http://{{ master_ip }}:2380
+{% elif ansible_hostname == node1_hostname %}
+ExecStart=/usr/local/bin/etcd --name {{ node1_hostname }} --initial-advertise-peer-urls http://{{ node1_ip }}:2380
+{% endif %}
+在上面中使用if进行了判断，如果ansible_hostname变量与定义的master_hostname变量值相等，那么将此文件copy到节点上就使用条件1，而过不满足条件1那么执行条件2
+
+ansible_hostname这个变量是setup模块中的值，是节点的固定值
+
+复制代码
+[root@master ~]# ansible all -m setup -a "filter=ansible_hostname"
+192.168.101.15 | SUCCESS => {
+    "ansible_facts": {
+        "ansible_hostname": "node1"
+    }, 
+    "changed": false, 
+    "failed": false
+}
+192.168.101.14 | SUCCESS => {
+    "ansible_facts": {
+        "ansible_hostname": "master"
+    }, 
+    "changed": false, 
+    "failed": false
+}
+复制代码
+现在查看tasks下面的文件：
+
+[root@master ansible]# cat roles/temp/tasks/main.yaml 
+- name: copy configfile to nodes
+  template:
+    src: test_if.j2
+    dest: /tmp/test.conf
+将上面的test.j2改为了if条件的j2，然后执行：
+
+[root@master ansible]# ansible-playbook work_dir/copy_configfile.yaml
+查看各节点生成的文件内容：
+
+[root@master ~]# cat /tmp/test.conf 
+ExecStart=/usr/local/bin/etcd --name master --initial-advertise-peer-urls http://192.168.101.14:2380
+[root@node1 ~]# cat /tmp/test.conf
+ExecStart=/usr/local/bin/etcd --name node1 --initial-advertise-peer-urls http://192.168.101.15:2380
+可以看见生成的文件内容不一样，于是这样就可以将节点的不同内容进行分离开了
+
+当然还可以使用另外的方式隔离节点的不同：
+
+ExecStart=/usr/local/bin/etcd --name {{ ansible_hostname }} --initial-advertise-peer-urls http://{{ ansible_ens33.ipv4.address }}:2380
+因为各个节点的ansible_hostname和ip都是固定的所以也可以根据上面进行区分不同（不过这种方式限制了一定的范围）
+
+ 
+
+3、使用template模块调用j2文件使用for循环：
+
+ 创建jinja关于for的文件：
+
+[root@master ansible]# cat roles/temp/templates/test_for.j2 
+{% for i in range(1,10) %}
+test{{ i }}
+{% endfor %}
+[root@master ansible]# cat roles/temp/tasks/main.yaml 
+- name: copy configfile to nodes
+  template:
+    src: test_for.j2
+    dest: /tmp/test.conf
+执行该角色：
+
+[root@master ansible]# ansible-playbook work_dir/copy_configfile.yaml
+验证两节点的文件内容：
+
+复制代码
+[root@master ~]# cat /tmp/test.conf 
+test1
+test2
+test3
+test4
+test5
+test6
+test7
+test8
+test9
+复制代码
+复制代码
+[root@node1 ~]# cat /tmp/test.conf 
+test1
+test2
+test3
+test4
+test5
+test6
+test7
+test8
+test9
+复制代码
+ 
+
+4、使用default()默认值
+
+当我们定义了变量的值时，采用变量的值，当我们没有定义变量的值时，那么使用默认给定的值：
+
+首先查看定义的变量：
+
+[root@master ansible]# cat roles/temp/vars/main.yaml 
+master_ip: 192.168.101.14
+master_hostname: master
+node1_ip: 192.168.101.15
+node1_hostname: node1
+然后查看jinja2的文件：
+
+[root@master ansible]# cat roles/temp/templates/test_default.j2 
+Listen: {{ server_port|default(80) }}
+可以看见并没有定义server_port这个变量
+
+查看tasks文件：
+
+[root@master ansible]# cat roles/temp/tasks/main.yaml 
+- name: copy configfile to nodes
+  template:
+    src: test_default.j2
+    dest: /tmp/test.conf
+执行完成后，查看文件内容：
+
+[root@master ~]# cat /tmp/test.conf 
+Listen: 80
+现在向vars/main.yaml中定义server_port变量，并给定值：
+
+[root@master ansible]# cat roles/temp/vars/main.yaml    
+master_ip: 192.168.101.14
+master_hostname: master
+node1_ip: 192.168.101.15
+node1_hostname: node1
+server_port: 8080
+再次执行，然后查看文件内容：
+
+[root@master ~]# cat /tmp/test.conf 
+Listen: 8080
+可以看见使用了定义的值
