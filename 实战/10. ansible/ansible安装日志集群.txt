@@ -1,0 +1,16 @@
+https://www.cnblogs.com/zhaojiankai/p/7678700.html
+
+Ansible实战：部署分布式日志系统
+创建和使用roles
+JDK 7 role
+JDK 8 role
+Zookeeper role
+Kafka role
+Elasticsearch role
+MySQL role
+Nginx role
+Redis role
+Hadoop role
+Spark role
+
+1. 安装JDK
