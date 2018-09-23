@@ -61,7 +61,19 @@ tasks/
     uid: 888
     createhome: no
     shell: /sbin/nologin
- 
+    
+- name: install base
+  package:
+    name: "{{item}}"
+    state: latest
+  with_items:
+    - gcc
+    - gcc-c++
+    - make
+    - libtool
+    - zlib
+    - zlib-devel
+
 - name: install pcre-devel  #安装依赖，package模块
   package:
     name: pcre-devel
