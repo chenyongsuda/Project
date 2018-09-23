@@ -13,4 +13,13 @@ Redis role
 Hadoop role
 Spark role
 
+
+创建目录结构
+
+创建和使用roles
+每一个软件或集群都创建一个单独的角色。
+
+[root@node1 ~]# mkdir -pv ansible_playbooks/roles/{db_server,web_server,redis_server,zk_server,kafka_server,es_server,tomcat_server,flume_agent,hadoop,spark,hbase,hive,jdk7,jdk8}/{tasks,files,templates,meta,handlers,vars}
+
+
 1. 安装JDK
