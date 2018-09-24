@@ -118,3 +118,27 @@ TASK [echo task4] **************************************************************
 ok: [vm04] => {
     "msg": "this is task 4"
 }
+
+
+代理功能：
+Delegate_to( 任务委派功能 )
+场景介绍：在对一组服务器 server_group1 执行操作过程中，需要在另外一台机器 A 上执行一个操作，比如在 A 服务器上添加一条 hosts 记录，这些操作必须要在一个 playbook 联动完成。也就是是说 A 服务器这个操作与 server_group1 组上的服务器有依赖关系。Ansible 默认只会在定义好的一组服务器上执行相同的操作，这个特性对于执行批处理是非常有用的。但如果在这过程中需要同时对另外 1 台机器执行操作时，就需要用到 Ansible 的任务委派功能（delegate_to）。使用 delegate_to 关键字可以委派任务到指定的机器上运行。
+
+[root@vm01 ansible-test]# cat test.yaml
+---
+- name: test group
+  hosts: groupA
+  serial: 1
+
+  tasks:
+    - name: disable nginx
+      debug:
+        msg: "disable nginx for {{ inventory_hostname }} from {{ groups['groupA'][0] }}"
+      delegate_to: "{{ groups['groupA'][0] }}"
+    - name: update software
+      debug:
+        msg: update software
+    - name: enable nginx
+      debug:
+        msg: "enable nginx for {{ inventory_hostname }} from {{ groups['groupA'][0] }}"
+
