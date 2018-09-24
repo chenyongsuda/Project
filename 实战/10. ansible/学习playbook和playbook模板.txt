@@ -172,3 +172,21 @@ PLAY RECAP *********************************************************************
 检查机器里面都已经创建出来了.
 
 实验成功.完美解决
+
+一般playbook模板推荐:
+---
+- name: test group
+  hosts: groupA
+  vars:
+    repo: xxxxx
+    version: 8
+  serial: 1
+
+  tasks:
+    - name: install nginx
+      debug:
+        msg: install nginx
+    - name: update software
+      debug:
+        msg: update software
+
