@@ -33,3 +33,88 @@ test.yaml
 命令：
 ansible-playbook -i hosts test.yaml
 
+使用条件变量
+如只有当hostname为vm03时候才显示错误
+---
+- name: test group
+  hosts: groupA
+
+  tasks:
+    - name: echo task1
+      debug:
+        msg: this is task 1
+    - name: echo task2
+      fail:
+        msg: this is task 2
+      when: inventory_hostname == 'vm03'
+
+- name: test group
+  hosts: groupB
+
+  tasks:
+    - name: echo task1
+      debug:
+        msg: this is task 1
+    - name: echo task2
+      debug:
+        msg: this is task 2
+        
+
+
+
+理解一下‘serial’ 关键字，如果需要更新一堆web服务器，可以使用‘serial’来控制一次更新多少台机器。
+---
+- name: test group
+  hosts: groupA
+
+  tasks:
+    - name: echo task1
+      debug:
+        msg: this is task 1
+    - name: echo task2
+      debug:
+        msg: this is task 2
+      when: inventory_hostname == 'vm03'
+
+- name: test group
+  hosts: groupB
+  serial: 1
+
+  tasks:
+    - name: echo task1
+      debug:
+        msg: this is task 1
+    - name: echo task2
+      debug:
+        msg: this is task 2
+
+结果：一次一台机器跑完playbook后第二台机器再跑这个playbook,注意如果上面的playbook失败会导致下面该机器不会执行其他playbook
+PLAY [test group] ***********************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************
+ok: [vm03]
+
+TASK [echo task3] ***********************************************************************************************************************************
+ok: [vm03] => {
+    "msg": "this is task 3"
+}
+
+TASK [echo task4] ***********************************************************************************************************************************
+ok: [vm03] => {
+    "msg": "this is task 4"
+}
+
+PLAY [test group] ***********************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************
+ok: [vm04]
+
+TASK [echo task3] ***********************************************************************************************************************************
+ok: [vm04] => {
+    "msg": "this is task 3"
+}
+
+TASK [echo task4] ***********************************************************************************************************************************
+ok: [vm04] => {
+    "msg": "this is task 4"
+}
