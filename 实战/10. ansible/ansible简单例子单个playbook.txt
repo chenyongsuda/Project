@@ -1,0 +1,35 @@
+hosts：
+[groupA]
+vm04
+
+[groupB]
+vm05
+
+test.yaml
+---
+- name: test group
+  hosts: groupA
+
+  tasks:
+    - name: echo task1
+      debug:
+        msg: this is task 1
+    - name: echo task2
+      debug:
+        msg: this is task 2
+
+
+- name: test group
+  hosts: groupB
+
+  tasks:
+    - name: echo task1
+      debug:
+        msg: this is task 1
+    - name: echo task2
+      debug:
+        msg: this is task 2
+
+命令：
+ansible-playbook -i hosts test.yaml
+
