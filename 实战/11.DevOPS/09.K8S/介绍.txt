@@ -7,3 +7,8 @@ Kubernetes 旨在作为你容器的管理层。然而，它的重点是无缝提
 以及配置密钥管理。
 
 
+Docker 和 Kubernetes 入门
+https://www.ibm.com/developerworks/cn/cloud/library/cl-getting-started-docker-and-kubernetes/index.html
+
+使用 Kubernetes 密钥来管理凭证
+https://www.ibm.com/developerworks/cn/cloud/library/cl-kubernetes-secrets-manage-credentials/index.html
