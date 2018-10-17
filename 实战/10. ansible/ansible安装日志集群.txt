@@ -15,6 +15,32 @@ Spark role
 
 
 创建目录结构
+ansible标准目录结构
+ansible-playbook
+├── nginx.yml
+└── roles
+    └── nginx                   #这就是在nginx.yml主文件中指定的role
+        ├── defaults
+        │   └── main.yml  低优先级变量
+        ├── vars
+        │   ├── main.yml   高优先级变量
+        ├── files
+        │   ├── compile.sh.j2
+        │   └── nginx-1.6.3.tar.gz
+        ├── handlers
+        │   └── main.yml
+        ├── tasks
+        │   ├── install.yml
+        │   └── main.yml
+        └── templates
+            └── nginx.conf.j2
+ 
+1.defaults中存放默认的变量，可以通过jinja模板调用
+2.files中存放文件、软件包、脚本等内容，可以被copy、unarchive、script等模块调用
+3.handlers中存放依赖任务，可以被notify关键字调用
+4.tasks中存放主任务，ansible会首先进行调用
+5.templates中存放模板文件，模板中可以使用jinja模板调用defaults中定义的变量，被templates模块调用
+
 
 创建和使用roles
 每一个软件或集群都创建一个单独的角色。
