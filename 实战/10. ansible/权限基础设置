@@ -1,0 +1,12 @@
+linux用户添加到多个组
+usermod -G groupname username (这种会把用户从其他组中去掉，只属于该组)
+如：usermod -G git git (git只属于git组)
+
+usermod -a -G groupname username (把用户添加到这个组，之前所属组不影响)
+如：usermod -a -G www git (git属于之前git组，也属于www组)
+
+
+创建用户
+9.无法使用shell，且其用户目录至/var/servlet/service
+＃useradd tomcat  -d /var/servlet/service -s /sbin/nologin
+无法使用shell，且其用户目录至/var/servlet/service
