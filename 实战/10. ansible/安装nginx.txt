@@ -41,19 +41,11 @@ tasks/
 [root@localhost nginx]# less tasks/main.yml
  
 ---
-- import_tasks: install.yml
- 
-#ansible的playbook以---开头，然后使用yml语法编写
-#tasks/main.yml中加载install.yml，include方式不久会被淘汰，这里采用import_tasks关键字
- 
-[root@localhost nginx]# less tasks/install.yml
- 
----
 - name: groupadd nginx   #创建组，存在则忽略，group模块   - name:说明
-  group:                         
+  group:
     name: "{{ group }}"
     gid: 888
- 
+
 - name: useradd nginx   #创建用户，存在则忽略，user模块
   user:
     name: "{{ user }}"
@@ -61,7 +53,7 @@ tasks/
     uid: 888
     createhome: no
     shell: /sbin/nologin
-    
+
 - name: install base
   package:
     name: "{{item}}"
@@ -78,53 +70,53 @@ tasks/
   package:
     name: pcre-devel
     state: latest
- 
+
 - name: install openssl-devel  #安装依赖,package模块
   package:
     name: openssl-devel
     state: latest
- 
+
 - name: create /tools    #创建目录,file模块
   file:
-    path: /tools
-    state: directory 
- 
+    path: "{{nginx_tmp_dir}}"
+    state: directory
+
 - name: copy and extract nginx tarball  #解压压缩包，unarchive模块
   unarchive:
     src: "{{ tarball_name }}"
-    dest: /tools
- 
+    dest: "{{nginx_tmp_dir}}"
+
 - name: ./configure         #检查环境，command模块
-  command: "./configure --user={{ user }} --group={{ group }} --prefix=/app/{{ nginx_dir }} --with-http_stub_s
-tatus_module --with-http_ssl_module"
+  command: "./configure --user={{ user }} --group={{ group }} --prefix={{app_path}}/{{ nginx_dir }} --with-http_stub_status_module --with-http_ssl_module"
   args:
-    chdir: /tools/{{ nginx_dir }}
- 
+    chdir: "{{nginx_tmp_dir}}/{{ nginx_dir }}"
+
 - name: make    #编译，command模块
   command: make
   args:
-    chdir: /tools/{{ nginx_dir }}
- 
+    chdir: "{{nginx_tmp_dir}}/{{ nginx_dir }}"
+
 - name: make install    #安装，command模块
   command: make install
   args:
     chdir: /tools/{{ nginx_dir }}
- 
+
 - name: modify nginx configuration   #修改配置文件，template模块
   template:
     src: "{{ nginx_configuration }}"
-    dest: /app/{{ nginx_dir }}/conf/nginx.conf
- 
+    dest: "{{app_path}}/{{ nginx_dir }}/conf/nginx.conf"
+
 - name: make link     #创建软连接，file模块
   file:
-    src: /app/{{ nginx_dir }}
-    dest: /app/nginx
+    src: "{{app_path}}/{{ nginx_dir }}"
+    dest: "{{app_path}}/nginx"
     state: link
- 
+
 - name: test nginx   #测试nginx配置,command模块
-  command: /app/nginx/sbin/nginx -t
+  command: "{{app_path}}/nginx/sbin/nginx -t"
   notify:              #调用handlers目录下的main.yml
     - start nginx
+
     
 handlers----------------------------------------------------------------------------------------
 [root@localhost nginx]# tree handlers/
@@ -135,14 +127,14 @@ handlers/
  
 ---
 - name: start nginx     #notify下面指定的内容在name这里定义
-  command: /app/nginx/sbin/nginx
+  command: "{{app_path}}/nginx/sbin/nginx"
  
 #这里只是演示，实际批量部署不需要nginx -t 这一步
 
 files--------------------------------------------------------------------------------------------------------------
 [root@localhost nginx]# tree files/
 files/
-└── nginx-1.6.3.tar.gz
+└── nginx-1.14.0.tar.gz
  
 #ansible中unarchive、copy等模块会自动来这里找文件，从而我们不必写绝对路径，只需写文件名
 
@@ -170,12 +162,15 @@ defaults
  
 [root@localhost nginx]# less defaults/main.yml
  
+app_path: /appl
 user: nginx
 group: nginx
-tarball_name: nginx-1.6.3.tar.gz
+tarball_name: nginx-1.14.0.tar.gz
 nginx_configuration: nginx.conf.j2
-nginx_dir: nginx-1.6.3
-nginx_port: 2223             #这是我们刚才在模板文件中使用的变量
+nginx_tmp_dir: /tools
+nginx_dir: nginx-1.14.0
+nginx_port: 7780
+
  
 #defaults中的变量优先级最低，通常我们可以临时指定变量来进行覆盖
 
@@ -237,3 +232,15 @@ nginx大部分常用模块，编译时./configure --help以--without开头的都
 --with-http_stub_status_module ： 用来监控 Nginx 的当前状态
 --with-http_realip_module ： 通过这个模块允许我们改变客户端请求头中客户端IP地址值(例如X-Real-IP 或 X-Forwarded-For)，意义在于能够使得后台服务器记录原始客户端的IP地址
 --add-module=PATH ： 添加第三方外部模块，如nginx-sticky-module-ng或缓存模块。每次添加新的模块都要重新编译（Tengine可以在新加入module时无需重新编译）
+
+
+
+从容停止Nginx：
+kill -QUIT 主进程号  
+例如：kill -QUIT 16391
+
+快速停止Nginx：
+kill -TERM 主进程号  
+
+强制停止Nginx：
+kill -9 主进程号  
