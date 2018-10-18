@@ -95,8 +95,8 @@ tasks/
     dest: /tools
  
 - name: ./configure         #检查环境，command模块
-  command: ./configure --user={{ user }} --group={{ group }} --prefix=/app/{{ nginx_dir }} --with-http_stub_s
-tatus_module --with-http_ssl_module
+  command: "./configure --user={{ user }} --group={{ group }} --prefix=/app/{{ nginx_dir }} --with-http_stub_s
+tatus_module --with-http_ssl_module"
   args:
     chdir: /tools/{{ nginx_dir }}
  
