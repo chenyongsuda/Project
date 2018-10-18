@@ -1,0 +1,86 @@
+结构
+|-- ansible_playbooks
+|   |-- jdk.yml
+|   `-- roles
+|       |-- jdk
+|       |   |-- files
+|       |   |   `-- jdk-8u191-linux-x64.tar.gz
+|       |   |-- handlers
+|       |   |-- meta
+|       |   |-- tasks
+|       |   |   `-- main.yml
+|       |   |-- templates
+|       |   |   `-- set_jdk.sh
+|       |   `-- vars
+|       |       `-- main.yml
+|       |-- nginx
+|       |   |-- files
+|       |   |-- handlers
+|       |   |-- meta
+|       |   |-- tasks
+|       |   |-- templates
+|       |   `-- vars
+|       `-- tomcat
+|           |-- files
+|           |-- handlers
+|           |-- meta
+|           |-- tasks
+|           |-- templates
+|           `-- vars
+
+
+task:
+---
+- name: install package tools
+  package:
+    name: tar
+    state: present
+
+- name: tar the source to dest dir
+  unarchive:
+    src: "{{ jdk_tarbar }}"
+    dest: "{{app_path}}"
+
+- name: create softlink 
+  file:
+    src: "{{app_path}}/{{ jdk_tarname }}"
+    dest: "{{app_path}}/{{ jdk_folder }}"
+    state: link
+
+- name: add JAVA_HOME path to env
+  lineinfile:
+    path: /etc/profile
+    regexp: "^export JAVA_HOME="
+    line: "export JAVA_HOME={{app_path}}/jdk"
+
+- name: add PATH path to env
+  lineinfile:
+    path: /etc/profile
+    regexp: "^export PATH="
+    line: "export PATH=$JAVA_HOME/bin:$PATH:$JAVA_HOME/jre/bin"
+
+- name: add CLASS_PATH path to env
+  lineinfile:
+    path: /etc/profile
+    regexp: "^export CLASSPATH="
+    line: "export CLASS_PATH=$JAVA_HOME/lib:$JAVA_HOME/jre/lib"
+
+- name: source the env
+  shell: source /etc/profile
+
+vars配置
+app_path: /appl
+jdk_tarbar: jdk-8u191-linux-x64.tar.gz
+jdk_tarname: jdk1.8.0_191
+jdk_folder: jdk
+
+
+jdk.yml
+---
+- name: deploy jdk
+  host: smb-all
+  roles:
+    - jdk
+
+
+
