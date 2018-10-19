@@ -1,0 +1,31 @@
+1.ansible的lookup插件
+ansible的lookup插件可以用来从外部数据读取信息，然后付给一个变量。获取外部数据信息的种类包括：读取文件内容、随机生成password、执行shell命令、读取redis键值等等。注意，lookup的所有运算都是在ansible中控机上完成的，而不是在远程目标机上。
+
+示例：
+---
+- hosts: test_server
+  remote_user: root
+  tasks:
+  - name: 获取普通文件内容（文件是存在于ansible中控机上的）
+    debug: msg="The contests is {{ lookup('file', '/tmp/foo.txt') }}"
+
+  - name: 获取users.ini文件中，[production]块下的user字段的内容
+    debug: msg="The contests is {{ lookup('ini', 'user section=production  file=users.ini') }}"
+
+  - name: 获取env环境变量 
+    debug: msg="PATH env is | {{ lookup('env', 'PATH')}}"
+
+  - name: 执行shell命令
+    debug: msg="Exec hostname cmd | {{ lookup('pipe', 'hostname') }}"
+
+  - name: 随机生成password。默认为20位，也可指定，如length=15
+    debug: msg="PASSWORD is {{ lookup('password', '/tmp/test_lookup_password_'+'{{inventory_hostname}}') }}"
+
+  - name: 查询redis键值，需要安装Python redis包
+    debug: msg="{{ lookup('redis_kv', 'redis://localhost:6379,somekey') }} is value in Redis for somekey"
+
+  - name: 查询etcd的键值
+    debug: msg="{{ lookup('etcd', 'foo') }} is a value from a locally running etcd"
+
+  - name: 获取template
+    debug: msg="{{ lookup('template', './some_template.j2') }} is a value from evaluation of this template"
