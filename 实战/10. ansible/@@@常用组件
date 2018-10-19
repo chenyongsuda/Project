@@ -1,3 +1,5 @@
+参考https://www.cnblogs.com/wanstack/category/1174322.html
+
 1.ansible的lookup插件
 ansible的lookup插件可以用来从外部数据读取信息，然后付给一个变量。获取外部数据信息的种类包括：读取文件内容、随机生成password、执行shell命令、读取redis键值等等。注意，lookup的所有运算都是在ansible中控机上完成的，而不是在远程目标机上。
 
