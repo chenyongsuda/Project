@@ -1,0 +1,2 @@
+ansible-playbook web.yml --syntax-check  #检查语法
+
