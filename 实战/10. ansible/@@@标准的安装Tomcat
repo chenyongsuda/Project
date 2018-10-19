@@ -1,0 +1,143 @@
+1.1 构建目录结构
+此操作是安装nginx+mysql+tomcat+db的目录结构，可以参考一下，不错~
+mkdir -p /ansible/roles/{nginx,mysql,tomcat,db}/{defaults,files,handlers,meta,tasks,templates,vars}
+
+defaults 默认寻找路径
+tasks 存放playbooks路径
+files 存放文件和脚本包，copy模块文件搜索路径
+templates 模版存放路径
+handlers notify调用部分playbook存放路径
+vars roles内变量存放路径
+
+1.2 文件目录结构
+[root@qtbackup ~]# tree /ansible/
+/ansible/
+├── playbook
+│   └── playbook.yml
+├── roles
+│   ├── db
+│   │   ├── defaults
+│   │   ├── files
+│   │   ├── handlers
+│   │   ├── meta
+│   │   ├── tasks
+│   │   ├── templates
+│   │   └── vars
+│   ├── mysql
+│   │   ├── defaults
+│   │   ├── files
+│   │   ├── handlers
+│   │   ├── meta
+│   │   ├── tasks
+│   │   ├── templates
+│   │   └── vars
+│   ├── nginx
+│   │   ├── defaults
+│   │   ├── files
+│   │   ├── handlers
+│   │   ├── meta
+│   │   ├── tasks
+│   │   ├── templates
+│   │   └── vars
+│   └── tomcat
+│       ├── defaults
+│       ├── files
+│       │   ├── apache-tomcat-8.0.29.tar.gz
+│       │   ├── jdk-8u73-linux-x64.gz
+│       │   ├── tomcat-initscript.sh
+│       │   └── tomcat-users.xml
+│       ├── handlers
+│       │   └── main.yml
+│       ├── meta
+│       ├── tasks
+│       │   └── main.yml
+│       ├── templates
+│       │   └── tomcat-users.xml
+│       └── vars
+├── ssh_key.sh       ###自动分发sshkey脚本 （下边会完整贴出来）
+├── web.retry
+└── web.yml          ####总调用文件
+
+34 directories, 11 files
+[root@qtbackup ~]#
+
+
+1.3 在ansible目录创建一个总调用文件
+- hosts: bgo   ####这个是hosts定义个主机组名字，如果是单台主机可以直接写地址
+  remote_user: root          ####执行用户
+  roles:                     #####解释配置文件目录，因为我们这次装的是tomcat所以注释其他的
+ #   - nginx
+ #   - mysql
+    - tomcat
+ #   - db
+ 
+ 
+ 1.4 创建tomcat安装playbook文件
+ vim   /ansible/roles/tomcat/tasks/main.yml
+
+#这个是用yum模块安装jdk，有需要的可以用
+#- name: install java
+#  yum: name=java-1.8.0-openjdk.x86_64   state=present
+
+===============================================================
+#创建用户
+- name: group
+  group: name=tomcat
+- name: user
+  user: name=tomcat group=tomcat home=/usr/tomcat
+  sudo: True
+
+##############################这个源码包安装JDK#############################
+#复制jdk到tmp目录下
+- name: copy jdk-8u73-linux-x64.gz
+  copy: src=jdk-8u73-linux-x64.gz dest=/tmp/jdk-8u73-linux-x64.gz
+#解压jdk包到/application
+- name: Extract archive jdk
+  command: /bin/tar xf /tmp/jdk-8u73-linux-x64.gz -C /application
+#改名
+- name: java
+  shell: mv /application/jdk1.8.0_73 /application/java
+#添加环境变量
+- name: add /etc/profile
+  lineinfile: dest=/etc/profile regexp="^JAVA_HOME=" line="JAVA_HOME=/application/java/"
+- name: add /etc/profile
+  lineinfile: dest=/etc/profile regexp="^CLASS_PATH=" line="CLASS_PATH=$JAVA_HOME/lib:$JAVA_HOME/jre/lib"
+- name: add /etc/profile
+  lineinfile: dest=/etc/profile regexp="^PATH=\$PATH:\$JAVA_HOME" line="PATH=$PATH:$JAVA_HOME/bin"
+- name: add /etc/profile
+  lineinfile : dest=/etc/profile regexp="^export JAVA_HOME" line="export JAVA_HOME"
+
+##########################安装tomcat###########################################
+- name: copy tomcat_tar_gz
+  copy: src=apache-tomcat-8.0.29.tar.gz dest=/tmp/apache-tomcat-8.0.29.tar.gz
+#解压tomcat到opt目录
+- name: Extract archive
+  command: /bin/tar xf /tmp/apache-tomcat-8.0.29.tar.gz -C /opt
+#创建软连接
+- name: Symlink install directory
+  file: src=/opt/apache-tomcat-8.0.29/ dest=/application/tomcat state=link
+#赋予目录权限
+- name: Change ownership of Tomcat installation
+  file: path=/application/tomcat/ owner=tomcat group=tomcat state=directory recurse=yes
+#推送配置文件
+- name: Configure Tomcat users
+  template: src=tomcat-users.xml dest=/application/tomcat/conf/
+  notify: restart tomcat
+#安装tomcat。init启动脚本
+- name: Install Tomcat init script
+  copy: src=tomcat-initscript.sh dest=/etc/init.d/tomcat mode=0755
+#开启tomcat
+- name: Start Tomcat
+  service: name=tomcat state=started enabled=yes
+  
+1.5 通过notify调用handlers
+- name: restart tomcat 
+  service: name=tomcat state=restarted
+  
+1.6 语法检测===执行安装
+cd /ansible
+ansible-playbook web.yml --syntax-check  #检查语法
+ansible-playbook web.yml  #执行
+
+
+
