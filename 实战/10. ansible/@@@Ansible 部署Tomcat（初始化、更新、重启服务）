@@ -1,0 +1,185 @@
+一、目录结构
+1、新建目录结构
+
+[root@localhost ansible]# mkdir -pv roles/test_tomcat/{vars,tasks,files,templates}
+mkdir: 已创建目录 "roles/test_tomcat"
+mkdir: 已创建目录 "roles/test_tomcat/vars"
+mkdir: 已创建目录 "roles/test_tomcat/tasks"
+mkdir: 已创建目录 "roles/test_tomcat/files"
+mkdir: 已创建目录 "roles/test_tomcat/templates"
+2、创建总调度文件
+
+---
+- name: 在测试环境部署Tomcat
+  hosts: 192.168.1.7
+  vars:
+    listen_port: 8410
+    project: car
+    tomcat_dir: /data/qsc_user/{{ project }}
+
+  roles:
+    - { role: test_tomcat }
+二、playbook
+设定标签，根据指定标签执行具体任务
+1）初始化项目 init
+2）更新部署 deploy
+3）重启服务 restart
+
+1、tasks目录
+
+tasks/
+├── deploy.yml     部署
+├── init.yml           初始化
+├── main.yml
+└── restart.yml      重启服务
+main.tml
+
+---
+- include: init.yml
+  tags:
+    - init
+- include: restart.yml
+  tags:
+    - restart
+- include: deploy.yml
+  tags:
+    - deploy
+init.yml
+
+- name: copy template
+  unarchive: src=tomcat-template.tar.gz dest=/usr/src
+- name: 创建项目{{ project }}
+  file: path={{ tomcat_dir }} state=directory force=yes
+- name: 判断模块{{ module }}是否已经存在，如果存在则删除
+  stat: path={{ tomcat_root }}
+  register: reg
+- name: 删除旧版本的模块{{ module }}
+  file: path={{ tomcat_root }} state=absent
+  when: reg.stat.exists
+- name: 创建项目{{ project }}模块{{ module }}
+  command: cp -r  /usr/src/tomcat-template/ "{{ tomcat_root }}"
+- name: 生成catalina.sh
+  template: src=catalina.j2 dest={{ tomcat_root }}/bin/catalina.sh
+- name: 生成server.xml
+  template: src=server.j2 dest={{ tomcat_root }}/conf/server.xml
+- name: 设置属组
+  file: path={{ tomcat_dir }} recurse=yes owner=qsc_user group=qsc_user
+deploy.yml
+
+---
+- name: 建立备份目录
+  file: dest={{ backup_dir }} state=directory
+- name: stop tomcat.
+  shell: su -c  {{ tomcat_root }}/bin/shutdown.sh qsc_user
+- name: 稍等一下
+  pause: seconds=10
+- name: 验证服务是否关闭
+  wait_for: port={{ RUN_PORT }} delay=3 state=stopped timeout=10
+- name: 备份现有程序
+  command: mv "{{ tomcat_root }}"/webapps "{{ backup_dir }}/{{ module }}"-webapps.bak
+- name: 建立webapps目录
+  file: dest={{ tomcat_root }}/webapps state=directory owner=qsc_user group=qsc_user
+#- name: 下载新程序
+#  get_url: url=http://www.xxx.com/jenkins/view/test/job/{{ porject }}/{{ buidnum}}/artifact/{{ project-module }}/target/ROOT.war dest="{{ tomcat_root }}"/webapps force=yes force_basic_auth=yes url_username=xxxx url_password=xxxx
+- name: start tomcat.
+  shell: su -c  {{ tomcat_root }}/bin/startup.sh qsc_user
+- name: 等待服务启动
+  wait_for: port={{ RUN_PORT }} delay=5 timeout=30
+- name: 重启服务执行完毕
+  shell: echo "Restart Successful !!!"
+restart.yml
+
+---
+- name: stop tomcat.
+  shell: su -c  {{ tomcat_root }}/bin/shutdown.sh qsc_user
+- name: 验证服务是否关闭
+  wait_for: port={{ RUN_PORT }} delay=3 state=stopped timeout=10
+- name: start tomcat.
+  shell: su -c  {{ tomcat_root }}/bin/startup.sh qsc_user
+- name: 等待服务启动
+  wait_for: port={{ RUN_PORT }} delay=5 timeout=30
+- name: 重启服务执行完毕
+  shell: echo "Restart Successful !!!"
+2、files目录
+
+[root@localhost files]# ll
+drwxr-xr-x 9 root root    4096 11月 16 10:24 tomcat-template
+-rw-r--r-- 1 root root 7765756 11月 16 10:24 tomcat-template.tar.gz
+该目录主要是为了存储部署文件
+
+3、templates目录
+
+templates/
+├── catalina.j2
+└── server.j2
+这两项文件都是为了生成对应的catalina.sh和server.xml文件，重要代码分别为：
+
+export JAVA_OPTS="
+-server
+-Dfile.encoding=UTF8
+-Dsun.jnu.encoding=UTF8
+-Denvironment.mode=test
+"
+
+JAVA_HOME=/usr/local/java
+CATALINA_HOME=/data/qsc_user/{{ project }}/{{ module }}
+<Server port="{{ STOP_PORT }}" shutdown="SHUTDOWN">
+  <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+  <!-- Security listener. Documentation at /docs/config/listeners.html
+  <Listener className="org.apache.catalina.security.SecurityListener" />
+  -->
+ <Connector port="{{ RUN_PORT }}" protocol="org.apache.coyote.http11.Http11NioProtocol"
+                URIEncoding="UTF-8"
+                minSpareThreads="64"
+                maxThreads="300"
+                enableLookups="false"
+                disableUploadTimeout="true"
+                connectionTimeout="20000"
+                acceptCount="1000"
+                redirectPort="8443"
+         />
+4、总调度文件
+
+- name: 在测试环境部署Tomcat
+  hosts: 192.168.1.7
+  vars:
+    project: bike
+    module: web
+    project-module: bike-admin
+    STOP_PORT: "8410"
+    RUN_PORT: "9410"
+    date: '{{ date }}'
+    tomcat_dir: "/data/qsc_user/{{ project }}"
+    tomcat_root: "{{ tomcat_dir }}/{{ module  }}"
+    backup_dir: "/data/backup/{{ project }}"
+  roles:
+    - { role: test_tomcat }
+vars部分的变量可以放在vars目录，或者放在该文件。
+
+5、整体目录结构
+
+test_tomcat.yml
+roles
+├── test_tomcat
+│   ├── files
+│   │   ├── tomcat-template
+│   ├── tasks
+│   │   ├── deploy.yml
+│   │   ├── init.yml
+│   │   ├── main.yml
+│   │   └── restart.yml
+│   ├── templates
+│   │   ├── catalina.j2
+│   │   └── server.j2
+│---└── vars
+6、执行playbook
+
+ansible-playbook test_tomcat.yml -t init    -vvv 初始化项目
+ansible-playbook test_tomcat.yml -t deploy  -vvv 部署服务
+ansible-playbook test_tomcat.yml -t restart -vvv 重启服务
+--end
+
+作者：Medivh_
+链接：https://www.jianshu.com/p/fd48fc5f7541
+來源：简书
+简书著作权归作者所有，任何形式的转载都请联系作者获得授权并注明出处。
