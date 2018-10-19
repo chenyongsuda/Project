@@ -12,5 +12,8 @@ become=True
 
 如果配置了秘钥的话只需要打开become
 
+3.添加证书key模块
+authorized_key 模块
+
 
 
