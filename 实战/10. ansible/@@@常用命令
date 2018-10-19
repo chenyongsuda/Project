@@ -15,5 +15,13 @@ become=True
 3.添加证书key模块
 authorized_key 模块
 
+4.添加sudoer用户
+- name: update sudoers file
+      lineinfile:
+        dest: /etc/sudoers
+        insertafter: '^tidb'
+        line: '{{ username }} ALL=(ALL) NOPASSWD: ALL'
+        regexp: '^tidb'
+        state: present
 
 
