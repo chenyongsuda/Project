@@ -14,6 +14,11 @@ become=True
 
 3.添加证书key模块
 authorized_key 模块
+- name: set authorized key
+      authorized_key:
+        user: "{{ username }}"
+        key: "{{ lookup('file', '/home/{{ username }}/.ssh/id_rsa.pub') }}"
+        state: present
 
 4.添加sudoer用户
 - name: update sudoers file
