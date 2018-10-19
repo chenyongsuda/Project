@@ -29,4 +29,10 @@ authorized_key 模块
         regexp: '^tidb'
         state: present
 
+5.列出所有的任务
+--list-tasks
+ansible-playbook --list-tasks installpkg.yml
+测试执行脚本，添加选项-C,并没有实际执行
+ansible-playbook -C installpkg.yml
+以上脚本，测试正常的话，就去掉-C选项，实际执行
 
