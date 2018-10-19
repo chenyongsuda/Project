@@ -2,7 +2,7 @@
 ansible-playbook web.yml --syntax-check  #检查语法
 
 
-2.自动权限审计
+2.自动权限升级
 # https://docs.ansible.com/ansible/become.html#becoming-an-unprivileged-user
 # If 'true' unparsed inventory sources become fatal errors, they are warnings otherwise.
 become=True
