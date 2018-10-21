@@ -61,3 +61,64 @@ sudo systemctl start docker
 
 
 由于本地没有hello-world这个镜像，所以会下载一个hello-world的镜像，并在容器内运行。
+
+=============================================================================================
+Docker 基本有三个比较常用的命令
+
+docker build
+docker run
+docker pull
+
+docker的配置文件默认在/etc/docker/deamon.json
+docker镜像加速  
+  1. docker cn
+  2. 阿里云
+  3. 中国科技大学
+
+镜像加速配置：
+  编辑deamon.json
+  {
+    "registry-mirrors": ["https://registry.docker-cn.com"] 可以有多个用逗号分隔
+  }
+  
+  启动程序systemctl start docker
+  
+  使用docker version 看下版本或者使用其他子命令
+  
+  使用docker info 查看docker系统的状态
+  [root@vm01 docker]# docker info
+    Containers: 1
+     Running: 0
+     Paused: 0
+     Stopped: 1
+    Images: 1
+    Server Version: 18.06.1-ce
+    Storage Driver: overlay2
+     Backing Filesystem: xfs
+     Supports d_type: true
+     Native Overlay Diff: true
+    Logging Driver: json-file
+    Cgroup Driver: cgroupfs
+    
+  看到有一个容器 没有正在运行的容器
+  
+  查看那些images在这台机器
+  [root@vm01 docker]# docker image list
+    REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+    hello-world         latest              4ab4c602aa5e        6 weeks ago         1.84kB
+
+如果要搜索远程的仓库用dock search
+
+
+
+
+
+
+
+
+
+  
+
+  
+  
+
