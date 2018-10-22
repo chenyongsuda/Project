@@ -76,11 +76,17 @@ docker镜像加速
   3. 中国科技大学
 
 镜像加速配置：
-  编辑deamon.json
+  sudo mkdir -p /etc/docker
+  sudo tee /etc/docker/daemon.json <<-'EOF'
   {
-    "registry-mirrors": ["https://registry.docker-cn.com"] 可以有多个用逗号分隔
+    "registry-mirrors": ["https://5qsph43c.mirror.aliyuncs.com"]
   }
+  EOF
+  如果之前已经启动了使用：
+  sudo systemctl daemon-reload
+  sudo systemctl restart docker
   
+  如果没启动过：
   启动程序systemctl start docker
   
   使用docker version 看下版本或者使用其他子命令
