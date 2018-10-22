@@ -1,0 +1,23 @@
+1. 举例制作自己的镜像
+在busybox系统中增加新文件制作成镜像并启动可以看到新文件还在
+
+[root@vm02 ~]# docker container run --name testb01 --rm -it busybox
+# mkdir -p  /data/html
+# touch /data/html/index.html
+# vi /data/html/index.html
+
+使用docker commit制作镜像
+docker commit [options] CONTAINER [REPO[:TAG]]
+
+如下镜像格式
+[root@vm02 ~]# docker image ls
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+busybox             latest              59788edf1f3e        2 weeks ago         1.15MB
+nginx               1.14.0-alpine       14d4a58e0d2e        5 weeks ago         17.4MB
+hello-world         latest              4ab4c602aa5e        6 weeks ago         1.84kB
+
+制作镜像例子
+docker commit -p CONTAINER xxx:1.10.0
+或者打标签
+docker tag 59788edf1f3e<IMAGE ID> mageedu/test:1.0.1
+
