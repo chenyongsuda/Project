@@ -115,9 +115,53 @@ docker镜像加速
 
 如果要搜索远程的仓库用dock search
 
+================================================================================================================
+仓库导入导出等操作
+
+Docker 本地导入镜像/保存镜像/载入镜像/删除镜像
+1、Docker导入本地镜像
+
+有时候我们自己在本地或者其它小伙伴电脑上拷贝了一份镜像，有了这个镜像之后，我们可以把本地的镜像导入，使用docker import 命令。
+
+例如这里下载了一个 alibaba-rocketmq-3.2.6.tar.gz 镜像文件，使用下列命令导入：
+
+复制代码
+[root@rocketmq-nameserver4 dev]# cat alibaba-rocketmq-3.2.6.tar.gz | docker import - rocketmq:3.2.6(镜像名自己定义)
+[root@rocketmq-nameserver4 dev]# docker images
+REPOSITORY                   TAG                 IMAGE ID            CREATED             SIZE
+rocketmq                     3.2.6               53925d1cf9f0        23 seconds ago      14MB
+my/python                    v1                  36b6e288656c        2 days ago          281MB
+my/centos_width_python       v1.0.1              36b6e288656c        2 days ago          281MB
+my/sinatra                   v2                  8ba1d6a3ce4e        2 days ago          453MB
+hello-world                  latest              725dcfab7d63        4 months ago        1.84kB
+复制代码
+可以看到导入完成后，docker为我们生成了一个镜像ID，使用docker images也可以看到我们刚刚从本地导入的镜像。
+
+注意镜像文件必须是tar.gz类型的文件。
+
+[root@rocketmq-nameserver4 dev]# docker run -it rocketmq:3.2.6 /bin/bash ##启动导入本地镜像,会报如下异常
+docker: Error response from daemon: oci runtime error: container_linux.go:247: starting container process caused "exec: \"/bin/bash\": stat /bin/bash: no such file or directory".
+
+解决方案： 暂时无解，有知道的兄台请在下面留言，在此先谢了。
 
 
+2、保存镜像
+我们的镜像做好之后，我们要保存起来，以供备份使用，该怎么做？使用docker save命令，保存镜像到本地。
 
+[root@rocketmq-nameserver4 dev]# docker save -o rocketmq.tar rocketmq ##-o：指定保存的镜像的名字；rocketmq.tar：保存到本地的镜像名称；rocketmq：镜像名字，通过"docker images"查看
+[root@rocketmq-nameserver4 dev]# ll 
+
+rocketmq.tar为刚保存的镜像
+
+3、载入镜像
+我们有了本地的镜像文件，在需要的时候可以使用docker load将本地保存的镜像再次导入docker中。
+docker load --input rocketmq.tar 或 docker load < rocketmq.tar
+
+
+4、删除镜像
+有些镜像过时了，我们需要删除。使用如下的命令：docker rmi -f image_id ##-f：表示强制删除镜像；image_id：镜像id
+
+=======================================================================================================================================
 
 
 
