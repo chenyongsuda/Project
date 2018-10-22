@@ -163,6 +163,27 @@ docker load --input rocketmq.tar 或 docker load < rocketmq.tar
 
 =======================================================================================================================================
 
+配置docker代理
+3. 为docker设置代理
+3.1 创建目录
+mkdir -p /etc/systemd/system/docker.service.d
+
+3.2 创建文件/etc/systemd/system/docker.service.d/http-proxy.conf，内容如下：
+[Service]
+Environment="HTTP_PROXY=http://pill:pill@node2:3128/"
+
+3.3 重启docker
+systemctl daemon-reload
+systemctl restart docker
+
+3.4 验证docker代理是否设置成功
+systemctl show --property=Environment docker　　
+显示如下结果说明设置成功
+Environment=GOTRACEBACK=crash HTTP_PROXY=http://pill:pill@node2:3128/
+
+
+========================================================================================================================================
+
 
 
 
