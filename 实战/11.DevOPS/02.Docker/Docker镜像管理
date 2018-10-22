@@ -21,3 +21,159 @@ docker commit -p CONTAINER xxx:1.10.0
 或者打标签
 docker tag 59788edf1f3e<IMAGE ID> mageedu/test:1.0.1
 
+使用docker inspect 观察镜像（images）
+可以观察到镜像中的默认命令
+[root@vm02 ~]# docker image inspect busybox
+[
+    {
+        "Id": "sha256:59788edf1f3e78cd0ebe6ce1446e9d10788225db3dedcfd1a59f764bad2b2690",
+        "RepoTags": [
+            "busybox:latest"
+        ],
+        "RepoDigests": [
+            "busybox@sha256:2a03a6059f21e150ae84b0973863609494aad70f0a80eaeb64bddd8d92465812"
+        ],
+        "Parent": "",
+        "Comment": "",
+        "Created": "2018-10-02T17:19:34.239926273Z",
+        "Container": "547a7f4181dc7c44a00961f3e6d3342f3d5d3c2095883b60fefff8d9de9be116",
+        "ContainerConfig": {
+            "Hostname": "547a7f4181dc",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "/bin/sh",
+                "-c",
+                "#(nop) ",
+                "CMD [\"sh\"]"
+            ],
+            "ArgsEscaped": true,
+            "Image": "sha256:8f4ffec338c4203118ad2ad56a01139b499e2ec244fdceda8ada658aa442b07a",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {}
+        },
+        "DockerVersion": "17.06.2-ce",
+        "Author": "",
+        "Config": {
+            "Hostname": "",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "sh"
+            ],
+            "ArgsEscaped": true,
+            "Image": "sha256:8f4ffec338c4203118ad2ad56a01139b499e2ec244fdceda8ada658aa442b07a",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": null
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 1154353,
+        "VirtualSize": 1154353,
+        "GraphDriver": {
+            "Data": {
+                "MergedDir": "/var/lib/docker/overlay2/a8c82a1f3a1ea9447e8368203809dff4986e7751718681fefbcc4c59a5eb9b47/merged",
+                "UpperDir": "/var/lib/docker/overlay2/a8c82a1f3a1ea9447e8368203809dff4986e7751718681fefbcc4c59a5eb9b47/diff",
+                "WorkDir": "/var/lib/docker/overlay2/a8c82a1f3a1ea9447e8368203809dff4986e7751718681fefbcc4c59a5eb9b47/work"
+            },
+            "Name": "overlay2"
+        },
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:8a788232037eaf17794408ff3df6b922a1aedf9ef8de36afdae3ed0b0381907b"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "0001-01-01T00:00:00Z"
+        }
+    }
+]
+
+
+修改默认镜像执行命令
+使用busybox改变默认的执行命令为httpd
+使用docker commit -c 改变cmd命令
+docker commit -c "CMD ['/bin/httpd','-f','-h','/data/html']" -p <CONTAINER NAME> hello-httpd:v0.0.1
+
+运行新的修改后的httpd容器
+docker commit -c 'CMD ["/bin/httpd","-f","-h","/data/html"]' -p tt  hello-httpd:v0.0.2
+
+使用docker inspect 观察运行的容器得到ip
+[root@vm02 ~]# curl 172.17.0.3
+hello world!!!
+
+使用ip访问容器获得网页结果.
+
+把文件推送到服务器中
+
+[root@vm02 ~]# docker image ls
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+hello-httpd         v0.0.2              be8133ffef10        5 minutes ago       1.15MB
+hello-httpd         v0.0.1              7c4510ff3784        10 minutes ago      1.16MB
+hello               v0.0.1              17b9022e4591        23 minutes ago      1.15MB
+busybox             latest              59788edf1f3e        2 weeks ago         1.15MB
+nginx               1.14.0-alpine       14d4a58e0d2e        5 weeks ago         17.4MB
+hello-world         latest              4ab4c602aa5e        6 weeks ago         1.84kB
+[root@vm02 ~]# docker tag be8133ffef10 chenyongsuda/httpd:v0.0.1
+[root@vm02 ~]# docker image ls
+REPOSITORY           TAG                 IMAGE ID            CREATED             SIZE
+hello-httpd          v0.0.2              be8133ffef10        7 minutes ago       1.15MB
+chenyongsuda/httpd   v0.0.1              be8133ffef10        7 minutes ago       1.15MB
+hello-httpd          v0.0.1              7c4510ff3784        12 minutes ago      1.16MB
+hello                v0.0.1              17b9022e4591        25 minutes ago      1.15MB
+busybox              latest              59788edf1f3e        2 weeks ago         1.15MB
+nginx                1.14.0-alpine       14d4a58e0d2e        5 weeks ago         17.4MB
+hello-world          latest              4ab4c602aa5e        6 weeks ago         1.84kB
+
+
+[root@vm02 ~]# docker login
+Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+Username: chenyongsuda
+Password:
+Error response from daemon: Get https://registry-1.docker.io/v2/: net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+[root@vm02 ~]# docker login
+Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+Username: chenyongsuda
+Password:
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+[root@vm02 ~]# docker push chenyongsuda/httpd
+The push refers to repository [docker.io/chenyongsuda/httpd]
+5577735495ba: Pushing [==================================================>]   5.12kB
+8a788232037e: Preparing
+
+
+等会儿就会推送成功.完成今天任务.
+
+
+
+
+
