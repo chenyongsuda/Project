@@ -185,10 +185,17 @@ Environment=GOTRACEBACK=crash HTTP_PROXY=http://pill:pill@node2:3128/
 ========================================================================================================================================
 
 
+启动busybox容器,设置容器名字,交互式运行,停止自动删除.
+docker container run -it --name bb01 --rm busybox
+
+以交互方式进入运行中的容器
+docker exec -it bb01 /bin/sh 该方式使多用户的. 没人进入是不互相影响的
+或者
+docker container attach bb01 该方式使多人都会互相影响比如在一个人终端上输入exit的话全部人员都会退出是相互影响的.
 
 
 
-  
+ 
 
   
   
