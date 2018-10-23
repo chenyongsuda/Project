@@ -51,3 +51,21 @@ docker0         8000.02421e5456fd       no              veth02f5188
 
 
 host 共享主机模式
+表示让容器使用宿主机的网络
+
+
+None 模式不使用网络,只内部没有网络,表示一个信息孤岛.
+有些容器只是批处理不需要网络通信.
+
+
+一般包含四种模式：
+无网络模型,桥接模式,联盟式网络共享一个网络基础,并且这个网络连接到docker01桥(joined container virtual interface),共享物理机的网络的模型.
+
+使用哪种可以指定
+docker container --network 指定那三种网络 默认不指定的话是bridge
+当然可以使用docker network inspect bridge
+
+
+
+
+
