@@ -173,6 +173,29 @@ The push refers to repository [docker.io/chenyongsuda/httpd]
 
 等会儿就会推送成功.完成今天任务.
 
+==========================================================================================================================
+查看容器的命令日志 类似于在机器上执行hostory
+docker container logs tt
+
+
+==========================================================================================================================
+镜像的导入导出 镜像的共享方式
+docker image save/load 针对images的
+docker container export/import 针对container的
+
+[root@digitest01 ~]# docker image save --help
+Usage:  docker image save [OPTIONS] IMAGE [IMAGE...]
+
+docker image save -o img.gz  ttimg:v0.1
+打包一个或者多个镜像后面可以增加多个镜像一起打包
+
+导入：
+docker image load -i img.gz
+导入成功
+
+
+
+
 
 
 
