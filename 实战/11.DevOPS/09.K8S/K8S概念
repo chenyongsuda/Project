@@ -1,0 +1,19 @@
+由Master和node组成
+Master: 主要由三个进程 APIServer（接收客户端请求）, Scheduler（容器调度）,Controller-manager（容器销毁等管理） 组成
+Node：主要由kubelet 和docker组成
+
+Pod：元数据如Label, Label Selector   Pod是K8S调度的最小单元
+Label:key=value 用于打标签
+
+
+Pod 分为两类
+1. 自主式Pod 
+2. 控制管理的Pod
+    ReplicationController 由副本管理器管理管理副本控制,滚动更新,滚动回退等.
+
+还有一类是Pod控制器
+
+
+
+    
+
