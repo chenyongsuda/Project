@@ -1,0 +1,53 @@
+Docker安装完后默认有三种网络方式
+
+NETWORK ID          NAME                DRIVER              SCOPE
+1f84864e599c        bridge              bridge              local
+77e7a275fe39        host                host                local
+a15f7a19c612        none                null                local
+
+bridge 桥接模式：指NAT桥非物理桥
+docker会自动创建docker0桥
+如下：
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default
+    link/ether 02:42:1e:54:56:fd brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+
+每创建一个容器创建一对网卡一个插在docker0上,一个在容器里面
+
+运行一个容器后查看
+[root@digitest01 ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+2: ens160: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:0c:29:24:7f:ec brd ff:ff:ff:ff:ff:ff
+    inet 10.132.250.85/24 brd 10.132.250.255 scope global ens160
+       valid_lft forever preferred_lft forever
+3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default
+    link/ether 02:42:1e:54:56:fd brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+25: veth02f5188@if24: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default
+    link/ether a2:a3:12:60:1c:ac brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    
+    
+看见多一块网卡
+
+安装bridge-utils 工具
+yum install -y bridge-utils
+[root@digitest01 ~]# brctl show
+bridge name     bridge id               STP enabled     interfaces
+docker0         8000.02421e5456fd       no              veth02f5188
+
+看到docker0上插了一个veth02f5188
+
+可以从外部看容器的地址 用docker inspect xxx
+
+这样在宿主机内部,容器内部可以互相访问,对于其他外部的机器的访问的话需要将容器的端口暴露并且使用dnat规则加其暴露出来.
+
+
+
+
+host 共享主机模式
