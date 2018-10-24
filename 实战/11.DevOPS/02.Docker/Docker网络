@@ -347,6 +347,98 @@ $ sudo docker logs -f nostalgic_morse
        
 发现ip地址是一样的
 
+====================================================================================================
+默认docker0桥 是172.17网段的如何自定义网段呢
+可以通过配置/etc/docker/daemon.json文件
+{
+    "bip": "192.168.1.5/24",                       定义网段
+    "default-gateway": "10.20.0.1",                默认网关
+    "dns": ["8.8.8.8","xx.xx.xx.xx"]               DNS
+}
+
+=====================================================================================================
+如何运行docker服务器给别人从外部连进来
+由于docker默认监听的是socket文件,所以要改成监听正常端口
+改daemon.json文件添加端口监听
+{
+    "hosts" : ["tcp://0.0.0.0:2375", "unix:///var/run/docker.socker.sock"]
+}
+增加在tcp端口的监听,然后重启docker服务即可
+远程连接的话使用
+运行时候带上 -H 写上主机   
+docker -H xxxx:2375 image ls
+
+=====================================================================================================
+创建自定义的桥
+格式有bridge还有macvlan 或者 overlay
+
+创建桥使用docker network create 命令
+桥接模式的并且设置子网的网桥  设置这个网络名叫mybr01
+[root@vm02 ~]# docker network create -d bridge --subnet "172.26.0.0/16" --gateway "172.26.0.1" mybr01
+17fd402bc83eb2a843fa8a58e1f3cd42fa9bfdf16325d562ab2b36ba95f791b7
+
+使用docker network ls 就可以看到自己创建的网桥了
+网桥名字可能是随机的
+用ip link set dev br-xxxxx name docker1
+修改网桥名字为docker1
+
+创建个容器加入我建的网络
+[root@vm02 ~]# docker run --rm -it --name b1 --net mybr01 busybox
+/ # ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+12: eth0@if13: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue
+    link/ether 02:42:ac:1a:00:02 brd ff:ff:ff:ff:ff:ff
+    inet 172.26.0.2/16 brd 172.26.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+       
+ 看到加入成功了 ip是哪个子网的ip
+ 
+ 如果在开一个容器的话加入原先的bridge桥的话
+ 这两个容器通不？
+ 不通
+ 
+分别测试到宿主机两个容器都是通的,但是容器到容器室不通的
+查看核心转发应该是可以连通的
+[root@vm02 ~]# cat /proc/sys/net/ipv4/ip_forward
+1
+
+估计是iptables的一些规则阻断了他们的连通.
+
+什么是核心转发功能呢？
+如下讲解：
+linux ip 转发设置 ip_forward
+工作原理：
+内网主机向公网发送数据包时，由于目的主机跟源主机不在同一网段，所以数据包暂时发往内网默认网关处理，而本网段的主机对此数据包不做任何回应。
+由于源主机ip是私有的，禁止在公网使用，所以必须将数据包的源发送地址修改成公网上的可用ip，这就是网关收到数据包之后首先要做的工作--ip转换。
+然后网关再把数据包发往目的主机。目的主机收到数据包之后，只认为这是网关发送的请求，并不知道内网主机的存在，也没必要知道，目的主机处理完请求，
+把回应信息发还给网关。网关收到后，将目的主机发还的数据包的目的ip地址修改为发出请求的内网主机的ip地址，并将其发给内网主机。
+这就是网关的第二个工作--数据包的路由转发。内网的主机只要查看数据包的目的ip与发送请求的源主机ip地址相同，就会回应，这就完成了一次请求。
+出于安全考虑，Linux系统默认是禁止数据包转发的。所谓转发即当主机拥有多于一块的网卡时，其中一块收到数据包，根据数据包的目的ip地址将包发往本机另一网卡，
+该网卡根据路由表继续发送数据包。这通常就是路由器所要实现的功能。
+
+设置
+Linux系统缺省并没有打开IP转发功能，要确认IP转发功能的状态，可以查看/proc文件系统，使用下面命令： cat /proc/sys/net/ipv4/ip_forward
+如果上述文件中的值为0,说明禁止进行IP转发；如果是1,则说明IP转发功能已经打开。
+要想打开IP转发功能，可以直接修改上述文件： echo 1 > /proc/sys/net/ipv4/ip_forward
+把文件的内容由0修改为1。禁用IP转发则把1改为0。
+上面的命令并没有保存对IP转发配置的更改，下次系统启动时仍会使用原来的值，要想永久修改IP转发，需要修改/etc/sysctl.conf文件，修 改下面一行的值： 
+net.ipv4.ip_forward = 1 修改后可以重启系统来使修改生效，也可以执行下面的命令来使修改生效： sysctl -p /etc/sysctl.conf 进行了上面的配置后，
+IP转发功能就永久使能了。
+
+
+ 
+ 
+
+
+
+
+
+
+
+
 
 
 
