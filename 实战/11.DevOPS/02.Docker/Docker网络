@@ -66,6 +66,200 @@ docker container --network 指定那三种网络 默认不指定的话是bridge
 当然可以使用docker network inspect bridge
 
 
+=======================================================================================================================
+网络名称空间
+首先查下ip包是否安装
+rpm -q iproute
+[root@digitest01 ~]# rpm -q iproute
+iproute-4.11.0-14.el7.x86_64
+
+linux的ip命令和ifconfig类似，但前者功能更强大，并旨在取代后者。使用ip命令，只需一个命令，你就能很轻松地执行一些网络管理任务。
+ifconfig是net-tools中已被废弃使用的一个命令，许多年前就已经没有维护了。
+iproute2套件里提供了许多增强功能的命令，ip命令即是其中之一。
+
+使用ip命令就可以操作了
+
+[root@digitest01 ~]# ip help netns
+Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
+       ip [ -force ] -batch filename
+where  OBJECT := { link | address | addrlabel | route | rule | neigh | ntable |
+                   tunnel | tuntap | maddress | mroute | mrule | monitor | xfrm |
+                   netns | l2tp | fou | macsec | tcp_metrics | token | netconf | ila |
+                   vrf }
+       OPTIONS := { -V[ersion] | -s[tatistics] | -d[etails] | -r[esolve] |
+                    -h[uman-readable] | -iec |
+                    -f[amily] { inet | inet6 | ipx | dnet | mpls | bridge | link } |
+                    -4 | -6 | -I | -D | -B | -0 |
+                    -l[oops] { maximum-addr-flush-attempts } | -br[ief] |
+                    -o[neline] | -t[imestamp] | -ts[hort] | -b[atch] [filename] |
+                    -rc[vbuf] [size] | -n[etns] name | -a[ll] | -c[olor]}
+
+
+或者使用
+[root@digitest01 ~]# ip netns help
+Usage: ip netns list
+       ip netns add NAME
+       ip netns set NAME NETNSID
+       ip [-all] netns delete [NAME]
+       ip netns identify [PID]
+       ip netns pids NAME
+       ip [-all] netns exec [NAME] cmd ...
+       ip netns monitor
+       ip netns list-id
+
+实验开始自建一个网络空间
+[root@digitest01 ~]# ip netns add r1
+[root@digitest01 ~]# ip netns add r2
+
+查看所有的网络空间
+[root@digitest01 ~]# ip netns list
+r2
+r1
+在r1的网络空间中执行ifconfig
+
+[root@digitest01 ~]# ip netns exec r1 ifconfig -a
+lo: flags=8<LOOPBACK>  mtu 65536
+        loop  txqueuelen 1  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+可以看到只有一个lo地址没配置没激活.
+
+现在我们已经有两个网络空间了,那我们可以创建两个虚拟网卡对
+把人工分配到网络名称空间中
+使用ip link创建一堆虚拟网卡
+[root@digitest01 ~]# ip link add name vth1.1 type veth peer name vth1.2
+[root@digitest01 ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+2: ens160: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:0c:29:24:7f:ec brd ff:ff:ff:ff:ff:ff
+    inet 10.132.250.85/24 brd 10.132.250.255 scope global ens160
+       valid_lft forever preferred_lft forever
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default
+    link/ether 02:42:1e:54:56:fd brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+28: vth1.2@vth1.1: <BROADCAST,MULTICAST,M-DOWN> mtu 1500 qdisc noop state DOWN group default qlen 1000
+    link/ether 96:80:2c:f2:d6:2c brd ff:ff:ff:ff:ff:ff
+29: vth1.1@vth1.2: <BROADCAST,MULTICAST,M-DOWN> mtu 1500 qdisc noop state DOWN group default qlen 1000
+    link/ether 3e:a1:d0:f2:18:1a brd ff:ff:ff:ff:ff:ff
+可以看到一堆虚拟网卡创建出来了
+
+
+首先把虚拟网卡vth1.2挪到r2中
+[root@digitest01 ~]# ip link set dev vth1.2 netns r2
+然后ip link show查看剩余的
+[root@digitest01 ~]# ip link show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: ens160: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 00:0c:29:24:7f:ec brd ff:ff:ff:ff:ff:ff
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN mode DEFAULT group default
+    link/ether 02:42:1e:54:56:fd brd ff:ff:ff:ff:ff:ff
+29: vth1.1@if28: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 3e:a1:d0:f2:18:1a brd ff:ff:ff:ff:ff:ff link-netnsid 1
+或者使用 ip addr
+
+[root@digitest01 ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+2: ens160: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:0c:29:24:7f:ec brd ff:ff:ff:ff:ff:ff
+    inet 10.132.250.85/24 brd 10.132.250.255 scope global ens160
+       valid_lft forever preferred_lft forever
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default
+    link/ether 02:42:1e:54:56:fd brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+29: vth1.1@if28: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN group default qlen 1000
+    link/ether 3e:a1:d0:f2:18:1a brd ff:ff:ff:ff:ff:ff link-netnsid 1
+
+
+在去看R2中
+[root@digitest01 ~]# ip netns exec r2 ifconfig -a
+lo: flags=8<LOOPBACK>  mtu 65536
+        loop  txqueuelen 1  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+vth1.2: flags=4098<BROADCAST,MULTICAST>  mtu 1500
+        ether 96:80:2c:f2:d6:2c  txqueuelen 1000  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+        
+看到这里面显示的名字叫vth1.2也可以改名的,通过命令ip netns exec r2 ip link set env vth1.2 name eht0
+[root@digitest01 ~]# ip netns exec r2 ip link set dev  vth1.2 name eth0
+[root@digitest01 ~]# ip netns exec r2 ifconfig -a
+eth0: flags=4098<BROADCAST,MULTICAST>  mtu 1500
+        ether 96:80:2c:f2:d6:2c  txqueuelen 1000  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=8<LOOPBACK>  mtu 65536
+        loop  txqueuelen 1  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+一个网卡在本机一个在网络空间里
+激活下本机网卡
+[root@digitest01 ~]# ifconfig vth1.1 10.1.0.1/24 up
+[root@digitest01 ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+2: ens160: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:0c:29:24:7f:ec brd ff:ff:ff:ff:ff:ff
+    inet 10.132.250.85/24 brd 10.132.250.255 scope global ens160
+       valid_lft forever preferred_lft forever
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default
+    link/ether 02:42:1e:54:56:fd brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+29: vth1.1@if28: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state LOWERLAYERDOWN group default qlen 1000
+    link/ether 3e:a1:d0:f2:18:1a brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet 10.1.0.1/24 brd 10.1.0.255 scope global vth1.1
+       valid_lft forever preferred_lft forever
+
+激活网络空间r2的虚拟网卡
+[root@digitest01 ~]# ip netns exec r2 ifconfig eth0 10.1.0.2/24 up
+[root@digitest01 ~]# ip netns exec r2 ip addr
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN group default qlen 1
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+28: eth0@if29: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 96:80:2c:f2:d6:2c brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 10.1.0.2/24 brd 10.1.0.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::9480:2cff:fef2:d62c/64 scope link
+       valid_lft forever preferred_lft forever
+
+测试是否联通在本地上进行ping
+[root@digitest01 ~]# ping 10.1.0.2
+PING 10.1.0.2 (10.1.0.2) 56(84) bytes of data.
+64 bytes from 10.1.0.2: icmp_seq=1 ttl=64 time=0.184 ms
+64 bytes from 10.1.0.2: icmp_seq=2 ttl=64 time=0.051 ms
+64 bytes from 10.1.0.2: icmp_seq=3 ttl=64 time=0.055 ms
+64 bytes from 10.1.0.2: icmp_seq=4 ttl=64 time=0.050 ms
+64 bytes from 10.1.0.2: icmp_seq=5 ttl=64 time=0.064 ms
+64 bytes from 10.1.0.2: icmp_seq=6 ttl=64 time=0.054 ms
+64 bytes from 10.1.0.2: icmp_seq=7 ttl=64 time=0.114 ms
+成功
+
+当然还可以吧另一个虚拟网卡挪到r1这样r1到r2就可以直接通信了.
 
 
 
