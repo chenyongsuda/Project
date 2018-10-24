@@ -262,4 +262,91 @@ PING 10.1.0.2 (10.1.0.2) 56(84) bytes of data.
 当然还可以吧另一个虚拟网卡挪到r1这样r1到r2就可以直接通信了.
 
 
+=======================================================================================
+docker 分配容器网络并且设置主机名并且设置DNS服务器定义和搜索域或者添加host文件
+docker container run --name tt --network bridge -h mydocker --dns x.x.x.x --dns-search xxx.xxx --add-host host:ip  --rm busybox:latest
+
+
+docker0位NAT桥,可以想象成容器室宿主机背后的主机.如果要外网访问内部的容器的话需要做DNAT访问
+为了把容器中的端口暴露出来需要类似做DNAT
+而docker中的DNAT就是在run的时候加-p选项将容器端口暴露到主机端口上
+
+
+-p（小写）则可以指定要映射的IP和端口，但是在一个指定端口上只可以绑定一个容器。支持的格式有 hostPort:containerPort、ip:hostPort:containerPort、 ip::containerPort。
+
+containerPort（映射所有接口地址随机端口） 
+
+hostPort:containerPort（映射所有接口地址）
+将本地的 5000 端口映射到容器的 5000 端口，可以执行如下命令：
+$ sudo docker run -d -p 5000:5000 training/webapp python app.py 此时默认会绑定本地所有接口上的所有地址。
+
+ip:hostPort:containerPort （映射指定地址的指定端口）
+指定映射使用一个特定地址，比如 localhost 地址 127.0.0.1
+$ sudo docker run -d -p 127.0.0.1:5000:5000 training/webapp python app.py
+
+ip::containerPort （映射指定地址的任意端口）
+绑定 localhost 的任意端口到容器的 5000 端口，本地主机会自动分配一个端口。
+sudo docker run -d -p 127.0.0.1::5000 training/webapp python app.py
+还可以使用 udp 标记来指定 udp 端口
+$ sudo docker run -d -p 127.0.0.1:5000:5000/udp training/webapp python app.py
+
+查看映射端口配置
+使用 docker port 来查看当前映射的端口配置，也可以查看到绑定的地址
+
+$ docker port nostalgic_morse 5000
+127.0.0.1:49155.
+注意：
+
+容器有自己的内部网络和 ip 地址（使用 docker inspect 可以获取所有的变量，Docker 还可以有一个可变的网络配置。）
+-p 标记可以多次使用来绑定多个端口
+例如
+$ sudo docker run -d -p 5000:5000 -p 3000:80 training/webapp python app.py
+
+=============================================================================================================
+大写P的话表示
+当使用 -P 标记时，Docker 会随机映射一个 49000~49900 的端口到内部容器开放的网络端口。
+使用 docker ps 可以看到，本地主机的 49155 被映射到了容器的 5000 端口。此时访问本机的 49155 端口即可访问容器内 web 应用提供的界面。
+
+$ sudo docker run -d -P training/webapp python app.py
+$ sudo docker ps -l
+CONTAINER ID  IMAGE                   COMMAND       CREATED        STATUS        PORTS                    NAMES
+bc533791f3f5  training/webapp:latest  python app.py 5 seconds ago  Up 2 seconds  0.0.0.0:49155->5000/tcp  nostalgic_morse
+同样的，可以通过 docker logs 命令来查看应用的信息。
+
+$ sudo docker logs -f nostalgic_morse
+* Running on http://0.0.0.0:5000/
+10.0.2.2 - - [23/May/2014 20:16:31] "GET / HTTP/1.1" 200 -
+10.0.2.2 - - [23/May/2014 20:16:31] "GET /favicon.ico HTTP/1.1" 404 -
+
+
+===================================================================================================================
+联盟式容器
+先启动一个容器
+[root@vm02 ~]# docker run --rm -it --name b1 busybox
+/ # ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+9: eth0@if10: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue
+    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+       
+ 在启动一个容器以之前容器网络为基础创建另一个网络
+ [root@vm02 ~]# docker run --rm -it --name b2 --network container:b1 busybox
+/ # ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+9: eth0@if10: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue
+    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+       
+发现ip地址是一样的
+
+
+
 
