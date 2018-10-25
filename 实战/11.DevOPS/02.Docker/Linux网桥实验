@@ -79,24 +79,28 @@ ip link add name link1.1 type veth peer name link1.2
 ip link set link1.1 up   激活网卡
 ip link set dev link1.1 master br0   挂载到网桥
 ip link set link1.2 up   激活网卡
-ip link set dev link1.2 master br0   挂载到网桥
+ip link set dev link1.2 master br1   挂载到网桥
 
 创建两个虚拟网卡
 ip link add name line1.1 type veth peer name line1.2
 ip addr add 192.168.3.101/24 dev line1.1
 ip link set line1.1 up
+ip link set dev line1.1 netns e0               把1.1放入网络空间中
 
 ip link set line1.2 up
 ip link set dev line1.2 master br0            把line1.2挂载到桥上
+
 
 ip link add name line2.1 type veth peer name line2.2
 ip addr add 192.168.3.103/24 dev line2.1
 ip link set line2.1 up
 
 ip link set line2.2 up
-ip link set dev line2.2 master br1            把line1.2挂载到桥上
+ip link set dev line2.2 master br1            把line2.2挂载到桥上
+ip link set dev line2.1 netns w0               把2.1放入网络空间中
 
 
+实验失败 在网桥上没配置ip 反正从一个网络空间ping另一个收不到.待继续研究
 
 
 
