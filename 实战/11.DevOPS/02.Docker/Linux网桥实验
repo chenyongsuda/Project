@@ -1,0 +1,104 @@
+我们先用iproute2创建一个bridge：
+dev@debian:~$ sudo ip link add name br0 type bridge
+dev@debian:~$ sudo ip link set br0 up
+
+再用iproute2创建一个bridge：
+dev@debian:~$ sudo ip link add name br1 type bridge
+dev@debian:~$ sudo ip link set br1 up
+
+将bridge和veth设备相连
+创建一对veth设备，并配置上IP
+dev@debian:~$ sudo ip link add veth0 type veth peer name veth1
+dev@debian:~$ sudo ip addr add 192.168.3.101/24 dev veth0
+dev@debian:~$ sudo ip addr add 192.168.3.102/24 dev veth1
+dev@debian:~$ sudo ip link set veth0 up
+dev@debian:~$ sudo ip link set veth1 up
+将veth0连上br0
+dev@debian:~$ sudo ip link set dev veth0 master br0
+#通过bridge link命令可以看到br0上连接了哪些设备
+
+上面的只是演示命令
+
+具体应该是
+创建两块虚拟网卡一块attach到网桥br0 
+在创建两块虚拟网卡一块再attache到网桥br0
+
+创建两个虚拟ns 讲另一端放进去
+
+
+命令参考
+实验开始自建一个网络空间
+[root@digitest01 ~]# ip netns add r1
+[root@digitest01 ~]# ip netns add r2
+
+查看所有的网络空间
+[root@digitest01 ~]# ip netns list
+r2
+r1
+在r1的网络空间中执行ifconfig
+
+[root@digitest01 ~]# ip netns exec r1 ifconfig -a
+lo: flags=8<LOOPBACK>  mtu 65536
+        loop  txqueuelen 1  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+可以看到只有一个lo地址没配置没激活.
+
+现在我们已经有两个网络空间了,那我们可以创建两个虚拟网卡对
+把人工分配到网络名称空间中
+使用ip link创建一堆虚拟网卡
+[root@digitest01 ~]# ip link add name vth1.1 type veth peer name vth1.2
+首先把虚拟网卡vth1.2挪到r2中
+[root@digitest01 ~]# ip link set dev vth1.2 netns r2
+然后ip link show查看剩余的
+[root@digitest01 ~]# ip link show
+在去看R2中
+[root@digitest01 ~]# ip netns exec r2 ifconfig -a
+看到这里面显示的名字叫vth1.2也可以改名的,通过命令ip netns exec r2 ip link set env vth1.2 name eht0
+[root@digitest01 ~]# ip netns exec r2 ip link set dev  vth1.2 name eth0
+[root@digitest01 ~]# ip netns exec r2 ifconfig -a
+激活网络空间r2的虚拟网卡
+[root@digitest01 ~]# ip netns exec r2 ifconfig eth0 10.1.0.2/24 up
+=========================================================================================
+
+思路建立两个由网桥隔离的网络由两个网桥通过一组没有ip的虚拟网卡连接
+两个网桥每个网桥2个网络空间
+ip link add name br0 type bridge
+ip netns add e0
+ip netns add e1
+
+ip link add name br1 type bridge
+ip netns add w0
+ip netns add w1
+
+创建连接网桥的两个虚拟网卡
+ip link add name link1.1 type veth peer name link1.2
+分别分配到两个桥上
+ip link set link1.1 up   激活网卡
+ip link set dev link1.1 master br0   挂载到网桥
+ip link set link1.2 up   激活网卡
+ip link set dev link1.2 master br0   挂载到网桥
+
+创建两个虚拟网卡
+ip link add name line1.1 type veth peer name line1.2
+ip addr add 192.168.3.101/24 dev line1.1
+ip link set line1.1 up
+
+ip link set line1.2 up
+ip link set dev line1.2 master br0            把line1.2挂载到桥上
+
+ip link add name line2.1 type veth peer name line2.2
+ip addr add 192.168.3.103/24 dev line2.1
+ip link set line2.1 up
+
+ip link set line2.2 up
+ip link set dev line2.2 master br1            把line1.2挂载到桥上
+
+
+
+
+
+
+
