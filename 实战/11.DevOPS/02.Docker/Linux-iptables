@@ -11,3 +11,24 @@
 这里可以看出 Netfilter 处理网络包的先后顺序：接收网络包，先 DNAT，然后查路由策略，查路由策略指定的路由表做路由，然后 SNAT，再发出网络包。
 
 简要流程就是收到包经过iptables处理然后进行路由选择发出去前再进过iptables处理.
+
+
+Linux系统安全02 iptables的5个表 filter表、nat表、mangle表，和raw表以及security表
+1.iptables有三个表，分别是filter表，nat表和mangle表。其中默认的表为filter表，使用时无需-t参数指定，其它2个表则需要使用-t参数明示。
+
+2.filter表。
+
+(1)filter表支持三个内建的规则链，以及自定义的规则链。
+
+三个内建的规则链分别是INPUT,OUTPUT,FORWARD。
+
+INPUT规则链指定对数据包进行处理时进行的修改。
+
+FORWARD规则链指定对数据包进行转发时进行的修改。
+
+Output规则链指定对本地产生的数据包进行的修改。
+
+
+处置结果有两种：ACCEPT、DROP。另外支持一种目标扩展REJECT。
+
+DROP和REJECT的区别在于DROP不会向数据包的发送方返回任何icmp错误信息，而REJECT则会返回一条icmp错误信息。
