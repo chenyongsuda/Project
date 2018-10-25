@@ -1,0 +1,15 @@
+IPForward类似于路由器功能,当一台电脑有多张网卡的时候,将通过路由表转发相关请求.
+
+###查看路由表
+[root@centos7-router ~]# route -n
+Kernel IP routing table  ###缺省情况下，每块网卡都有一个基于本网段的路由记录
+Destination    Gateway        Genmask        Flags Metric Ref    Use Iface
+0.0.0.0        192.168.1.1    0.0.0.0        UG    100    0        0 eno33554960
+172.24.8.0      0.0.0.0        255.255.255.0  U    100    0        0 eno16777728
+192.168.1.0    0.0.0.0        255.255.255.0  U    100    0        0 eno33554960
+
+###使用ip命令方式查看路由
+[root@centos7-router ~]# ip route list
+default via 192.168.1.1 dev eno33554960  proto static  metric 100 
+172.24.8.0/24 dev eno16777728  proto kernel  scope link  src 172.24.8.254  metric 100 
+192.168.1.0/24 dev eno33554960  proto kernel  scope link  src 192.168.1.175  metric 100 
