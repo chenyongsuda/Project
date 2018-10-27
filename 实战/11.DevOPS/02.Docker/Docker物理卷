@@ -1,0 +1,19 @@
+1. 容器物理卷可以挂载
+命令docker run -it -v /home/dock/Downloads:/usr/Downloads ubuntu64 /bin/bash
+挂载/usr/Downloads到宿主机/home/dock/Downloads
+
+也可以忽略宿主机的路径只写内部路径这样的话就会随机生成一个路径.
+
+
+2.拷贝某些容器的挂载路径
+docker run -it --name bb02 --volumns-from bb01 busybox
+拷贝bb02的容器挂载路径
+
+3.制作joined容器
+就是多个容器使用一个网络使用同一个挂载设置
+docker run --name nginx --network container:infrabox --volumns-from infrabox 
+
+OK
+挂载章节比较简单
+
+完成.
