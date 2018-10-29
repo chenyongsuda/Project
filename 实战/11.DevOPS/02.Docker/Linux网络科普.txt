@@ -1,0 +1,40 @@
+Linux 数据流图
+http://www.cnblogs.com/sammyliu/p/5225623.html
+https://blog.csdn.net/hsly_support/article/details/8775201 
+https://blog.csdn.net/hsly_support/article/list/2?t=1
+
+IP 层的入口函数在 ip_rcv 函数。
+该函数首先会做包括 package checksum 在内的各种检查，如果需要的话会做 IP defragment（将多个分片合并），
+然后 packet 调用已经注册的 Pre-routing netfilter hook ，完成后最终到达 ip_rcv_finish 函数。
+ip_rcv_finish 函数会调用 ip_router_input 函数，进入路由处理环节。它首先会调用 ip_route_input 来更新路由，
+然后查找 route，决定该 package 将会被发到本机还是会被转发还是丢弃：
+
+如果是发到本机的话，调用 ip_local_deliver 函数，可能会做 de-fragment（合并多个 IP packet），
+然后调用 ip_local_deliver 函数。该函数根据 package 的下一个处理层的 protocal number，调用下一层接口，
+包括 tcp_v4_rcv （TCP）, udp_rcv （UDP），icmp_rcv (ICMP)，igmp_rcv(IGMP)。对于 TCP 来说，函数 tcp_v4_rcv 函数会被调用，从而处理流程进入 TCP 栈。
+如果需要转发 （forward），则进入转发流程。该流程需要处理 TTL，再调用 dst_input 函数。该函数会 
+（1）处理 Netfilter Hook 
+（2）执行 IP fragmentation 
+（3）调用 dev_queue_xmit，进入链路层处理流程。
+
+
+包接收选择：
+->ip_rcv_finish()
+     ->ip_route_input()  查找路由信息
+     ->if (iph->ihl > 5 && ip_rcv_options(skb)) 如果IP头部大于20字节，则表示IP头部包含IP选项，需要进行选项处理.
+          goto drop;
+     ->dst_input(skb);      dst_input实际上会调用skb->dst->input(skb).input函数会根据路由信息设置为合适的函数指针，如果是递交到本地的               
+                                        则为ip_local_deliver，若是转发则为ip_forward
+两条路径：
+1) ip_local_deliver
+2) ip_forward
+
+--------------------- 
+作者：白水煮鸡蛋 
+来源：CSDN 
+原文：https://blog.csdn.net/hsly_support/article/details/8775201 
+版权声明：本文为博主原创文章，转载请附上博文链接！
+
+
+
+
