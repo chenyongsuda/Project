@@ -77,3 +77,7 @@ Follow steps described in Zabbix documentation: Installing frontend
 
 Start using Zabbix
 See Quickstart guide
+
+
+Zabbix frontend is ready! The default user name is Admin, password zabbix.
+
