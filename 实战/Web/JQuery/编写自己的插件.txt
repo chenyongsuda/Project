@@ -1,0 +1,140 @@
+https://blog.csdn.net/nloneday/article/details/80922660
+
+编写自己的jQuery扩展（插件）
+2018年07月05日 10:11:54 NLOneDay 阅读数：262更多
+个人分类： javascript
+就我目前所知，编写jQuery扩展（插件）有三种方式
+扩展jQuery本身的方法，$.extend
+扩展jQuery对象的方法，$.fn.extend
+扩展DataType对象的方法，[DataType].prototype，[DataType]代指String、Number...等数据类型
+下面通过举例介绍具体用法
+1.$.extend，以一个页面弹窗为例：
+
+//$.extend有两种写法，注意扩展时funcName=function()和funcName:function()的区别
+
+//1. $.funcName = function(){}，一般用于定义单个扩展（插件）
+$.popUp = function (text, type, second = 2) {
+    var types = {
+        'info': {'background': "#90c24f"},
+        'warning': {'background': "#f99e2b"},
+        'error': {'background': "#f06a6a"}
+    }
+    type = type in types ? type : 'info'
+    $p = $('<p></p>').text('{0}：{1}'.format(type, text)).css({ 
+    //format方法也是扩展（插件），详见下文[DataType].prototype
+        'color': 'white',
+        'width': '400px',
+        'z-index': '5',
+        'height': '50px',
+        'line-height': '50px',
+        'text-align': 'center',
+        'position': 'fixed',
+        'top': '50px',
+        'left': '50%',
+        'margin': '3px',
+        'margin-left': '-200px',
+        'border-radius': '5px'
+    }).css(types[type]);
+    $('body').append($p);
+    setTimeout(() => $p.fadeOut(), parseInt(second) * 1000)
+};
+
+ //2. $.extend({funcName1:function(){}, funcName2:function(){}})，一般用于定义多个扩展（插件）
+ $.extend({
+    popUp: function (text, type, second = 2) {
+        ...
+    },
+});
+
+//调用方式：
+$.popUp("保存失败！", "error", 3)
+
+页面弹窗
+
+2.$.fn.extend，以一个在光标处插入文本为例：
+
+//和$.extend一样，$.fn.extend也是同样的两种写法
+
+//1. $.fn.funcName = function(){}，一般用于定义单个扩展（插件）
+$.fn.insertContent = function (myValue, t) {
+    var $t = $(this)[0];
+    if (document.selection) { // ie
+        this.focus();
+        var sel = document.selection.createRange();
+        sel.text = myValue;
+        this.focus();
+        sel.moveStart('character', -l);
+        var wee = sel.text.length;
+        if (arguments.length == 2) {
+            var l = $t.value.length;
+            sel.moveEnd("character", wee + t);
+            t <= 0 ? sel.moveStart("character", wee - 2 * t - myValue.length) : sel.moveStart("character", wee - t - myValue.length);
+            sel.select();
+        }
+    } else if ($t.selectionStart
+        || $t.selectionStart == '0') {
+        var startPos = $t.selectionStart;
+        var endPos = $t.selectionEnd;
+        var scrollTop = $t.scrollTop;
+        $t.value = $t.value.substring(0, startPos)
+            + myValue
+            + $t.value.substring(endPos, $t.value.length);
+        this.focus();
+        $t.selectionStart = startPos + myValue.length;
+        $t.selectionEnd = startPos + myValue.length;
+        $t.scrollTop = scrollTop;
+        if (arguments.length == 2) {
+            $t.setSelectionRange(startPos - t,
+                $t.selectionEnd + t);
+            this.focus();
+        }
+    } else {
+        this.value += myValue;
+        this.focus();
+    }
+}
+
+//2. $.fn.extend({funcName1:function(){}, funcName2:function(){}})，一般用于定义多个扩展（插件）
+$.fn.extend({
+    insertContent: function (myValue, t) {
+        ...
+    },
+})
+
+//调用方式
+$("#target").insertContent("text");
+
+光标文本插入
+
+3.[DataType].prototype，以一个文本格式化为例：
+
+//[DataType].prototype只有一种写法
+String.prototype.format = function (args) {
+    var result = this;
+    if (arguments.length > 0) {
+        if (arguments.length == 1 && typeof (args) == "object") {
+            for (var key in args) {
+                if (args[key] != undefined) {
+                    // noinspection Annotator
+                    var reg = new RegExp("({" + key + "})", "g");
+                    result = result.replace(reg, args[key]);
+                }
+            }
+        }
+        else {
+            for (var i = 0; i < arguments.length; i++) {
+                if (arguments[i] != undefined) {
+                    // noinspection Annotator
+                    var reg = new RegExp("({[" + i + "]})", "g");
+                    result = result.replace(reg, arguments[i]);
+                }
+            }
+        }
+    }
+    return result;
+}
+
+//调用方式
+var text = '{"{0}": {1}, "{2}": "{3}"}'.format('id',1,'name','nandy')
+1
+2
