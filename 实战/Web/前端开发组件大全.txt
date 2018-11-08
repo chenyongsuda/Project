@@ -1,0 +1,329 @@
+https://blog.csdn.net/u013487813/article/details/79937655
+
+前端自动化 
+前端构建工具 
+gulp – The streaming build system 
+grunt – the JavaScript Task Runner 
+前端模块管理器 
+Bower – A package manager for the web 
+Browserify 
+Component 
+Duo 
+RequireJS 
+Sea.js 
+css预处理器 
+Less – Less is More , Than CSS 
+Sass – Syntactically Awesome Style Sheets 
+Stylus – Expressive, dynamic, robust CSS
+
+前端框架 
+Bootstrap 
+Foundation 
+Amaze UI 
+Semantic UI 
+Pure CSS 
+topcoat 
+UIkit 
+Material UI 
+Framework7 
+mui 
+ionic framework 
+Fries 
+jQuery Mobile
+
+JavaScript 框架汇总 
+JavaScript 框架 
+Angular 
+jQuery 
+Backbone.js 
+Ractive.js 
+KISSY 
+Zepto.js 
+Vanilla JS 
+Avalon 
+轻量级JavaScript框架 
+Min.js – Super minimal selector and event library 
+skel.js – A lightweight responsive framework 
+JavaScript 工具库 
+underscore.js 
+Way.js – 双向数据绑定库 
+Keys.js – 应用快捷键
+
+前端游戏框架 
+cocos2d-html5 
+Egret Engine 
+LimeJS 
+EaselJS 
+three.js 
+AlloyStick 
+The-Best-JS-Game-Framework 
+CanvasEngine 
+Quintus
+
+ui组件库 
+GMU 
+NEC 
+NEJ 
+Pure CSS Components 
+magic-of-css
+
+基础模版 
+HTML5 BOILERPLATE 
+Modernizr 
+Normalize.css
+
+排版 
+yue.css 
+typo.css
+
+网格系统 
+grid 
+Flexbox Grid
+
+HTML5 API 应用 
+History.js – gracefully supports the HTML5 History/State APIs 
+jquery-pjax – pushState+ajax 
+jquery-address – Deep Linking 
+Notify.js(Web Notifications API)
+
+UA 识别 
+Detector
+
+表单处理 
+10.1 表单验证(Form Validator) 
+Validator 
+Parsley 
+jquery.form.js – jQuery Form Plugin 
+Validform 
+validator.js 
+formvalidator.js 
+Fort.js – 表单填写进度提示 
+10.2 < select > 相关 
+Chosen 
+Select2 
+bootstrap-select 
+10.3 单选框/复选框相关 
+iCheck – 增强复选框和单选按钮 
+10.4 上传组件 
+jQuery File Upload Plugin 
+百度 Web Uploader 
+Uploadify 
+Plupload 
+arale-upload – 轻量级 iframe and html5 file uploader 
+Dropzone.js – drag’n’drop library拖拽上传 
+flow.js 
+10.5 日期选择 
+Both Date and Time picker widget based on twitter bootstrap 
+GMU 日历组件 
+Mobiscroll 
+10.6 取色 
+Colorpicker plugin for Twitter Bootstrap 
+10.7 标签插件(Tag) 
+TaggingJS – 可以灵活定制的 jQuery 标签系统插件
+
+图表绘制 
+Highcharts 
+Chart.js – Simple HTML5 Charts using Canvas 
+百度 ECharts 
+Chartist.js 
+D3.js – A JavaScript visualization library for HTML and SVG. 
+intro-to-d3 – a D3.js tutorial
+
+日期格式化 
+Moment.js 
+Smart Time Ago – 显示相对时间
+
+页面交互 
+13.1 Slider 
+slick – the last carousel you’ll ever need 
+Swipe – the most accurate touch slider 
+Swiper – Most modern mobile touch slider 
+iscroll – Smooth scrolling for the web 
+13.2 瀑布流 
+Masonry 
+Isotope – Filter & sort magical layouts 
+13.3 图片懒加载/加载监听 
+imagesLoaded 
+Echo.js 
+lazySizes 
+jquery_lazyload 
+lazyload.js 
+waitForImages – 图片加载监听库 
+13.4 图片轮播/展示 
+FlexSlider 
+unslider – 小而美的轮播库 
+prettyPhoto 
+13.5 图片剪裁 
+croppic – an image cropping jquery plugin 
+13.6 进度条 
+NProgress.js 
+progress.js 
+Pace – Automatic page load progress bar 
+jquery-ajax-progress 
+13.7 侧滑插件(offcancas) 
+pushy – a responsive off-canvas navigation menu 
+13.8 菜单(Menu) 
+SuperFish – 基于jQuery的级联下拉菜单 
+Responsive Nav – 响应式导航 
+13.9 滚动侦测(ScrollSpy) 
+jquery-scrollspy(1) 
+jquery-scrollspy(2) 
+Waypoints 
+13.10 滚动加载更多 
+jScroll 
+13.11 平滑滚动插件(Smooth Scroll) 
+jquery-smooth-scroll 
+jquery.scrollTo – 平滑滚动到页面指定位置 
+13.12 全屏滚动 
+pagePiling.js – 全屏滚动效果 
+13.13 分屏滚动 
+multiscroll.js – 分屏滚动效果 
+13.14 转场效果 
+Animsition – 页面切换时的过渡效果 
+13.15 固定元素(Sticky) 
+sticky – jQuery Plugin for Sticky Objects 
+jquery.pin – 固定页面元素 
+13.16 触控事件 
+Hammer.JS 
+13.17 拖拽组件 
+Draggabilly – 专注于拖拽功能的 JS 库 
+13.18 隐藏或展示页面元素 
+Headroom.js – 在不需要页头时将其隐藏 
+Readmore.js – 内容显示与隐藏插件 
+13.19 滚动条 
+jScrollPane 
+13.20 视差滚动(Parallax Scrolling)() 
+parallax.js 
+jparallax
+
+代码高亮插件/代码编辑器 
+google-code-prettify 
+highlight.js 
+Rainbow 
+ACE 
+CodeMirror 
+Crayon Syntax Highlighter 
+prism – Lightweight, robust, elegant syntax highlighting.
+
+UI Icon 组件 
+Font Awesome 
+Glyphter: The SVG Font Machine 
+Perfect Icons 
+iconizr 
+Cikonss – 纯CSS实现的响应式Icon 
+Simple Icons
+
+动画 
+animate.css – A cross-browser library of CSS animations. 
+Transit – CSS transitions and transformations for jQuery 
+Move.js – 简化CSS3动画的JS库 
+ScrollMe – 在网页中加入各种滚动动画效果 
+Effeckt.css – A Performant Transitions and Animations Library 
+NEC动画库 
+csshake – CSS classes to move your DOM 
+magic – CSS3 Animations with special effects 
+Hover.css 
+css-loaders 
+SpinKit
+
+本地存储 
+cross-storage – Cross domain local storage 
+localForage 
+pouchdb 
+basil.js
+
+模板引擎 
+mustache.js 
+Handlebars.js 
+artTemplate 
+baiduTemplate 
+JSRender 
+EJS – JavaScript Templates 
+Juicer – A Light Javascript Templete Engine. 
+Tempo 
+json2html
+
+通知组件/弹框组件 
+alertify.js 
+AlertifyJS 
+SweetAlert 
+Messenger – 非常酷的弹框组件 
+PNotify
+
+提示控件(Tooltips) 
+qTip2 – Pretty powerful tooltips 
+tooltip – CSS Tooltips 
+tooltipster – A jQuery tooltip plugin 
+grumble.js – 气泡形状的提示（Tooltip）控件 
+Ouibounce – 离站提示控件
+
+对话框/弹出层(lightbox) 
+fancyBox – Fancy jQuery lightbox 
+jquery-lightbox – The popular lightbox script, ported to jQuery 
+Colorbox – a jQuery lightbox 
+artDialog – 经典的网页对话框组件 
+DialogEffects
+
+文档/表格 
+handsontable – 在线可编辑excel表格 
+jQuery Bootgrid – 用于ajax生成动态表格 
+DataTables – Table plug-in for jQuery
+
+目录树插件 
+zTree_v3 – jQuery Tree Plugin 
+jstree – jQuery Tree Plugin 
+fancytree – Tree plugin for jQuery
+
+Ajax模块 
+fetch – A window.fetch JavaScript polyfill 
+reqwest – browser asynchronous http requests 
+minAjax.js
+
+音频/视频 
+jPlayer – HTML5 Audio & Video for jQuery 
+video.js – HTML5 & Flash video player 
+Accessible HTML5 Video Player – PayPal 开源的 HTML5 视频播放器 
+Clappr – 开源的Web视频播放器 
+Plyr – A simple HTML5 media player 
+FitVids.js – A lightweight, easy-to-use jQuery plugin for fluid width video embeds. 
+BigVideo.js – The jQuery Plugin for Big Background Video 
+BigScreen – A simple library for using the JavaScript Full Screen API 
+Vide – 视频背景 
+winamp2-js
+
+按钮 
+Buttons – A CSS button library 
+ButtonComponentMorph 
+ProgressButtonStyles 
+CreativeButtons 
+CSS3 buttons
+
+富文本编辑器/Markdown编辑器/Markdown解析器 
+Simditor – 简单快速的富文本编辑器 
+BachEditor – 一个有情怀的编辑器 
+bootstrap-markdown 
+marked – markdown解析器
+
+内容提取(Readability) 
+Readability 
+json.human.js – Json Formatting for Human Beings
+
+颜色(CSS Colors)/SVG 
+CSS Colours 
+SVGeneration
+
+实用工具/其他插件 
+jquery-cookie 
+FastClick – 处理移动端 click 事件 300 毫秒延迟 
+screenfull.js – 全屏切换 
+Async.js – 异步操作 
+html2canvas – 实现纯JS网页截图 
+jquery.qrcode.js – 生成二维码的 jQuery 插件 
+FocusPoint.js 实现图片的响应式裁剪 
+DD_belatedPNG.js – 让IE6支持透明PNG图片 
+nakedpassword – 用脱衣女帮助检测密码强度
+
+前端参考集 
+frontend-guidelines – Some HTML, CSS and JS best practices. 
+Codrops – Useful resources 
+Front-end Code Standards & Best Practices
