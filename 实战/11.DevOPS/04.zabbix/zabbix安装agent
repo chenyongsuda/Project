@@ -94,3 +94,16 @@ Hostname=本机IP #不要用127.0.0.1
 添加开机启动
 chkconfig zabbix-agent on
  
+一、zabbix agent主动模式与被动模式的区别
+zabbix agent的运行模式有以下两种：
+1、被动模式：此模式为zabbix默认的工作模式，由zabbix server 向zabbix agent 发出指令获取数据，zabbix agent被动地去获取数据并返回给zabbix server，
+zabbix server会周期性地向agent索取数据。此模式的最大问题就是会增加zabbix server的工作量，在大量的服务器环境下，
+zabbix server不能及时获取到最新的数据。
+2、主动模式：即由zabbix agent 主动采集数据并返回给zabbix server，
+不需要zabbix server 的另行干预，因此使用主动模式能在一定程序上减轻zabbix server的压力。
+
+作者：小尛酒窝
+链接：https://www.jianshu.com/p/c735e9bb1c66
+來源：简书
+简书著作权归作者所有，任何形式的转载都请联系作者获得授权并注明出处。
+
