@@ -1,0 +1,323 @@
+解决安装rpm包依赖关系的烦恼 - yum工具介绍及本地源配置方法
+
+1、背景概述
+在实际生产环境下，对于在linux系统上安装rpm包，主要面临两个实际的问题
+1）安装rpm包过程中，不断涌现的依赖关系问题，导致需要按照提示或者查询资料，手工安装更多的包
+2）由于内外网的隔离，无法连接外网的yum源
+
+鉴于上述因此，本文将详细介绍，yum工具以及配置本地yum源的方法
+
+ 
+
+ 
+
+2、yum工具简介
+yum工具作为rpm包的软件管理器，可以进行rpm包的安装、升级以及删除等日常管理工作，而且对于rpm包之间的依赖关系可以自动分析，大大简化了rpm包的维护成本。
+yum工具的配置，主要由两个文件控制：/etc/yum.conf以及/etc/yum.repos.d/filename.repo
+关于/etc/yum.conf文件：主要承担全局配置[main]，此外也可以在此处配置软件仓库（repository）
+关于/etc/yum.repos.d/filename.repo：主要承担具体软件仓库的配置（若上面yum.conf中配置了软件仓库，此处也可以选择不配置），filename可自行定义。
+ 
+
+ 
+
+3、/etc/yum.conf文件主要参数详解
+该文件主要负责全局配置，若不在此文件中进行repository的配置，一般不需要进行改动
+
+下面是系统yum默认的一份yum.conf配置，具体解释如示：
+
+复制代码
+[root@sunny yum.repos.d]# cat /etc/yum.conf 
+
+[main]                            --main定义全局属性，只能有一个                                           
+cachedir=/var/cache/yum           --定义yum缓存目录，用于储存下载存储的rpm包等
+keepcache=0                       --成功安装后，缓存数据是否保存。0：不保存，1：保存      
+debuglevel=2                      --调试级别（0-10），默认为2
+logfile=/var/log/yum.log          --定义yum日志目录
+distroverpkg=redhat-release       --通过指定针对系统发行版的rpm包，判断当前系统的版本。默认值为redhat-release
+tolerant=1                        --定义是否容忍命令行发生与软件包有关的错误。0：不容忍，1：容忍
+exactarch=1                       --定义当更新rpm包时，yum是否仅仅升级当前架构的包。
+                                  --当设置为1，不会发生i386包升级到i686
+
+obsoletes=1
+gpgcheck=1                        --定义是否对rpm包进行GPG校验。0：不校验，1：校验
+plugins=1                         --定义是否使用插件。0：不允许，1：允许
+# Default.
+# installonly_limit = 3
+
+# PUT YOUR REPOS HERE OR IN separate files named file.repo
+# in /etc/yum.repos.d 
+
+复制代码
+ 
+
+除上述的参数外，可能用到的主要参数还有：
+exclude ： 该参数主要用于屏蔽不想更新的RPM包，可使用通配符，多个RPM包之间使用空格分离。
+
+ 
+
+ 
+
+4、/etc/yum.repos.d/filename.repo文件主要参数详解
+该文件主要负责具体软件仓库的配置，若在/etc/yum.conf文件中进行了配置，可以选择不配置。
+下面是系统yum默认的一份软件仓库的配置文件：
+
+复制代码
+[root@sunny yum.repos.d]# cat rhel-debuginfo.repo 
+[rhel-debuginfo]
+name=Red Hat Enterprise Linux $releasever - $basearch - Debug
+baseurl=ftp://ftp.redhat.com/pub/redhat/linux/enterprise/$releasever/en/os/$basearch/Debuginfo/
+enabled=0
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+复制代码
+ 
+
+参数解释如下：
+[rhel-debuginfo]：用于区分不同的repository，在一个filename.repo文件中，可以定义一个或者多个repository
+name：用于对repository的描述
+baseurl：用于指定获取rpm包的源位置，支持http://、ftp://、file://三种协议。
+enabled：用于定义此软件仓库是否可用。0：不可用，1：可用
+gpgcheck：定义是否对rpm包进行GPG校验。
+gpgkey：用于定义校验的gpg密钥文件的位置。
+
+ 
+
+ 
+
+5、常用命令介绍
+以下是关于yum管理的常用命令
+
+yum repolist ： 查看可用的软件仓库信息
+yum list rpm包 ： 查看rpm包的安装情况，支持通配符*，若为被安装，显示可用的软件仓库
+yum list installed |grep rpm包： 查看rpm包是否被安装
+yum info rpm包 ： 查看rpm包详细信息
+yum check-update ： 检查可用的rpm包更新
+yum install rpm包 ： 安装rpm包，支持通配符*
+yum remove rpm包 ： 删除rpm包
+yum clean packages ： 清除rpm包缓存
+yum clean headers ： 清除rpm头文件缓存
+yum clean all ： 清除rpm头文件以及包缓存
+
+ 
+
+
+6、配置本地yum源的具体示例
+本次示例使用的系统为redhat 5.8 64位，具体过程及说明如下：
+
+复制代码
+--安装gcc-c++包，提示因为依赖关系缺少包而无法安装
+--若采用手工安装，在安装提示的rpm包过程中，可能还存在其他需要的依赖关系包
+[root@sunny Desktop]# rpm -ivh gcc-c++-4.1.2-52.el5.x86_64.rpm 
+warning: gcc-c++-4.1.2-52.el5.x86_64.rpm: Header V3 DSA signature: NOKEY, key ID 37017186
+error: Failed dependencies:
+        gcc = 4.1.2-52.el5 is needed by gcc-c++-4.1.2-52.el5.x86_64
+        libstdc++-devel = 4.1.2-52.el5 is needed by gcc-c++-4.1.2-52.el5.x86_64
+
+
+
+--下面开始通过配置本地源yum的方法从镜像光盘安装
+
+
+
+--查看文件系统，此时未挂载cdrom
+[root@sunny ~]# df -h
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/mapper/VolGroup00-LogVol00
+                       16G  6.1G  8.7G  42% /
+/dev/sda1              99M   13M   81M  14% /boot
+tmpfs                1004M     0 1004M   0% /dev/shm
+
+
+
+--创建cdrom的挂载点目录
+--挂载点目录名随意，此处作者创建目录名为cdrom的目录作为挂载点
+[root@sunny ~]# mkdir /cdrom
+
+
+
+
+--挂载cdrom，并查看挂载情况
+[root@sunny ~]# mount /dev/cdrom /cdrom
+[root@sunny ~]# df -h
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/mapper/VolGroup00-LogVol00
+                       16G  6.1G  8.7G  42% /
+/dev/sda1              99M   13M   81M  14% /boot
+tmpfs                1004M     0 1004M   0% /dev/shm
+/dev/sr0              3.9G  3.9G     0 100% /cdrom
+
+
+
+--进入cdrom目录，确定rpm包的位置
+--需要注意，rpm包所在的目录绝对路径将作为后面yum的url源路径
+[root@sunny Server]# pwd
+/cdrom/Server
+
+
+
+
+--创建filename.repo文件，此处作者定义filename.repo名为newyum.repo
+--需要注意，由于是baseurl以及gpgkey均是本地位置，因此采用file://协议
+--需要注意，file://后面是文件所在的绝对路径，因此file://后面会以/开头，因此是file:///（三个/）
+[root@sunny yum.repos.d]# vi /etc/yum.repos.d/newyum.repo 
+[redhatcdrom]
+name=local resource 
+baseurl=fill:///cdrom/Server
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+
+
+
+
+--查询此时可用的软件仓库，显示刚刚配置的库可用
+[root@sunny yum.repos.d]# yum repolist
+Loaded plugins: katello, product-id, security, subscription-manager
+Updating certificate-based repositories.
+Unable to read consumer identity
+redhatcdrom                                           | 1.5 kB     00:00     
+redhatcdrom/primary                                   | 920 kB     00:00     
+redhatcdrom                                                        3285/3285
+repo id                 repo name                                  status
+redhatcdrom             local resource                             3,285
+repolist: 3,285
+
+
+
+
+--利用yum安装刚才的gcc-c++包
+--可以看到，安装过程中，yum处理了依赖关系，并将相应的包进行了安装
+[root@sunny yum.repos.d]# yum install gcc-c++ -y
+Loaded plugins: katello, product-id, security, subscription-manager
+Updating certificate-based repositories.
+Unable to read consumer identity
+redhatcdrom                                                         | 1.5 kB     00:00     
+redhatcdrom/primary                                                 | 920 kB     00:00     
+redhatcdrom                                                                  3285/3285
+Setting up Install Process
+Resolving Dependencies
+--> Running transaction check
+---> Package gcc-c++.x86_64 0:4.1.2-52.el5 set to be updated
+--> Processing Dependency: libstdc++-devel = 4.1.2-52.el5 for package: gcc-c++
+--> Processing Dependency: gcc = 4.1.2-52.el5 for package: gcc-c++
+--> Running transaction check
+---> Package gcc.x86_64 0:4.1.2-52.el5 set to be updated
+--> Processing Dependency: glibc-devel >= 2.2.90-12 for package: gcc
+---> Package libstdc++-devel.x86_64 0:4.1.2-52.el5 set to be updated
+redhatcdrom/filelists                                                | 2.8 MB     00:00     
+--> Running transaction check
+---> Package glibc-devel.x86_64 0:2.5-81 set to be updated
+--> Processing Dependency: glibc-headers = 2.5-81 for package: glibc-devel
+--> Processing Dependency: glibc-headers for package: glibc-devel
+--> Running transaction check
+---> Package glibc-headers.x86_64 0:2.5-81 set to be updated
+--> Processing Dependency: kernel-headers >= 2.2.1 for package: glibc-headers
+--> Processing Dependency: kernel-headers for package: glibc-headers
+--> Running transaction check
+---> Package kernel-headers.x86_64 0:2.6.18-308.el5 set to be updated
+--> Finished Dependency Resolution
+
+Dependencies Resolved
+
+======================================================================================
+ Package                      Arch          Version         Repository          Size
+======================================================================================
+Installing:
+ gcc-c++                      x86_64        4.1.2-52.el5    redhatcdrom        3.8 M
+Installing for dependencies:
+ gcc                          x86_64        4.1.2-52.el5    redhatcdrom        5.3 M
+ glibc-devel                  x86_64        2.5-81          redhatcdrom        2.4 M
+ glibc-headers                x86_64        2.5-81          redhatcdrom        596 k
+ kernel-headers               x86_64        2.6.18-308.el5  redhatcdrom        1.4 M
+ libstdc++-devel              x86_64        4.1.2-52.el5    redhatcdrom        2.8 M
+
+Transaction Summary
+======================================================================================
+Install       6 Package(s)
+Upgrade       0 Package(s)
+
+Total download size: 16 M
+Is this ok [y/N]: 
+Exiting on user Command
+Complete!
+
+
+
+
+--查询安装结果，确定安装完成。
+[root@sunny yum.repos.d]# yum list gcc-c*
+Loaded plugins: katello, product-id, security, subscription-manager
+Updating certificate-based repositories.
+Unable to read consumer identity
+Installed Packages
+gcc-c++.x86_64                   4.1.2-52.el5                               installed
+复制代码
+
+=========================================================================================================================
+离线安装依赖包
+用yum将安装包及其依赖包下载到本地的方法
+
+前言
+有的时候由于网络安全等原因，服务器不被允许上公网。这就导致了，我们用yum安装一些包的时候，是无法执行成功的。
+我们可以通过创建一个本地的yum仓库，来解决这一问题。
+
+虽然我们可以使用 curl 或者 wget 等命令来下载网上的软件包，但是一般我们执行安装命令的时候，
+却会提示我们还要先安装一些其他的依赖软件包，然后又要再下载其他的软件包，这样太费时费力了。
+
+于是，下面我们要介绍的是用yum将安装包及其依赖包下载到本地的方法。
+
+Downloadonly工具
+我们可以通过 yum 命令的 Downloadonly 插件下载 RPM 软件包及其所有依赖包。
+
+如无此命令，请安装： 
+yum install yum-plugin-downloadonly
+命令格式： 
+yum install –downloadonly + –downloaddir=软件包位置[可选] + 软件包名(可加上版本号，指定版本)
+软件包保存位置： 
+默认保存到/var/cache/yum/ 下的软件相应的repo的源的目录的packages目录下
+
+也可以通过 –downloaddir 来指定位置，软件包和依赖的软件将被下载到此目录 
+yum install –downloadonly –downloaddir=/root/mypackages/ vim
+
+Yumdownloader工具
+我们可以通过 yum 命令的 Yumdownloader 插件下载 RPM 软件包及其所有依赖包。
+
+如无此命令，请安装： 
+yum install yum-utils
+
+命令格式： 
+yumdownloader +–resolve(可选，意为下依赖包) + –destdir=软件存放位置 (可选) +软件包名
+
+软件包保存位置： 
+默认，将会下载软件包到当前目录下
+
+也可以通过–destdir 来指定位置，软件包和依赖的软件将被下载到此目录
+yumdownloader –resolve –destdir=/root/mypackages/ nginx
+
+
+======================
+reposync工具
+我们可以通过 yum 命令的reposync命令下载 某一个repo源的所有RPM 软件包。
+
+命令格式： 
+reposync -r repo源的名称 + -p + 指定下载的路径(可选)
+
+软件包保存位置： 
+默认，将会下载软件包到当前目录下(自动生成repo源的目录及Packges)
+
+mkdir repo_test 
+cd repo_rest 
+reposync -r base
+
+
+
+也可以通过-p来指定位置，软件包将被下载到此目录
+
+reposync -r base -p /root/repo2/
+--------------------- 
+作者：漠效 
+来源：CSDN 
+原文：https://blog.csdn.net/GX_1_11_real/article/details/80694556 
+版权声明：本文为博主原创文章，转载请附上博文链接！
+
+
