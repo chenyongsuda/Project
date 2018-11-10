@@ -20,4 +20,77 @@ chkconfig zabbix-agent on
 
 但是如果是离线的话如何安装呢？？？？？？？？
 
+下载依赖包后安装
+如下：
+离线安装依赖包
+用yum将安装包及其依赖包下载到本地的方法
 
+前言
+有的时候由于网络安全等原因，服务器不被允许上公网。这就导致了，我们用yum安装一些包的时候，是无法执行成功的。
+我们可以通过创建一个本地的yum仓库，来解决这一问题。
+
+虽然我们可以使用 curl 或者 wget 等命令来下载网上的软件包，但是一般我们执行安装命令的时候，
+却会提示我们还要先安装一些其他的依赖软件包，然后又要再下载其他的软件包，这样太费时费力了。
+
+于是，下面我们要介绍的是用yum将安装包及其依赖包下载到本地的方法。
+
+Downloadonly工具
+我们可以通过 yum 命令的 Downloadonly 插件下载 RPM 软件包及其所有依赖包。
+
+如无此命令，请安装： 
+yum install yum-plugin-downloadonly
+命令格式： 
+yum install –downloadonly + –downloaddir=软件包位置[可选] + 软件包名(可加上版本号，指定版本)
+软件包保存位置： 
+默认保存到/var/cache/yum/ 下的软件相应的repo的源的目录的packages目录下
+
+也可以通过 –downloaddir 来指定位置，软件包和依赖的软件将被下载到此目录 
+yum install –downloadonly –downloaddir=/root/mypackages/ vim
+
+Yumdownloader工具
+我们可以通过 yum 命令的 Yumdownloader 插件下载 RPM 软件包及其所有依赖包。
+
+如无此命令，请安装： 
+yum install yum-utils
+
+命令格式： 
+yumdownloader +–resolve(可选，意为下依赖包) + –destdir=软件存放位置 (可选) +软件包名
+
+软件包保存位置： 
+默认，将会下载软件包到当前目录下
+
+也可以通过–destdir 来指定位置，软件包和依赖的软件将被下载到此目录
+yumdownloader –resolve –destdir=/root/mypackages/ nginx
+
+
+======================
+reposync工具
+我们可以通过 yum 命令的reposync命令下载 某一个repo源的所有RPM 软件包。
+
+命令格式： 
+reposync -r repo源的名称 + -p + 指定下载的路径(可选)
+
+软件包保存位置： 
+默认，将会下载软件包到当前目录下(自动生成repo源的目录及Packges)
+
+mkdir repo_test 
+cd repo_rest 
+reposync -r base
+
+也可以通过-p来指定位置，软件包将被下载到此目录
+
+下载完后使用
+ rpm -ivh zabbix-agent-3.4.14-1.el7.x86_64.rpm
+ 
+ 配置zabbix-agent
+<pre name="code" class="html">#vim /etc/zabbix/zabbix_agentd.conf  
+###修改配置文件中的Server, ServerActive的IP, 该IP是zabbix服务端IP地址  
+  
+Server=zabbix server ip  
+ServerActive=zabbix server ip  
+Hostname=本机IP #不要用127.0.0.1 
+启动zabbix-agent
+#service zabbix-agent start
+添加开机启动
+chkconfig zabbix-agent on
+ 
