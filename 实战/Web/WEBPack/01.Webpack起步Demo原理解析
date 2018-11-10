@@ -260,3 +260,82 @@ webpack-demo
 如果你使用的是 npm 5，你可能还会在目录中看到一个 package-lock.json 文件。
 如果你想要了解 webpack 的设计思想，你应该查看 basic concepts 和 configuration 页面。此外，API 章节可以深入了解 webpack 提供的各种接口。
 
+也可以加一个脚本
+zabbix-agentd.bat脚本内容如下：
+@echo off
+
+CHCP 65001
+
+echo ****************************************
+
+echo *****Zabbix Agentd Operation************
+
+echo ****************************************
+
+echo ** a. start Zabbix Agentd********
+
+echo ** b. stop Zabbix Agentd********
+
+echo ** c. restart Zabbix Agentd********
+
+echo ** d. install Zabbix Agentd********
+
+echo ** e. uninstall Zabbix Agentd********
+
+echo ** f. exit Zabbix Agentd********
+
+echo ****************************************
+
+:loop
+
+choice /c abcdef /M "please choose"
+
+if errorlevel 6 goto :exit 
+
+if errorlevel 5 goto uninstall
+
+if errorlevel 4 goto install
+
+if errorlevel 3 goto restart
+
+if errorlevel 2 goto stop
+
+if errorlevel 1 goto start
+
+:start
+
+c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -s
+
+goto loop
+
+:stop
+
+c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -x
+
+goto loop
+
+:restart
+
+c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -x
+
+c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -s
+
+goto loop
+
+:install
+
+c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -i
+
+goto loop
+
+:uninstall
+
+c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -d
+
+goto loop
+
+:exit
+
+exit
+
+装完启动后也可以看看进程管理器中是否成功再重启检测是否自启动.
