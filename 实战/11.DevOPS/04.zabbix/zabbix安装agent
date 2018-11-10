@@ -121,9 +121,15 @@ ServerActive=172.16.*.*   #后面地址为Zabbix服务器端的IP地址
 
 4、根据你当前windows的版本选择64位还是32位的进行安装
 我的是服务器是64位系统
+zabbix_agentd.exe命令说明
+-c    制定配置文件所在位置
+-i     安装客户端
+-s     启动客户端
+-x    停止客户端
+-d    卸载客户端
 
-c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -i   #加载配置文件
-c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -s  #添加windows自启动服务
+c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -i   #安装位系统服务
+c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -s   #启动agent
 win+r-->输入services.msc-->开启"Zabbix Agent"
 改为自动启动，并重启服务即可！开启防火墙则需要放行10050端口。
 
