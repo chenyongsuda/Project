@@ -108,9 +108,30 @@ zabbix server不能及时获取到最新的数据。
 具体主动还是被动要看item监控项设置.
 
 
+五、Windows安装Zabbix客户端
 
-作者：小尛酒窝
-链接：https://www.jianshu.com/p/c735e9bb1c66
-來源：简书
-简书著作权归作者所有，任何形式的转载都请联系作者获得授权并注明出处。
+1、下载zabbix软件包
+
+2、解压文件会出现两个目录
+bin目录（运行文件）和conf目录（配置文件）
+
+3、修改配置文件
+Server=172.16.*.*   #后面地址为Zabbix服务器端的IP地址
+ServerActive=172.16.*.*   #后面地址为Zabbix服务器端的IP地址
+
+4、根据你当前windows的版本选择64位还是32位的进行安装
+我的是服务器是64位系统
+
+c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -i   #加载配置文件
+c:\zabbix\bin\win64\zabbix_agentd.exe -c c:\zabbix\conf\zabbix_agentd.win.conf -s  #添加windows自启动服务
+win+r-->输入services.msc-->开启"Zabbix Agent"
+改为自动启动，并重启服务即可！开启防火墙则需要放行10050端口。
+
+5、删除服务（有需要再删除，删除的同时先停止服务）
+
+win+r-->输入cmd-->sc delete "Zabbix Agent"（必须是管理员权限）
+6、检查端口
+
+win+r-->输入cmd-->netstat -an-->查找10050端口默认
+服务端添加主机的方法跟linux系统一样，就不在此多写了。
 
