@@ -102,7 +102,12 @@ zabbix server不能及时获取到最新的数据。
 2、主动模式：即由zabbix agent 主动采集数据并返回给zabbix server，
 不需要zabbix server 的另行干预，因此使用主动模式能在一定程序上减轻zabbix server的压力。
 
-不配置server-active就为默认被动模式,否则就为主动模式.
+
+主动模式一定要设置server-active
+被动 模式一定要设置active
+具体主动还是被动要看item监控项设置.
+
+
 
 作者：小尛酒窝
 链接：https://www.jianshu.com/p/c735e9bb1c66
