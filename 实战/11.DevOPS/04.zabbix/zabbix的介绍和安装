@@ -106,3 +106,8 @@ systemctl enable zabbix-agent
 
 In your browser, open Zabbix URL: http://<server_ip_or_name>/zabbix
 Zabbix frontend is ready! The default user name is Admin, password zabbix.
+
+
+查看自启动项
+systemctl list-unit-files | grep zabbix
+
