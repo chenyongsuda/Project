@@ -79,4 +79,60 @@ like: 内容匹配
 使用触发器：{Test Temp:system.cpu.util[,].count(#5,6,"gt")}=5 表示计算五次值大于六的次数为5次 就是连续五次探测连续超过设定的值.
 设置出发器为一次还是多次,如果一次的话只提示一次,如果设置多次会一直报.
 
+==============================================================================================================
+2. 内存占有率    1分钟间隔      连续5次采样操过70%     SMS+Mail
+
+可用内存：Available memory=free+buffers+cached，即2021=235+394+1392
+已使用内存：Used memory=used-buffers-cached，即30217=32003-394-1392
+
+而在用zabbix自身的Template OS Linux模版监控服务器时，发现Used memory都偏高。
+
+这是因为zabbix通过vm.memory.size[used]这个key获取服务器的已使用内存（Used memory）。但vm.memory.size[used]获取的值（如下所示为used 32003）还包含buffers、cached这部份。buffers、cached这部份对服务器来说也是可用的。只不过linux本身是尽可能多地使用内存，只有当内存不足时才会释放buffers、cached空间。
+vm.memory.size[available]获取的可用内存倒是挺准确的，也就是说zabbix获取的available是加上buffers和cached的，获取的used也是加上buffers和cached，因此我们这边就会修改Used memory的key值，让总内存减去可用内存即可获取准确的已使用内存。
+Used memory的key：(last("vm.memory.size[total]")-last("vm.memory.size[available]"))
+
+请注意使用计算表达式的时候原先涉及到的任何一个取值都要创建出来否则报不存在
+
+说明：
+计算类型的key定义主要是根据已定义过的key值来计算的。注意是已定义过的key值。
+如这里我要创建一个计算linux服务器内存实际使用大小的监控项(计算方法为：vm.memory.size[total]-vm.memory.size[buffers]-vm.memory.size[cached]-vm.memory.size[free])。但zabbix默认的Items里并没有获取vm.memory.size[cached]这个key值。所以在查看Calculated类型的items时会出现Cannot evaluate function “last()”: item “coolnull:vm.memory.size[cached]” does not exist。要解决的话就需要自己再定义添加coolnull:vm.memory.size[cached]这个Items。
+以下这边以获取算linux服务器内存实际使用大小来举例。
+
+具体：
+1、在模板中或是主机中选择监控项—->选择Create item
+
+2、监控的名称和key按照其功能随便起一个名字(注：名字和key的名字一定要是英文格式的，包括你名字中包含的特殊字符)，如：mem.realused，key的类型选择计算，这时会出现一个Formula，里面就是你的计算公式，如：
+(last(“vm.memory.size[total]”)-last(“vm.memory.size[buffers]”)-last(“vm.memory.size[cached]”)-last(“vm.memory.size[free]”))
+这个计算公式就是取各个key值的最后一次值做计算，注意公式中没有空格(经测试发现有时有空格之类的话提交的时候可能报错)，计算的各个key都是同一类型的。
+
+3、其他的选项没有什么特别，参照公式中其中一个key值的设置选项设置即可。
+
+4、最后点保存提交，完成key的定义。
+这边发现如果用(last(“vm.memory.size[total]”)-last(“vm.memory.size[buffers]”)-last(“vm.memory.size[cached]”)-last(“vm.memory.size[free]”))来减的话，还需要再定义vm.memory.size[buffers]、vm.memory.size[cached]值。因此我直接使用(last(“vm.memory.size[total]“)-last(“vm.memory.size[available]“))来计算更方便，不需要再定义buffers、cached。
+
+
+最终的表达式  {Test Temp:vm.memory.size[usepercent].count(#5,80,"ge")}=5
+
+附录：
+常用的计算类型key定义时用的有以下几种公式(注意一下公式在写入Formula时要加一个小括号)：
+1、计算空闲磁盘空间的比例：100*last(“vfs.fs.size[/,free]”)/last(“vfs.fs.size[/,total]”)
+2、计算10分钟主机出流量的平均值：avg(“Zabbix Server:net.if.out[eth0,bytes]”,600)
+3、计算网卡总流量：last(“net.if.in[eth0,bytes]”)+last(“net.if.out[eth0,bytes]”)
+4、计算进流量占网卡总流量的比例：100*last(“net.if.in[eth0,bytes]”)/(last(“net.if.in[eth0,bytes]”)+last(“net.if.out[eth0,bytes]”))
+5、在计算项目中正确使用聚合条目，注意双引号如何被转义:last(“grpsum[\”video\”,\”net.if.out[eth0,bytes]\”,\”last\”,\”0\”]”)/last(“grpsum[\”video\”,\”nginx_stat.sh[active]\”,\”last\”,\”0\”]”)
+6、计算多台主机出流量的和：last(“192.168.1.100:net.if.out[eth0,bytes]”)+last(“192.168.1.200:net.if.out[eth0,bytes]”)+last(“192.168.1.110:net.if.out[eth0,bytes]”)
+这种计算是多台主机的，至于这个值放在哪个主机的监控项中都是一样的，只要是在此zabbix服务器端中。
+
+=======================================================================================================================
+3. 磁盘空间      3分钟间隔      连续5次采样操过70%     SMS+Mail
+
+
+=======================================================================================================================
+4. Traffic      1分钟间隔      连续5次采样操过80%     SMS+Mail
+5. NIC          1分钟间隔      如果有UP/DOWN          SMS+Mail
+6. 服务+管理端口 1分钟间隔      连续三次不响应          SMS+Mail
+7. 系统进程      1分钟间隔      系统进程丢失            SMS+Mail
+8.系统日志       N/A           日志中发现关键词         SMS+Mail
+
+
 
