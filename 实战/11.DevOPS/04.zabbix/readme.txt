@@ -74,7 +74,9 @@ like: 内容匹配
 最近30分钟zabbix这个主机超过5次不可到达。
 {zabbix:icmpping.count(30m,0)}>5
 
-作者：_简_述_
-链接：https://www.jianshu.com/p/0c800a095e6c
-來源：简书
-简书著作权归作者所有，任何形式的转载都请联系作者获得授权并注明出处。
+================解决方案
+使用监控项：system.cpu.util[,] 表示CPU使用率  如果用system.cpu.util[,idle] window下不支持
+使用触发器：{Test Temp:system.cpu.util[,].count(#5,6,"gt")}=5 表示计算五次值大于六的次数为5次 就是连续五次探测连续超过设定的值.
+设置出发器为一次还是多次,如果一次的话只提示一次,如果设置多次会一直报.
+
+
