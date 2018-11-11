@@ -1,0 +1,37 @@
+zabbix-server连接不到zabbix-agent
+背景条件：zabbix-server安装在VM虚拟机上，zabbix-agent安装在物理机上
+BUG原因：启动zabbix前端以后，一直无法检测到agent端的数据，并且使用zabbix_get得到如下错误提示：
+
+zabbix_get [45557]: Check access restrictions in Zabbix agent configuration
+解决步骤：
+
+在server端使用zabbix_get工具查看与agent端连接情况
+# zabbix_get -s IP -k system.cpu.num
+
+如果返回正常，则检查WEB前端配置、
+
+查看agent端配置是否正确（Server的值得设定至关重要）
+# vim /etc/zabbix/zabbix_agentd.conf 
+#确保以下三个值配置正确，其中IP值不仅仅是指server端的地址，而是
+#Incoming connections will be accepted only from the hosts listed here
+#也就是说，除了下面列出的地址以外，谁也无法与agent端建立连接
+Server=IP
+ServerActive=IP
+Hostname=Zabbix server
+
+如果还没有建立连接，记得查看agent端的日志
+# vim /var/log/zabbix/zabbix_agentd.log
+44397:20180920:171207.584 failed to accept an incoming connection: connection from "IP2" rejected, allowed hosts: "IP"
+
+日志里可以明确的看到，agent允许我们Server=IP里的IP建立连接，拒绝了IP2的连接。
+
+特殊问题的解释？
+在（3）的情况下，我们明明配置Server的地址是zabbix-server的地址，为什么会出现了一个IP2的地址呢？这里大家可以看一下我的背景条件，我的zabbix-server安装在虚拟机上，而我却想要拉取物理机的指标，这里就有一个网络跳转的问题
+
+虚拟机的网络要想连接到真实的物理机，必须要有真正的网络地址而不是虚拟地址，所以他的地址跳转到了宿主机的地址，由宿主地址来访问agent物理机，这也就是为什么日志中出现了第二个IP2地址的原因，因为你在agent里配置的Server的地址是你虚拟机的地址，而实际建立连接的是宿主机的地址，所以agent端老是连接不上。
+所以，我认为Server=IP里的IP不能单单解释成服务器端的地址，而是路由表中最后一跳的地址，因为agent只会与最后一个地址建立连接，而拒绝所有其他的地址，当然，Server=IP，IP2可以一次配多个建立连接的地址，有点类似防火墙的白名单。
+--------------------- 
+作者：zunwangtianqian 
+来源：CSDN 
+原文：https://blog.csdn.net/zunwangtianqian/article/details/82793460 
+版权声明：本文为博主原创文章，转载请附上博文链接！
