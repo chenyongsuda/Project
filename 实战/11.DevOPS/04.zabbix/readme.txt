@@ -198,3 +198,44 @@ sample2：
 
 =====================================================================================================================================
 WEB接口监控
+
+步骤标签配置页面如下所示，步骤配置页面中各参数的含义如下
+名称：唯一的步骤名称
+URL：需要监控的URL，支持HTTP或HTTPS协议。GET参数可以直接写在URL中，也可以使用宏变量，长度不能超过2048个字符
+
+Post：HTTP请求中的 POST变量。例如id=2345&userid={user}，如果 {user} 是在web scenario中定义的宏变量，在step执行时会自动替换相应的值。这个变量会原样发送，不会进行URL编码
+变量：步骤级别的变量列表
+
+头（Headers）：当执行请求时HTTP headers将被发送。Headers使用HTTP协议的语法列出。步骤级别上定义的Headers会覆盖scenario级别的Headers。在这里可以使用HOST.*和用户定义的宏变量。这将设置cURL选项CURLOPT_HTTPHEADER
+
+跟随跳转：勾选此项允许HTTP redirects（重定向）。这将设置cURL选项CURLOPT_FOLLOWLOCATION
+
+仅获取头信息：勾选此项仅接收HTTP响应的headers。这将设置cURL选项CURLOPT_NOBODY
+
+超时：超过设置的秒数后Zabbix不会再处理URL。实际上这个参数定义了最大的连接时间和完成HTTP请求的最大时间。因此Zabbix在步骤中处理URL不会超出2倍的设置时间
+
+要求的字串：需要的正则表达式。除非接收的HTML中的内容匹配正则表达式，否则step将执行失败。如果该字段为空时不执行检测。这里需要注意不能引用在Zabbix 前端页面中创建的正则表达式。在这里也可以使用宏变量
+
+要求的状态码：设置期望的HTTP状态码列表，例如200,201,202-229。如果Zabbix收集的状态码在这个列表中没有时step将执行失败。如果该字段为空时不执行检测。在这里也可以使用宏变量
+=========================================================
+认证标签配置页面如下所示，认证标签配置页面中各参数的含义如下：
+
+HTTP 认证：身份验证选项。包括：
+
+无：不使用身份验证。
+
+基础的：使用基本身份验证。
+
+NTLM：使用NTLM（Windows NT LAN Manager）身份验证。
+
+选择基础的或NTLM时页面会出现用户名和密码的输入字段，在用户名和密码字段中可以使用宏变量
+
+SSL验证对端：勾选此项为验证web服务器的SSL证书。服务器证书会自动从系统CA的存储位置获得。你可以使用Zabbixserver或 proxy server的配置文件中设置参数SSLCALocation保存证书。这将设置cURL选项CURLOPT_SSL_VERIFYPEER。
+
+SSL 验证主机：勾选此项为验证web服务器证书匹配的Common Name 字段或Subject Alternate Name 字段。这将设置cURL选项CURLOPT_SSL_VERIFYHOST。
+
+SSL 证书文件：用于客户端身份验证的 SSL 证书文件的名称。证书文件必须是 PEM1 格式。如果证书文件还包含私钥，则将 SSL Key文件字段留空。如果对密钥进行加密，在 SSL Key密码字段中指定密码。Zabbixserver或 proxy server的配置文件中设置参数SSLCALocation保存证书文件。在这里可以使用HOST.*和用户定义的宏变量。这将设置cURL选项CURLOPT_SSLCERT。
+
+SSL 秘钥文件：用于客户端身份验证 SSL 私钥文件的名称。私钥文件必须是PEM1格式。Zabbix server或 proxy server的配置文件中设置参数SSLCALocation保存证书文件。在这里可以使用HOST.*和用户定义的宏变量。这将设置cURL选项CURLOPT_SSLKEY。
+
+SSL 秘钥密码：SSL 私钥文件密码。在这里可以使用用户定义的宏变量。这将设置cURL选项CURLOPT_KEYPASSWD。
