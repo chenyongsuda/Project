@@ -135,9 +135,64 @@ windows下：vfs.fs.size[c:,<mode>]
 
 =======================================================================================================================
 5. NIC          1分钟间隔      如果有UP/DOWN          SMS+Mail
+
+=======================================================================================================================
 6. 服务+管理端口 1分钟间隔      连续三次不响应          SMS+Mail
+zabbix监控端口使用如下key:
+key：net.tcp.listen[port]
+Checks if this port is in LISTEN state. 0 - it is not, 1 - it is inLISTEN state.
+
+触发器
+{Test Temp:net.tcp.listen[22].count(#3,0,eq)}=3
+  
+=======================================================================================================================
 7. 系统进程      1分钟间隔      系统进程丢失            SMS+Mail
+为主机添加对应的监控项，proc.num[GoodSync.exe]，因为我要监控某个进程，所以使用proc.num键值。
+添加键值以后，需要建立一个触发器。触发器的表达式如下：
+    proc.num[<name>,<user>,<state>,<cmdline>]
+    name - 进程名称 (默认“all processes”)
+    user - 用户名 (默认 “all users”)
+    state - 可用值: all (默认), run,sleep, zomb
+    cmdline - 命令行过滤(正则表达式)
+    
+    示例keys: proc.num[,mysql] – MySQL用户运行的进程数量
+    proc.num[apache2,www-data] – www-data运行了多少个apache2进程
+    proc.num[,oracle,sleep,oracleZABBIX]
+    {wldatacenter:proc.num[GoodSync.exe].last(60)}<1
+
+表达式解释：
+wldatacenter    指明哪台机器
+proc.num[GoodSync.exe]            指明哪个键值
+last()  最近一次获取的值，等同于last(#1).
+last: 参数可以是秒，也可以是次数，如果是秒，就忽略，last(5)  和last(100)  因为最近5秒和最近100秒的值都是一个值。
+    如果是次数，就是：last(#1)  最近的第一个值   last(#10) 最近的第10个值。
+    例子：最近的值为  1, 10, 20, 50. 8 ,3  ，1为最近的取值。
+    last(#3)  取值就是20.
+======================================================================================================================
 8.系统日志       N/A           日志中发现关键词         SMS+Mail
+最近开发人员有一个需求，监控java程序的报错日志，如日志中包含“ERROR”关键字的信息，就邮件告警，以下是具体实现方法。
+log[file_pattern,<regexp>,<encoding>,<maxlines>,<mode>,<output>]
+参数介绍：
+file - 日志文件的全路径。
+regexp - 过滤日志的正则表达式。
+encoding - 字符编码，默认为英文单字节SBCS(Single-Byte Character Set)。
+maxlines - agent每秒发送给server（或proxy）的数据的最大行数，这个参数会覆盖掉zabbix_agentd.conf配置文件里的'MaxLinesPerSecond'参数。
+mode - 可填参数：all（默认），skip（跳过旧数据）。
+output - 自定义格式化输出，默认输出regexp匹配的整行数据。转义字符'\0'表示regexp
 
+键值示例：log[/app/wutongshu/monitorlog/error.log,ERROR,,,skip,]
+表达式：{Template App Java logs:log[/app/wutongshu/monitorlog/error.log,ERROR,,,skip,].str(ERROR)}=1  and  {Template App Java logs:log[/app/wutongshu/monitorlog/error.log,ERROR,,,skip,].nodata(60)}=0
 
+拆开解析：
+{Template App Java logs:log[/app/wutongshu/monitorlog/error.log,ERROR,,,skip,].str(ERROR)}=1表示如果匹配到“ERROR”关键字，表达式为真。
+{Template App Java logs:log[/app/wutongshu/monitorlog/error.log,ERROR,,,skip,].nodata(60)}=0表示60秒内有数据产生则表达式为真，即60秒内如果没有新数据了，则表达式为假。
+
+and表示同时满足两个条件，触发器才会触发。
+
+sample2：
+{log_test:log[/var/log/secure,"Failed password"].str(Failed)}=1 and  {log_test:log[/var/log/secure,"Failed password"].nodata(60)}=0
+# item 获取的值中出现Failed 就报警, 如果60s 无数据就恢复.
+
+好了这个只是简单的模拟了log的用法..我们匹配了Failed 我们也可以配置 key( log[/var/log/secure,"(Accepted|Failed) password"])  trigger相应改下.
+根据不同的需求可以做响应的改变.
 
