@@ -1,0 +1,56 @@
+javascript 之Rest 参数（...）
+概述：
+
+      Rest就是为解决传入的参数数量不一定， rest parameter(Rest 参数) 本身就是数组，数组的相关的方法都可以用。
+
+1.语法：
+
+function f(a, b, ...theArgs) {
+  // ...
+}
+2.描述：
+theArgs以“...”开头，它是一个数组，它的值来自于实际调用者传入[0,theArgs.length)  (索引的范围：0到theArgs.length-1)
+
+3.区分rest参数和 参数对象
+rest参数不会为每个变量给一个单独的名称，参数对象包含所有参数传递给函数
+参数对象不是真正的数组，rest参数是真实的数组实例。例如数组sort、map、forEach、pop的方法都可以直接使用
+参数对象有他自己额外的特性（例如callee 属性）
+4.从参数变成数组
+Rest参数的引入减少样式代码。
+
+ 
+
+//以前函数
+function f(a, b) {
+  var args = Array.prototype.slice.call(arguments, f.length);
+ 
+  // …
+}
+ 
+// 等效于现在
+ 
+function f(a, b, ...args) {
+  
+}
+5.Rest参数可以被解构（通俗一点，将rest参数的数据解析后一一对应）不要忘记参数用[] 括起来，因为它数组嘛
+function f(...[a, b, c]) {
+  return a + b + c;
+}
+ 
+f(1)          //NaN 因为只传递一个值，其实需要三个值
+f(1, 2, 3)    // 6
+f(1, 2, 3, 4) // 6 (第四值没有与之对应的变量名)
+6.例子走起
+计算rest参数的长度，验证是否直接可以用数组的方法
+function fun1(...theArgs) {
+  console.log(theArgs.length);
+}
+ 
+fun1();  // 0
+fun1(5); // 1
+
+--------------------- 
+作者：往前的娘娘 
+来源：CSDN 
+原文：https://blog.csdn.net/m0_37355951/article/details/72851050 
+版权声明：本文为博主原创文章，转载请附上博文链接！
