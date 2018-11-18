@@ -1,1 +1,13 @@
 创建项目
+任务自动化(gulp)
+gulp：自动化构建工具；任务自动化，就是说，尽量不使用人工，使用工具自动操作一些任务；
+gulp的作用：完成任务自动化的工作流；
+
+编译工具(babel、webpack)
+babel：专门编译es6；
+webpack：处理模块之间的依赖的。
+webpack与wepack-stream的作用：有了webpack-stream，就可以使webpack支持gulp；
+
+JS项目涉及到es兼容编译babel webpack打包. 变化自动话任务工具gulp
+
+
