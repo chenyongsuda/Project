@@ -10,4 +10,33 @@ webpack与wepack-stream的作用：有了webpack-stream，就可以使webpack支
 
 JS项目涉及到es兼容编译babel webpack打包. 变化自动话任务工具gulp
 
+创建目录结构
+Project
+    ---app【前端】
+        ---js
+           ---class【js的类路径】
+              ---test.js
+           ---index.js【js入口文件】
+        ---css
+        ---views【模板】
+          ---error.ejs【错误的模板】
+          ---index.ejs【入口的模板使用nodejs experss的模板ejs】
+    ---server【后端-使用express脚手架】
+    ---task【文件合并脚本的编译,自动化更新】
+        ---util【常见脚本】
+    ---package.json
+    ---.babelrc
+    ---gulpfile.babel.js
+        
+experss进入sever使用experss -e . 初始化当前目录结构
+然后使用npm install 安装
+
+在根目录使用npm init 创建package.json文件初始化后就能使用npm安装项目依赖包了
+还需要一个.babelrc 使用babel
+使用gulp 新建gulpfile.babel.js
+
+
+
+      
+
 
