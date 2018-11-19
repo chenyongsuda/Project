@@ -11,3 +11,37 @@ $ systemctl start grafana-server
 $ systemctl status grafana-server
 
 访问grafana 我是在192.168.1.1上面安装的，grafana服务端默认访问端口是3000，访问地址为192.168.1.1:3000
+
+安装zabbix插件
+====================================使用grafana-cli工具安装
+ 
+获取可用插件列表
+# grafana-cli plugins list-remote
+ 
+安装zabbix插件
+# grafana-cli plugins install alexanderzobnin-zabbix-app
+ 
+安装插件完成之后重启garfana服务
+# service grafana-server restart
+#使用grafana-zabbix-app源，其中包含最新版本的插件
+
+====================================git安装
+cd /var/lib/grafana/plugins/
+#克隆grafana-zabbix-app插件项目
+ 
+git clone https://github.com/alexanderzobnin/grafana-zabbix-app
+#注：如果没有git，请先安装git
+ 
+yum –y install git
+# 插件安装完成重启garfana服务
+ 
+service grafana-server restart
+#注：通过这种方式，可以很容器升级插件
+ 
+cd /var/lib/grafana/plugins/grafana-zabbix-app
+git pull
+service grafana-server restart
+
+=====================================离线安装
+参考
+https://grafana.com/plugins/alexanderzobnin-zabbix-app/installation?version=3.4.0
