@@ -1,0 +1,13 @@
+1. yum install https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-4.6.3-1.x86_64.rpm
+
+2.将grafana-server添加到系统启动项
+
+sudo systemctl enable grafana-server.service
+1
+启动grafana-server
+
+$ systemctl daemon-reload //#重新载入 systemd，扫描新的或有变动的单元
+$ systemctl start grafana-server
+$ systemctl status grafana-server
+
+访问grafana 我是在192.168.1.1上面安装的，grafana服务端默认访问端口是3000，访问地址为192.168.1.1:3000
