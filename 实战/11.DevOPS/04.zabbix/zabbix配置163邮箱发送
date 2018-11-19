@@ -72,6 +72,7 @@ script name：脚本名称（需要先定义AlertScriptsPath，sendmail.sh脚本
 发现发送邮件内容为一个.bin的附件
 1）安装dos2unix转换工具( 解决发出的邮件是xx.bin附件格式的问题 )，如果这里的下载链接失效就到阿里官网查找
 2）修改邮件发送脚本内容
+==============================================这个脚本一直正文发不出去
 #!/bin/bash
 #export.UTF-8 ###解决发送的中文变成了乱码的问题 
 file=/tmp/zabbix_mail.txt
@@ -80,6 +81,16 @@ dos2unix -k $file
 /bin/mail -s "$2" "$1" < $file
 # echo "$3" | mail -s "$2" "$1"  #如果发送邮件完全是英文的，可以只使用这一条
 
+==============================================正确发送的脚本如下：
+#!/bin/bash
+export LANG=en_US.UTF-8
+to=$1
+subject=$2
+echo "$3" > /tmp/zabbix_mailbody_$$
+ 
+dos2unix /tmp/zabbix_mailbody_$$
+mail -s "$subject" "$to" < /tmp/zabbix_mailbody_$$
+rm -f /tmp/zabbix_mailbody_$$
 
 
 
