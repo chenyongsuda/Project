@@ -84,3 +84,101 @@ for (let i of text) {
 }
 // "𠮷"
 上面代码中，字符串text只有一个字符，但是for循环会认为它包含两个字符（都不可打印），而for...of循环会正确识别出这一个字符。
+
+
+==============================================================================================
+字符串包含 
+includes(), startsWith(), endsWith()
+传统上，JavaScript 只有indexOf方法，可以用来确定一个字符串是否包含在另一个字符串中。ES6 又提供了三种新方法。
+
+includes()：返回布尔值，表示是否找到了参数字符串。
+startsWith()：返回布尔值，表示参数字符串是否在原字符串的头部。
+endsWith()：返回布尔值，表示参数字符串是否在原字符串的尾部。
+let s = 'Hello world!';
+
+s.startsWith('Hello') // true
+s.endsWith('!') // true
+s.includes('o') // true
+这三个方法都支持第二个参数，表示开始搜索的位置。
+
+let s = 'Hello world!';
+
+s.startsWith('world', 6) // true
+s.endsWith('Hello', 5) // true
+s.includes('Hello', 6) // false
+上面代码表示，使用第二个参数n时，endsWith的行为与其他两个方法有所不同。它针对前n个字符，而其他两个方法针对从第n个位置直到字符串结束。
+
+repeat()
+repeat方法返回一个新字符串，表示将原字符串重复n次。
+
+'x'.repeat(3) // "xxx"
+'hello'.repeat(2) // "hellohello"
+'na'.repeat(0) // ""
+
+模板字符串（template string）是增强版的字符串，用反引号（`）标识。它可以当作普通字符串使用，也可以用来定义多行字符串，或者在字符串中嵌入变量。
+
+// 普通字符串
+`In JavaScript '\n' is a line-feed.`
+
+// 多行字符串
+`In JavaScript this is
+ not legal.`
+
+console.log(`string text line 1
+string text line 2`);
+
+// 字符串中嵌入变量
+let name = "Bob", time = "today";
+`Hello ${name}, how are you ${time}?`
+
+padStart()，padEnd()
+ES2017 引入了字符串补全长度的功能。如果某个字符串不够指定长度，会在头部或尾部补全。padStart()用于头部补全，padEnd()用于尾部补全。
+
+'x'.padStart(5, 'ab') // 'ababx'
+'x'.padStart(4, 'ab') // 'abax'
+
+'x'.padEnd(5, 'ab') // 'xabab'
+'x'.padEnd(4, 'ab') // 'xaba'
+
+标签模板
+模板字符串的功能，不仅仅是上面这些。它可以紧跟在一个函数名后面，该函数将被调用来处理这个模板字符串。这被称为“标签模板”功能（tagged template）。
+
+alert`123`
+// 等同于
+alert(123)
+标签模板其实不是模板，而是函数调用的一种特殊形式。“标签”指的就是函数，紧跟在后面的模板字符串就是它的参数。
+
+但是，如果模板字符里面有变量，就不是简单的调用了，而是会将模板字符串先处理成多个参数，再调用函数。
+
+let a = 5;
+let b = 10;
+
+tag`Hello ${ a + b } world ${ a * b }`;
+// 等同于
+tag(['Hello ', ' world ', ''], 15, 50);
+上面代码中，模板字符串前面有一个标识名tag，它是一个函数。整个表达式的返回值，就是tag函数处理模板字符串后的返回值。
+
+函数tag依次会接收到多个参数。
+
+function tag(stringArr, value1, value2){
+  // ...
+}
+
+// 等同于
+
+function tag(stringArr, ...values){
+  // ...
+}
+String.raw()
+ES6 还为原生的 String 对象，提供了一个raw方法。
+
+String.raw方法，往往用来充当模板字符串的处理函数，返回一个斜杠都被转义（即斜杠前面再加一个斜杠）的字符串，对应于替换变量后的模板字符串。
+
+String.raw`Hi\n${2+3}!`;
+// 返回 "Hi\\n5!"
+
+String.raw`Hi\u000A!`;
+// 返回 "Hi\\u000A!"
+
+
+
