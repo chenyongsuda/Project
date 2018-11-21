@@ -1,0 +1,195 @@
+在Linux中利用Service命令添加系统服务及开机自启动
+2017年12月13日 15:44:08 EthanYYYY 阅读数：20898
+版权声明：本文为博主原创文章，未经博主允许不得转载。	https://blog.csdn.net/u013554213/article/details/78792686
+近期由于做嵌入式项目需要，要求将编写的程序在板载系统开机时自启动。这里做个笔记，备忘。
+
+1 概念
+通过查资料发现linux启动服务是用SERVICE +COMMAND。这里的command命令本身也是一个脚本。比如说：service networking start；中networking就是一个shell脚本。注意：这里的脚本没有文件后缀.sh。
+
+接下来，将介绍如何做一个属于自己的service命令。
+
+首先可以了解一下service这个命令的原理。这里我就偷一下懒，你们自己去问度娘或找一下“man”（在终端上man service下）。
+
+接下来我简单说下service的运行过程。以networking为例：service networking start。
+
+首先，sevice 会去/etc/init.d下寻找networking脚本，start是networking脚本里的一个参数（你可以去查看networking这个脚本支持的参数），然后告诉系统运行networking这个脚本，剩下的事情就交给networking脚本去坐了，事实就是这么简单。
+
+至此，你们应该知道如何添加一个service命令了吧。
+
+编写一个脚本，然后把它放在/etc/init.d这个目录下，再用service + 脚本名字 运行即可。如果是要开机自动启动那就得用chkconfig命令了。
+
+
+注意：
+A、service这个命令往往是即时生效，不用开关机，但是重启后服务会回到默认状态。
+B、chkconfig是用于把服务加到开机自动启动列表里，只要启动它，就能自动启动，重启后永久生效即：
+
+chkconfig --add COMMAND 
+
+chkconfig COMMAND on/off    重启后永久生效
+
+
+
+如果你们的机器不支持chkconfig命令，下面提供另一种开机自动启动系统服务的方法。
+
+首先确保脚本已在/etc/init.d/目录下，然后用：update-rc.d xxx defaults NN命令(NN为启动顺序)，将脚本添加到初始化执行的队列中去。
+
+注意如果脚本需要用到网络，则NN需设置一个比较大的数字，如99。
+
+
+
+2 实例
+接下来我带大家做一下试验，帮助大家更好的理解如何在Linux中利用Service命令添加系统服务
+
+2.1 首先编写demo程序：hello.c
+
+#include <stdio.h>
+ 
+main()
+{
+	FILE *fp;
+	char a[] = "Hello world!"; 
+	fp=fopen("hhh.txt","a+"); 
+	fputs(a,fp);
+	return 0;
+}
+2.2 编译hello.c
+gcc -g hello.c -o hello
+2.3 在/etc/init.d目录下添加脚本test
+#!/bin/bash
+start(){
+    echo "------------------test----------------"
+    cd /home/xxx   //hello的所在文件夹的绝对路径
+    ./hello
+}
+ 
+case $1 in
+start):
+    start
+    ;;
+stop):
+    echo "-----------------stop------------------"
+    ;;
+esac
+ 
+exit 0
+2.4 设置权限
+
+chmod 777 /etc/init.d/test
+2.5 利用service启动hello
+
+service test start
+2.6 设置开机自动启动
+chkconfig --add test 
+chkconfig test on/off    //重启后永久生效
+如果2.6不起作用，按2.7提供的方法执行
+
+2.7 通过update-rc.d 命名设置开机自启动
+
+cd /etc/init.d
+sudo update-rc.d test defaults 95
+ 注：其中数字95是脚本启动的顺序号，按照自己的需要相应修改即可。在你有多个启动脚本，而它们之间又有先后启动的依赖关系时你就知道这个数字的具体作用了。该命令的输出信息参考如下：
+update-rc.d: warning: /etc/init.d/test missing LSB information
+update-rc.d: see <http://wiki.debian.org/LSBInitScripts>
+Adding system startup for /etc/init.d/test ...
+/etc/rc0.d/K95test -> ../init.d/test
+/etc/rc1.d/K95test -> ../init.d/test
+/etc/rc6.d/K95test -> ../init.d/test
+/etc/rc2.d/S95test -> ../init.d/test
+/etc/rc3.d/S95test -> ../init.d/test
+/etc/rc4.d/S95test -> ../init.d/test
+/etc/rc5.d/S95test -> ../init.d/test
+卸载启动脚本的方法：
+cd /etc/init.d
+sudo update-rc.d -f test remove
+命令输出的信息参考如下：
+Removing any system startup links for /etc/init.d/test ...
+/etc/rc0.d/K95test
+/etc/rc1.d/K95test
+/etc/rc2.d/S95test
+/etc/rc3.d/S95test
+/etc/rc4.d/S95test
+/etc/rc5.d/S95test
+/etc/rc6.d/K95test
+3 Ubuntu设置开机启动脚本的方法
+如果2.7提供的方法不行，这里提供另一种方法。
+/etc/rc.local脚本
+rc.local脚本是一个ubuntu开机后会自动执行的脚本，我们可以在该脚本内添加命令行指令。该脚本位于/etc/路径下，需要root权限才能修改。
+该脚本具体格式如下：
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+  
+exit 0
+注意: 
+一定要将命令添加在 exit 0之前，即在第13行添加；
+命令即为脚本文件所在的绝对路径，如在第13行添加 /usr/local/bin/test；
+如果脚本中有死循环，需要在该脚本路径后加上 & ，让其后台执行；
+一定要给脚本文件赋可执行权限。
+sudo chmod 777 test 
+或者在 /etc/init.d/rc.local 中在最后加上脚本的绝对路径也可以开机自启动。
+
+另外还有一点要说的就是，脚本test在后台执行后，我尝试使用
+ps -ef | grep test | grep -v grep
+去查看脚本test的进程以确定它是否被执行，但是查不到。后来一想，可能是shell执行了该脚本，所以无法查到该脚本的进程。
+
+
+
+
+
+
+例子
+==============================================================================
+Sample
+vi /etc/init.d/amoeba
+#!/bin/bash
+#
+# auditd        This starts and stops auditd
+#
+# chkconfig: 2345 11 88
+# description: This starts the Linux Auditing System Daemon, \
+#              which collects security related events in a dedicated \
+#              audit log. If this daemon is turned off, audit events \
+#              will be sent to syslog.
+#
+#
+######forjava
+export JAVA_HOME=/usr/java/jdk1.6.0_45
+export PATH=$PATH:$JAVA_HOME/bin
+export CLASSPATH=.:$JAVA_HOME/jre/lib:$JAVA_HOME/lib:$JAVA_HOME/lib/tools.jar
+#######
+ 
+###amoeba
+export AMOEBA_HOME=/usr/local/amoeba/
+export PATH=$PATH:$AMOEBA_HOME/bin
+#######
+case "$1" in
+start)
+        echo "Starting amoeba"
+        /usr/local/amoeba/bin/amoeba start &
+        ;;
+ 
+stop)
+        echo "Stop amoeba"
+        /usr/local/amoeba/bin/amoeba stop
+        ;;
+restart)
+        echo "Stop amoeba..."
+        /usr/local/amoeba/bin/amoeba stop
+        echo "Starting amoeba"
+        /usr/local/amoeba/bin/amoeba start &
+        ;;
+esac
+
+ok
+
+chmod +x amoeba #给权限
+chkconfig --add amoeba #添加到系统服务
