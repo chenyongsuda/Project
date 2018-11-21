@@ -1,0 +1,20 @@
+1.我使用openResty来搭建nginx
+安装方式
+tar -xzvf openresty-VERSION.tar.gz
+cd openresty-VERSION/
+./configure
+make
+sudo make install
+
+
+./configure 时候出现错误缺perl
+安装perl就行了
+
+使用./configure --help 查看帮助
+
+安装前期基础库
+yum install -y gcc gcc-c++ make libtool zlib zlib-devel perl openssl openssl-devel pcre pcre-devel curl
+ 
+然后执行make & make install
+
+使用/appl/nginx/nginx/sbin/nginx 启动nginx应用.
