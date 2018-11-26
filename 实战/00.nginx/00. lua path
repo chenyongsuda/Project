@@ -1,0 +1,43 @@
+openresty的lua_package_path
+文档
+lua_package_path可以配置openresty的文件寻址路径。官网文档如下：
+
+ # 设置纯 Lua 扩展库的搜寻路径(';;' 是默认路径):
+ lua_package_path '/foo/bar/?.lua;/blah/?.lua;;';
+
+ # 设置 C 编写的 Lua 扩展模块的搜寻路径(也可以用 ';;'):
+ lua_package_cpath '/bar/baz/?.so;/blah/blah/?.so;;';
+然后require的字符串就会替换对应的问号?，一个文件就会去/foo/bar/下面寻找。
+
+example
+在代码中require "controller.test",会依次根据package.path匹配对应的lua文件。即替换掉对应的问号。（在lapis框架中，在框架的根目录中创建一个文件夹名字叫controllers，写一个文件test.lua，可以正常输出，改为controller，找不到对应的文件夹，打开日志，查看openresty的寻找方式）
+
+首先输出package.path:
+
+/usr/local/openresty/site/lualib/?.lua;/usr/local/openresty/site/lualib/?/init.lua;/usr/local/openresty/lualib/?.lua;/usr/local/openresty/lualib/?/init.lua;./?.lua;/usr/local/openresty/luajit/share/luajit-2.1.0-beta2/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/usr/local/openresty/luajit/share/lua/5.1/?.lua;/usr/local/openresty/luajit/share/lua/5.1/?/init.lua
+在log中查看：
+
+    no field package.preload['controller.test']
+    no file '/usr/local/openresty/site/lualib/controller/test.lua'
+    no file '/usr/local/openresty/site/lualib/controller/test/init.lua'
+    no file '/usr/local/openresty/lualib/controller/test.lua'
+    no file '/usr/local/openresty/lualib/controller/test/init.lua'
+    no file './controller/test.lua'
+    no file '/usr/local/openresty/luajit/share/luajit-2.1.0-beta2/controller/test.lua'
+    no file '/usr/local/share/lua/5.1/controller/test.lua'
+    no file '/usr/local/share/lua/5.1/controller/test/init.lua'
+    no file '/usr/local/openresty/luajit/share/lua/5.1/controller/test.lua'
+    no file '/usr/local/openresty/luajit/share/lua/5.1/controller/test/init.lua'
+    no file '/usr/local/openresty/site/lualib/controller/test.so'
+    no file '/usr/local/openresty/lualib/controller/test.so'
+    no file './controller/test.so'
+    no file '/usr/local/lib/lua/5.1/controller/test.so'
+    no file '/usr/local/openresty/luajit/lib/lua/5.1/controller/test.so'
+    no file '/usr/local/lib/lua/5.1/loadall.so'
+    no file '/usr/local/openresty/site/lualib/controller.so'
+    no file '/usr/local/openresty/lualib/controller.so'
+    no file './controller.so'
+    no file '/usr/local/lib/lua/5.1/controller.so'
+    no file '/usr/local/openresty/luajit/lib/lua/5.1/controller.so'
+    no file '/usr/local/lib/lua/5.1/loadall.so'
+openresty根据package.path依次替换到寻找文件，全部寻找完毕还找不到就报错。
