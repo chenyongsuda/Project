@@ -30,3 +30,45 @@ server {
     }
 }
 lua文件我们使用绝对路径/usr/example/lua/test.lua。 
+
+
+===========================================================================================
+1、当配置文件过多的时候管理起来就很麻烦，这时就可以考虑想apache（apache官方本身）那样把配置文件分成独立文件。
+2、配置文件修改
+error_log  logs/error.log error;
+worker_processes  2;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+   include extra/www.conf;
+   include extra/bbs.conf;
+   include extra/blog.conf;
+   include extra/status.conf;
+}
+
+
+mkdir extra
+
+
+[root@nginx conf]# sed -n '34,42p' nginx.conf.name  
+        server {
+        listen       80;
+        server_name  www.wolf.com;
+        location / {
+            root   html/www;
+            index  index.html index.htm;
+            access_log logs/www_access.log main;
+        }
+    }
