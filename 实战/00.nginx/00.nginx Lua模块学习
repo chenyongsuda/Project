@@ -1,4 +1,7 @@
 ========================================================
+网站：http://wiki.jikexueyuan.com/project/openresty/test.html
+
+
 set_by_lua方法：
 
 　　语法：set_by_lua $res <lua-script-str> [$arg1 $arg2 ...]
