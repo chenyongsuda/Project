@@ -1,0 +1,59 @@
+Linux 安装NFS
+yum install -y  nfs-utils rpcbind
+
+systemctl restart rpcbind.service
+
+首先我们应该建立一个数据文件夹，例如data文件夹也可以是单独的一个块硬盘风趣，都可以。
+
+#mkdir data
+
+[root@service ~]# echo "/appl/ * (rw,sync,root_squash)">>/etc/exports
+
+启动nfs
+systemctl start nfs.service
+
+开机自启
+systemctl enable rpcbind.service
+systemctl enable nfs.service
+
+重新加载nfs配置文件
+[root@service ~]# exportfs -rv
+exporting 192.168.10.1/24:/data/bbs
+exportfs：NFS服务端发布共享控制命令。
+-r：表示重新刷新共享。
+-a：表示将配置文件/etc/exports中的所有定义共享发布出去。
+-v：显示确认共享设置。
+-u：表示不发布共享。
+
+查看nfs服务器挂载情况
+[root@service ~]# showmount -e localhost
+Export list for localhost:
+/data/bbs 192.168.10.1/24
+
+ro：目录只读
+rw：目录读写
+sync：将数据同步写入内存缓冲区与磁盘中，效率低，但可以保证数据的一致性
+async：将数据先保存在内存缓冲区中，必要时才写入磁盘
+all_squash：将远程访问的所有普通用户及所属组都映射为匿名用户或用户组(nfsnobody)
+no_all_squash：与all_squash取反(默认设置)
+root_squash：将root用户及所属组都映射为匿名用户或用户组(默认设置)
+no_root_squash：与rootsquash取反
+anonuid=xxx：将远程访问的所有用户都映射为匿名用户，并指定该用户为本地用户(UID=xxx)
+anongid=xxx：将远程访问的所有用户组都映射为匿名用户组账户
+
+=========================================================================================
+
+WINDOW 找到控制面板打开其中的NFS挂载功能打开后
+mount \\192.168.58.103\appl x:\
+或者使用界面方式的挂载然后
+通过修改注册表将windows访问NFS时的UID和GID改成0即可，步骤如下 
+1、在运行中输入regedit，打开注册表编辑器； 
+2、进入HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\ClientForNFS\CurrentVersion\Default条目； 
+3、选择新建—-QWORD值，新建AnonymousUid，AnonymousGid两个值，值为0. 
+这样就有权限.
+
+
+
+
+
+
