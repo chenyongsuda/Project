@@ -57,7 +57,23 @@ location = /get {
     }
 最后，推荐两个基于 OpenResty 的比较实用的两个开源项目：
 基于动态策略的灰度发布系统 ABTestingGateway
-基于ngx_lua的web应用防火墙 ngx_lua_waf
+
+
+==============================================================================================================
+我的实现如下：
+location / {
+            set $backend_server '';
+            access_by_lua_block {
+                local server = "192.168.56.102:8080"
+                local random = math.random()
+                if random > 0.5 then
+                    server = "192.168.56.104:8080"
+                end
+                ngx.var.backend_server = server
+            }      
+            proxy_pass http://$backend_server;
+        }
+基于ngx_lua的web应用防火墙 =====================ngx_lua_waf
 
 
 =======================================================================================
