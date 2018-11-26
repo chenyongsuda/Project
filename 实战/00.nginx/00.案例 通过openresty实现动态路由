@@ -1,0 +1,63 @@
+通过 OpenResty + Redis 实现动态路由
+Nginx 经常用来作为反向代理服务器。通常情况下，我们将后端的服务配置在 Nginx 的 upstream 中，
+当后端服务有变更时就去修改 upstream 中的配置再通过reload 的方式使其生效。这个操作如果在后端服务经常发生变更的情况下，
+操作起来就会显得有些繁琐了。现在利用 Lua + Redis 的方式将 upstream 中的配置放在 Redis 中，以实现动态配置的效果。
+
+原理：
+
+在求请求访问阶段处理（access_by_lua*）通过指定的规则（这个规则根据自己的需求去设计）从 Redis 中去获取相对应的后端服务地址去替换 Nginx 配置中的proxy_pass 的地址。
+
+流程：
+
+在 Nginx 配置中创建后端服务地址的变量 $backend_server。
+
+    server {
+
+
+listen 80; server_name app1.example.com; location / { ... set $backend_server ''; } }
+同时在 Redis 中存入后端服务的地址。
+
+set app1 10.10.10.10:8080
+使用 ngx_redis2 模块来实现一个读取 Redis 的接口。
+
+    # GET /get?key=some_key
+
+
+location = /get { 
+        internal; # 保护这个接口只运行内部调用 
+        set_unescape_uri $key $arg_key; # this requires ngx_set_misc 
+        redis2_query get $key; 
+        redis2_pass foo.com:6379; # redis_server and port 
+}
+
+   2. 在求请求访问阶段处理利用 ngx.location.capture 模块请求去上个阶段定义的 Redis 接口，并将结果替换 $backend_server。
+    location / {
+        ...
+        access_by_lua_block {
+            local rds_key = "app1"
+            # 从 redis 中获取 key 为 app1 对应的 server_ip
+            local res = ngx.location.capture('/get', { args = {key = rds_key}})
+            # 解析 redis 结果
+            local parser = require("redis.parser")
+            local server, typ = parser.parse_reply(res.body)
+            if typ ~= parser.BULK_REPLY or not server then
+                ngx.log(ngx.ERR, "bad redis response: ", res.body)
+                ngx.exit(500)
+            end
+
+            ngx.var.backend_server = server
+        }
+    }
+    
+    3.Nginx 转发阶段将请求转发至后端服务。
+    location / {
+        ...
+        access_by_lua_block {...};
+        proxy_pass http://$backend_server;
+    }
+最后，推荐两个基于 OpenResty 的比较实用的两个开源项目：
+基于动态策略的灰度发布系统 ABTestingGateway
+基于ngx_lua的web应用防火墙 ngx_lua_waf
+
+
+=======================================================================================
