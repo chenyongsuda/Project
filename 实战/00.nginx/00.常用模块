@@ -1,0 +1,42 @@
+
+=============================================================================================
+查看该版本编译了哪些包
+nginx -v
+
+==============================================================================================
+1.http客户端
+Openresty没有提供默认的Http客户端，需要下载第三方的http客户端。
+下载lua-resty-http到lualib目录下，使用以下的命令下载：
+
+cd /usr/example/lualib/resty/  
+wget https://raw.githubusercontent.com/pintsized/lua-resty-http/master/lib/resty/http_headers.lua  
+wget https://raw.githubusercontent.com/pintsized/lua-resty-http/master/lib/resty/http.lua 
+
+lua-resty-http模块的地址为https://github.com/pintsized/lua-resty-http
+
+安装成功后，通过require(“resty.http”)引入 lua_http模块，它有以下的api方法：
+
+syntax: httpc = http.new() 创建一个 http对象
+syntax: res, err = httpc:request_uri(uri, params)根据参数获取内容，包括：
+status 状态码
+headers 响应头
+body 响应体
+
+=======================================================================
+2.lua_cjson模块
+Json是一种常见的数据交换格式，常用于http通信协议和其他数据传输领域。在openresty默认内嵌了lua_cjson模块，用来序列化数据。
+
+lua_cjson模块的地址：https://www.kyne.com.au/~mark/software/lua-cjson-manual.html
+
+它常用的API如下：
+
+local cjson = require “cjson” 获取一个cjson对象
+local str = cjson.encode(obj) obj转换成string
+local obj = cjson.decode(str) 将string转obj
+
+========================================================================
+3.Redis客户端
+lua-resty-redis是为基于cosocket API的ngx_lua提供的Lua redis客户端，通过它可以完成Redis的操作。默认安装OpenResty时已经自带了该模块
+
+
+
