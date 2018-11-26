@@ -47,3 +47,27 @@ nginx -s reload
 nginx -c /usr/local/openresty/nginx/conf/nginx.conf
 
 然后打开浏览器
+
+
+======================================================================================================
+我这边的框架模式
+nginx.conf 中
+    lua_package_path "/appl/nginx/lualib/?.lua;;";
+    lua_package_cpath "/appl/nginx/lualib/?.so;;";
+    include apps/demo/lua.conf;
+
+lua.conf
+location /hello {
+    content_by_lua_file     conf/apps/demo/lua_scripts/hello.lua;
+}
+
+conf/
+├── apps
+│   └── demo
+│       ├── lua.conf
+│       └── lua_scripts
+│           └── hello.lua
+
+
+
+
