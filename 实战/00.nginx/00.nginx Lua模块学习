@@ -1,6 +1,7 @@
 ========================================================
 网站：http://wiki.jikexueyuan.com/project/openresty/test.html
 Nginx：最佳实践https://blog.csdn.net/forezp/article/details/78616856
+Nginx:最佳实践：https://moonbingbing.gitbooks.io/openresty-best-practices/content/
 
 set_by_lua方法：
 
