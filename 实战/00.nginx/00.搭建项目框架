@@ -1,0 +1,49 @@
+下面在nginx中签入lua代码。 
+修改nginx配置文件，在http下引入lua库，如果你的openresty不是这个路径，对应修改就可以了：
+
+#lua模块路径，多个之间”;”分隔，其中”;;”表示默认搜索路径，默认到/usr/servers/nginx下找
+lua_package_path "/usr/local/openresty/lualib/?.lua;;";  #lua 模块
+lua_package_cpath "/usr/local/openresty/lualib/?.so;;";  #c模块
+include lua.conf
+
+如：
+http {
+    include       mime.types;
+    default_type  text/html;
+
+    #lua模块路径，其中”;;”表示默认搜索路径，默认到/usr/servers/nginx下找
+    lua_package_path "/usr/example/lualib/?.lua;;";  #lua 模块
+    lua_package_cpath "/usr/example/lualib/?.so;;";  #c模块
+    include /usr/example/example.conf;
+}
+
+
+然后在nginx.conf同级下新建这个lua.conf文件，然后写东西进入：
+
+root@forever:/usr/local/openresty/nginx/conf# touch lua.conf
+root@forever:/usr/local/openresty/nginx/conf# vi lua.conf
+
+#lua.conf
+server {
+    listen       8080;
+    server_name  _;
+    location /lua {
+        default_type 'text/html';
+        lua_code_cache off; #关闭缓存，这个配置可以不加。
+        content_by_lua_file conf/lua/test.lua; #相对于nginx安装目录
+    }
+}
+
+然后保存，这里看到，我们在conf下新建了一个lua文件夹，在lua文件夹里新建了一个test.lua文件。为什么要这么建立呢？可以看到我们整个的目录结构： 
+ 
+这里仅作测试，并不是一个很好的目录结构，但是可以参考。lua代码就放到lua目录下。 
+test.lua里面只有一行代码：
+
+ngx.say("hello lua!");
+之后保存，我们先把之前的nginx停掉：
+
+killall nginx
+nginx -s reload
+nginx -c /usr/local/openresty/nginx/conf/nginx.conf
+
+然后打开浏览器
