@@ -1,0 +1,187 @@
+==========================================================================
+WAF的功能
+支持IP白名单和黑名单功能，直接将黑名单的IP访问拒绝。
+支持URL白名单，将不需要过滤的URL进行定义。
+支持User-Agent的过滤，匹配自定义规则中的条目，然后进行处理（返回403）。
+支持CC攻击防护，单个URL指定时间的访问次数，超过设定值，直接返回403。
+支持Cookie过滤，匹配自定义规则中的条目，然后进行处理（返回403）。
+支持URL过滤，匹配自定义规则中的条目，如果用户请求的URL包含这些，返回403。
+支持URL参数过滤，原理同上。
+支持日志记录，将所有拒绝的操作，记录到日志中去
+
+=========================================================================
+WAF实现规划
+分析步骤如下：解析HTTP请求==》匹配规则==》防御动作==》记录日志 
+具体实现如下：
+
+解析http请求：协议解析模块
+匹配规则：规则检测模块，匹配规则库
+防御动作：return 403 或者跳转到自定义界面
+日志记录：记录到elk中，画出饼图，建议使用json格式 
+
+函数流程：每个进入access请求进行过滤,匹配其中的规则,如果满足其中的一个规则的话做响应处理.
+
+基本结构类似于
+function waf_main()
+    if white_ip_check() then
+    elseif black_ip_check() then
+    elseif user_agent_attack_check() then
+    elseif cc_attack_check() then
+    elseif cookie_attack_check() then
+    elseif white_url_check() then
+    elseif url_attack_check() then
+    elseif url_args_attack_check() then
+    --elseif post_attack_check() then
+    else
+        return
+    end
+end
+
+waf_main()
+
+==============================================================================
+首先做黑白名单
+首先要获取客户端的IP
+=====================================================
+X-Forwarded-For  和  X-Real-IP
+https://blog.csdn.net/broadview2006/article/details/54570943
+https://imququ.com/post/x-forwarded-for-header-in-http.html
+
+客户端通过Nginx Proxy1 和 Nginx Proxy2 两层反向代理才访问到具体服务Nginx Backend（或如Tomcat服务）。
+那Nginx Backend如何才能拿到真实客户端IP呢？
+
+场景1
+　　场景1是很简单的场景，Nginx Proxy直接把请求往后转发，没有做任何处理。
+
+Nginx Proxy
+192.168.107.107 nginx.conf
+location /test {
+    proxy_pass http://192.168.107.112:8080;
+}
+192.168.107.112 nginx.conf
+location /test {
+    proxy_pass http://192.168.107.114:8080;
+}
+Nginx Proxy就是简单的把请求往后转发。
+Nginx Backend
+192.168.107.114 nginx.conf
+location /test {
+    default_type text/html;
+    charset gbk;
+    echo "$remote_addr || $http_x_forwarded_for";
+}
+
+Nginx Backend输出客户端IP（$remote_addr）和X-Forwarded-For请求头（$http_x_forwarded_for），当访问服务时输出结果如下所示：
+192.168.107.112 ||
+分析
+1.$remote_addr代表客户端IP，当前配置的输出结果为最后一个代理服务器的IP，并不是真实客户端IP； 
+2.在没有特殊配置情况下，X-Forwarded-For请求头不会自动添加到请求头中，即Nginx Backend的$http_x_forwarded_for输出为空
+
+
+
+------------------------------------------------------
+
+场景2
+　　场景2通过添加X-Real-IP和X-Forwarded-For捕获客户端真实IP。
+
+Nginx Proxy
+192.168.107.107 nginx.conf
+location /test {
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_pass http://192.168.107.112:8080;
+}
+192.168.107.112 nginx.conf
+location /test {
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_pass http://192.168.107.114:8080;
+}
+Nginx Backend
+192.168.107.114 nginx.conf
+location /test {
+    default_type text/html;
+    charset gbk;
+    echo "$remote_addr ||$http_x_real_ip  ||$http_x_forwarded_for";
+}
+当访问服务时，输出结果为：
+
+192.168.107.112 || 192.168.162.16 || 192.168.162.16, 192.168.107.107
+分析
+1.在离用户最近的反向代理NginxProxy 1，通过“proxy_set_header X-Real-IP $remote_addr”把真实客户端IP写入到请求头X-Real-IP，在NginxBackend输出$http_x_real_ip获取到了真实客户端IP；而Nginx Backend的“$remote_addr”输出为最后一个反向代理的IP； 
+2.“proxy_set_headerX-Forwarded-For $proxy_add_x_forwarded_for”的是把请求头中的X-Forwarded-For与$remote_addr用逗号合起来，如果请求头中没有X-Forwarded-For则$proxy_add_x_forwarded_for为$remote_addr。 
+　　X-Forwarded-For代表了客户端IP，反向代理如Nginx通过$proxy_add_x_forwarded_for添加此项，X-Forwarded-For的格式为X-Forwarded-For:real client ip, proxy ip 1, proxy ip N，每经过一个反向代理就在请求头X-Forwarded-For后追加反向代理IP。 
+　　到此我们可以使用请求头X-Real-IP和X-Forwarded-For来获取客户端IP及客户端到服务端经过的反向代理IP了。这种方式还是很麻烦，$remote_addr并不是真实客户端IP。
+
+场景3
+　　为了更方便的获取真实客户端IP，可以使用nginx http_realip_module模块解决，在安装nginx时通过–with-http_realip_module安装该模块。NginxProxy配置和场景2一样。
+
+Nginx Backend
+192.168.107.114 nginx.conf
+real_ip_header X-Forwarded-For; 
+set_real_ip_from 192.168.0.0/16; 
+real_ip_recursive on; 
+ 
+location /test {
+    default_type text/html;
+    charset gbk;
+    echo "$remote_addr || $http_x_real_ip  ||$http_x_forwarded_for";
+}
+　　当访问服务时，输出结果为：
+
+192.168.162.16 || 192.168.162.16 || 192.168.162.16, 192.168.107.107
+分析
+1.X-Real-IP和X-Forwarded-For和场景2一样； 
+2.使用realip模块后，$remote_addr输出结果为真实客户端IP，可以使用$realip_remote_addr获取最后一个反向代理的IP； 
+3.real_ip_headerX-Forwarded-For：告知Nginx真实客户端IP从哪个请求头获取，如X-Forwarded-For； 
+4.set_real_ip_from192.168.0.0/16：告知Nginx哪些是反向代理IP，即排除后剩下的就是真实客户端IP，支持配置具体IP地址、CIDR地址； 
+5.real_ip_recursive on：是否递归解析，当real_ip_recursive配置为off时，Nginx会把real_ip_header指定的请求头中的最后一个IP作为真实客户端IP；当real_ip_recursive配置为on时，Nginx会递归解析real_ip_header指定的请求头，最后一个不匹配set_real_ip_from的IP作为真实客户端IP。 
+　　如果配置“real_ip_recursive off; ”，则输出结果为：
+
+192.168.107.107 || 192.168.162.16 ||192.168.162.16, 192.168.107.107
+总结
+1.通过“proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for” 把从真实客户端IP和反向代理IP通过逗号分隔，添加到请求头中； 
+2.可以在第一个反向代理上配置“proxy_set_header X-Real-IP $remote_addr” 获取真实客户端IP； 
+3.配合realip模块从X-Forwarded-For也可以获取到真实客户端IP。 
+　　在整个反向代理链条的第一个反向代理可以不配置“proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for”，否则客户端可以伪造X-Forwarded-For从而伪造客户端真实IP，如果服务端使用X-Forwarded-For第一个IP作为真实客户端IP，则就出问题了。如果通过配置X-Real-IP请求头或者配合realip模块也不会出现该问题。如果自己解析X-Forwarded-For的话，记得使用realip算法解析，而不是取第一个。 
+当我们进行限流时一定注意限制的是真实客户端IP，而不是反向代理IP，我遇到过很多同事在这块出问题的。
+
+===============================
+补充：
+X-Forwarded-For 是一个 HTTP 扩展头部。HTTP/1.1（RFC 2616）协议并没有对它的定义，它最开始是由 Squid 这个缓存代理软件引入，用来表示 HTTP 请求端真实 IP。如今它已经成为事实上的标准，
+被各大 HTTP 代理、负载均衡等转发服务广泛使用，并被写入 RFC 7239（Forwarded HTTP Extension）标准之中。
+X-Forwarded-For 请求头格式非常简单，就这样：
+
+X-Forwarded-For: client, proxy1, proxy2
+可以看到，XFF 的内容由「英文逗号 + 空格」隔开的多个部分组成，最开始的是离服务端最远的设备 IP，然后是每一级代理设备的 IP。
+如果一个 HTTP 请求到达服务器之前，经过了三个代理 Proxy1、Proxy2、Proxy3，IP 分别为 IP1、IP2、IP3，用户真实 IP 为 IP0，那么按照 XFF 标准，
+服务端最终会收到以下信息：
+X-Forwarded-For: IP0, IP1, IP2
+Proxy3 直连服务器，它会给 XFF 追加 IP2，表示它是在帮 Proxy2 转发请求。列表中并没有 IP3，IP3 可以在服务端通过 Remote Address 字段获得。
+我们知道 HTTP 连接基于 TCP 连接，HTTP 协议中没有 IP 的概念，Remote Address 来自 TCP 连接，表示与服务端建立 TCP 连接的设备 IP，在这个例子里就是 IP3。
+Remote Address 无法伪造，因为建立 TCP 连接需要三次握手，如果伪造了源 IP，无法建立 TCP 连接，更不会有后面的 HTTP 请求。
+不同语言获取 Remote Address 的方式不一样，例如 php 是 $_SERVER["REMOTE_ADDR"]，Node.js 是 req.connection.remoteAddress，但原理都一样。
+
+
+
+=================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
