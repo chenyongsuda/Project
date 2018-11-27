@@ -36,7 +36,9 @@ pfSense
 ChilliSpot
 CoovaChilli
 --------------------- 
-作者：神农民 
-来源：CSDN 
-原文：https://blog.csdn.net/shennongminblog/article/details/76158379 
-版权声明：本文为博主原创文章，转载请附上博文链接！
+强制门户认证(captive Portal)简单实现
+https://www.jianshu.com/p/0293e1a30b89
+在开始之前先说一下工作原理。APP在访问某个域名的时候，会先发起DNS请求，向服务器问域名的IP地址。然后再发起HTTP请求，请求想要的内容。
+在这里，由于nodemcu充当了AP的角色，可以接收到APP发起的DNS请求包。只要让nodemcu把回复请求的IP地址指向自己的IP就行了。这样一来，APP就会向设备IP发起HTTP请求。那么，nodemcu在收到HTTP请求后，不管对方请求什么内容，都回复本地的HTML文件。手机（小米4）就会弹出这个页面，比如弹出下面这个难看的页面。
+如何实现
+从上面的原理可以看出来，需要实现一个DNS服务器和一个TCP服务器，还要撸HTML来实现一个难看的页面。
