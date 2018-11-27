@@ -47,3 +47,12 @@ function get_client_ip( ... )
     return client_ip
 end
 ===========================================================================
+其它内置变量
+变量	含义	示例
+$body_bytes_sent	发给客户端的数据大小，以字节计，不包括http报头	
+$bytes_sent	发给客户端的数据大小，以字节计	
+$status	http响应状态码	
+$request_time	请求处理时间	
+$upstream_response_time	从与upstream建立连接到收到最后一个字节所经历的时间（nginx做反向代理服务器时可用）	
+$upstream_connect_time	与upstream建立连接所消耗的时间（nginx做反向代理服务器时可用）
+===========================================================================
