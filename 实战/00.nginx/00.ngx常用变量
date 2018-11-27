@@ -1,0 +1,49 @@
+=========================================================================
+从请求头中解析到的变量
+用Firefox的HttpRequester插件，添加Cookie为CA=abc;CB=123，Referer为http://invo.com的请求头， 
+以访问地址http://invo.com/nginx-var/header-var得到的结果为例。
+
+变量	含义	示例
+$host	该变量按如下优先级获得：请求行中解析到的host、请求头“Host”中的host、配置文件中匹配到的server_name	invo.com
+$remote_addr	客户端ip地址	127.0.0.1
+$remote_port	客户端端口	4204
+$http_user_agent	用户代理（“User-Agent”请求头的值)	Mozilla/5.0 (Windows NT 6.1; rv:50.0) Gecko/20100101 Firefox/50.0
+$http_cookie	“Cookie”请求头的值	CA=abc;CB=123
+$cookie_name	Cookie中名为name的值	$cookie_CA=abc, $cookie_CB=123
+$http_referer	“Http-Referer”请求头的值	http://invo.com
+--------------------- 
+ngx lua 中使用
+ngx.var.remote_addr
+ngx.var.remote_port
+等
+
+===========================================================================
+从请求行中解析到的变量
+以访问http://invo.com/nginx-var/request-line?a=1&b=2得到的结果为例，invo.com为测试的虚拟主机
+
+变量	含义	示例
+$request	整个请求行	GET /nginx-var/request-line?a=1&b=2 HTTP/1.1
+$request_method	请求方法（如GET、POST)	GET
+$request_uri	完整的请求URI	/nginx-var/request-line?a=1&b=2
+$uri	URI，除去查询字符串	/nginx-var/request-line
+$document_uri	同$uri	/nginx-var/request-line
+$args	查询字符串	a=1&b=2
+$query_string	同$args	a=1&b=2
+$server_protocol	请求协议（如HTTP/1.0 HTTP/1.1)	HTTP/1.1
+$arg_name	请求行中name参数的值	$arg_a = 1 , $arg_b = 2
+
+========================================================================
+获取真实IP
+function get_client_ip( ... )
+    -- body
+    local client_ip
+    client_ip = ngx.req.get_headers()["X-Real-IP"]
+    if client_ip == nil then
+        client_ip = ngx.req.get_headers()["x_forwarded_for"]
+    end
+    if client_ip == nil then
+        client_ip = ngx.var.remote_addr
+    end
+    return client_ip
+end
+===========================================================================
