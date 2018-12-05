@@ -26,6 +26,36 @@ flush privileges;
 
 创建数据库
 create database zabbix default character set utf8 collate utf8_bin;
+==============================================================================================
+移动数据目录到挂载点
+移动 mysql 数据库文件存储位置
+默认mysql存储的位置在系统盘上。一般我们在使用阿里云等服务器的时候都会配备一个数据盘用来存储数据。所以，今天学习一下如何移动 数据库文件存储位置。
+
+首先，在 home 下建立文件夹 service/mysql/data/ 新建文件夹命令为 mkdir 谢天谢地，作为为数不多我能记住的命令，这个命令没有变化。
+
+停止MYSQL服务 systemctl stop mariadb.service
+
+移动 mysql 数据库文件 mv /var/lib/mysql　/home/service/mysql/data/
+
+进入/etc/文件夹 看一下有没有一个 my.cnf的文件。
+
+编辑配置文件 vi /etc/my.cnf。
+
+把其中的 datadir 和 socket 修改为如下
+
+datadir=/home/service/mysql/data/
+socket=/home/service/mysql/data/mysql.sock
+保存退出文件编辑。
+
+重启mysql 服务 systemctl start mariadb.service 我XXXXXX，又报错！！！
+
+到 service/mysql/data/ 目录下瞅一眼，咦？咋还有一个mysql文件夹呢，再进去看，我勒个去，我这文件夹建的，也忒深了吧!_!~
+
+重新 vi /etc/my.cnf 文件，将修改为~~~
+
+datadir=/home/service/mysql/data/mysql/
+socket=/home/service/mysql/data/mysql/mysql.sock
+保存退出，重启mysql服务 systemctl start mariadb.service 成功！
 
 ==============================================================================================
 不要参照上面的了,直接安装官网安装
