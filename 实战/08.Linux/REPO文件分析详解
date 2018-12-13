@@ -320,4 +320,7 @@ reposync -r base -p /root/repo2/
 原文：https://blog.csdn.net/GX_1_11_real/article/details/80694556 
 版权声明：本文为博主原创文章，转载请附上博文链接！
 
-
+===========================
+数据包依赖查询
+查看.rpm 包依赖：
+rpm -qpR [package]
