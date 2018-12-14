@@ -1,0 +1,62 @@
+查询网卡的状态
+cat /sys/class/net/$1/carrier $1表示哪个网卡
+
+查看所有的网卡
+# for i in $( ls /sys/class/net ); do echo $i; done
+eth0
+eth1
+lo
+
+另一种方式：
+
+/sys/class/net/
+
+I experimented with mine:
+Wire Plugged in:
+eth0/carrier:1
+eth0/operstate:unknown
+Wire Removed:
+
+eth0/carrier:0
+eth0/operstate:down
+Wire Plugged in Again:
+
+eth0/operstate:up
+eth0/carrier:1
+Side Trick: harvesting all properties at once the easy way:
+
+grep "" eth0/* 
+This forms a nice list of  key:value pairs.
+
+制作网卡状态监控：
+Using a bash for loop we can now check whether a network cable is connected for all network interfaces at once:
+
+# for i in $( ls /sys/class/net ); do echo -n $i: ; cat /sys/class/net/$i/carrier; done
+eth0:1
+eth1:0
+lo:1
+wlan0:cat: /sys/class/net/wlan0/carrier: Invalid argument
+==================================================================
+监控网卡状态
+So yes a UserParameter it is (even in Zabbix 3.0) and it's reasonably easy to setup, at least on modern Linux boxes. By parametrizing the UserParameter (if you follow...), it's possible to define a single Parameter to support monitoring of multiple NICs; here's how:
+
+On a target box, locate the agent's directory where UserParamter definitions are stored, smth like /etc/zabbix/zabbix_agentd.d/
+Create a new file for the definition or amend an existing one; I did this:
+
+cat > /etc/zabbix/zabbix_agentd.d/userparameter_niclink.conf << EOF
+UserParameter=net.if.link[*],cat /sys/class/net/$1/carrier
+EOF
+
+Restart the agent, eg: service zabbix-agent restart
+In the Zabbix UI, create an Item against the host as follows:
+Type: Zabbix agent (active if appropriate).
+Key: has the actual NIC to be monitored between brackets, eg: net.if.link[em1],
+Type of information: Numeric (unsigned); Data type: Decimal
+Show Value: as "Service state" (displays them as "Up/Down")
+Application: Network Interfaces
+That's it; go to Latest data; wait 30 secs or so and your NIC state should start populating. 
+It might also be useful to define a Trigger against the Item to be alerted if the link goes down.
+=======================================================================
+
+Here are some other ways to detect a NIC link's state; the above cat /sys/class/net/${nic}/carrier works well for me 
+(Ubuntu 14.04 server, physical NIC).
