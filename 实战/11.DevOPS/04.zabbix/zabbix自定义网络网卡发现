@@ -60,3 +60,79 @@ It might also be useful to define a Trigger against the Item to be alerted if th
 
 Here are some other ways to detect a NIC link's state; the above cat /sys/class/net/${nic}/carrier works well for me 
 (Ubuntu 14.04 server, physical NIC).
+
+============================================================================
+自定义自动发现网络脚本 自动发现中暴露网卡和IP
+[root@localhost ~]# chown -R zabbix.zabbix /etc/zabbix/script
+[root@localhost ~]# chmod 755 /etc/zabbix/script/discovery_dev.sh
+[root@localhost ~]# cat /etc/zabbix/script/discovery_dev.sh 
+#!/bin/bash
+
+ts=$(cat /proc/net/dev|tail -n +3 | awk '{print $1}'|cut -d: -f1)
+num=$(cat /proc/net/dev|tail -n +3 | awk '{print $1}'|cut -d: -f1|wc -l)
+
+printf "{\n"
+printf "\t\"data\":["
+
+for line in $ts;do
+  ip=$(ifconfig $line|grep "inet addr"|awk '{print $2}'|cut -d: -f2)
+  printf "\n\t\t{\n\t\t\t\"{#IFNAME}\":\"$line\",\"{#IP}\":\"$ip\"}"
+  ((num--))
+  if [ "$num" == 0 ];then break; else printf ","; fi
+done
+printf "]"
+printf "}"
+
+================================================================================
+自定义网络发现实现批量网站域名监控
+#!/bin/bash 
+# function:monitor tcp connect status from zabbix 
+ 
+source /etc/bashrc >/dev/null 2>&1 
+source /etc/profile  >/dev/null 2>&1 
+#/usr/bin/curl -o /dev/null -s -w %{http_code} http://$1/ 
+ 
+web_site_discovery () { 
+WEB_SITE=($(cat  /data/usr/local/zabbix/sbin/WEB.txt|grep -v "^#")) 
+        printf '{\n' 
+        printf '\t"data":[\n' 
+for((i=0;i<${#WEB_SITE[@]};++i)) 
+{ 
+num=$(echo $((${#WEB_SITE[@]}-1))) 
+        if [ "$i" != ${num} ]; 
+                then 
+        printf "\t\t{ \n" 
+        printf "\t\t\t\"{#SITENAME}\":\"${WEB_SITE[$i]}\"},\n" 
+                else 
+                        printf  "\t\t{ \n" 
+                        printf  "\t\t\t\"{#SITENAME}\":\"${WEB_SITE[$num]}\"}]}\n" 
+        fi 
+} 
+} 
+ 
+web_site_code () { 
+/usr/bin/curl -o /dev/null -s -w %{http_code} https://$1 
+} 
+ 
+case "$1" in 
+web_site_discovery) 
+web_site_discovery 
+;;
+web_site_code) 
+web_site_code $2 
+;; 
+*) 
+ 
+echo "Usage:$0 {web_site_discovery|web_site_code [URL]}" 
+;; 
+esac
+============================================================================================
+
+
+
+
+
+
+
+
+
