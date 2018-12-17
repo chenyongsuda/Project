@@ -1,0 +1,110 @@
+opencv 图像的深度和通道介绍
+CV_<bit_depth>(S|U|F)C<number_of_channels>
+
+S = 符号整型  U = 无符号整型  F = 浮点型
+
+E.g.:
+
+CV_8UC1 是指一个8位无符号整型单通道矩阵,
+
+CV_32FC2是指一个32位浮点型双通道矩阵
+
+CV_8UC1           CV_8SC1          CV_16U C1       CV_16SC1 
+CV_8UC2           CV_8SC2          CV_16UC2        CV_16SC2 
+CV_8UC3           CV_8SC3          CV_16UC3        CV_16SC3 
+CV_8UC4           CV_8SC4          CV_16UC4        CV_16SC4 
+CV_32SC1         CV_32FC1         CV_64FC1
+CV_32SC2         CV_32FC2         CV_64FC2
+CV_32SC3         CV_32FC3         CV_64FC3
+CV_32SC4         CV_32FC4         CV_64FC4
+
+其中，通道表示每个点能存放多少个数，类似于RGB彩色图中的每个像素点有三个值，即三通道的。
+图片中的深度表示每个值由多少位来存储，是一个精度问题，一般图片是8bit（位）的，则深度是8.
+
+===================================================================================
+python读取图片方式
+opencv可以用imread()直接处理jpg文件，不需要提前转换。C++直接读成mat, python直接读成numpy 数组
+另外，看你写的是python，如果你想直接不保存就直接存成opencv的图片格式（这里是numpy.ndarray，不是mat）
+函数调用方式：cv2.imread()
+使用cv2.imread()函数读取图像。图像应该当前路径下，或者给出完整的图像路径。第二个参数是一个标识，它用来指定图像的读取方式。
+
+以下是官方文档的参数说明：
+cv2.IMREAD_COLOR : Loads a color image. Any transparency of image will be neglected. It is the default flag.
+cv2.IMREAD_GRAYSCALE : Loads image in grayscale mode
+cv2.IMREAD_UNCHANGED : Loads image as such including alpha channel
+它们分别对应的意思是：
+cv2.IMREAD_COLOR : 默认使用该种标识。加载一张彩色图片，忽视它的透明度。
+cv2.IMREAD_GRAYSCALE : 加载一张灰度图。
+cv2.IMREAD_UNCHANGED : 加载图像，包括它的Alpha通道。     友情链接：Alpha通道的概念
+提示：如果觉得以上标识太麻烦，可以简单的使用1，0，-1代替。（必须是整数类型）
+
+import numpy as np
+import cv2
+# Load an color image in grayscale
+# 使用灰度图方式加载一张彩色照片
+img = cv2.imread('messi5.jpg',0)
+cv2.imshow("hello", img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+返回的为ndarray
+=====================================================================================
+在图像上划线
+• img：你想要绘制图形的那幅图像。
+• color：形状的颜色。以 RGB 为例，需要传入一个元组，例如： （255,0,0）
+代表蓝色。对于灰度图只需要传入灰度值。
+• thickness：线条的粗细。如果给一个闭合图形设置为 -1，那么这个图形
+就会被填充。默认值是 1.
+• linetype：线条的类型， 8 连接，抗锯齿等。默认情况是 8 连接。 cv2.LINE_AA
+为抗锯齿，这样看起来会非常平滑。
+
+line(img, pt1, pt2, color[, thickness[, lineType[, shift]]])
+cv2.line(img,(0,0),(512,512),(255,0,0),5)
+
+要画一个矩形，你需要告诉函数的左上角顶点和右下角顶点的坐标。这次我们会在图像的右上角话一个绿色的矩形。
+cv2.rectangle(img,(384,0),(510,128),(0,255,0),3)
+
+要画圆的话，只需要指定圆形的中心点坐标和半径大小。我们在上面的矩形中画一个圆。
+cv2.circle(img,(447,63),63,(0,0,255),-1)
+
+画椭圆比较复杂，我们要多输入几个参数。一个参数是中心点的位置坐标。下一个参数是长轴和短轴的长度。椭圆沿逆时针方向旋转的角度。椭圆弧演
+顺时针方向起始的角度和结束角度，如果是 0 很 360，就是整个椭圆。
+查看cv2.ellipse() 可以得到更多信息。下面的例子是在图片的中心绘制半个椭圆。
+cv2.ellipse(img,(256,256),(100,50),0,0,0,255,-1)
+
+
+画多边形，需要指点每个顶点的坐标。用这些点的坐标构建一个大小等于行数 X1X2 的数组，行数就是点的数目。
+
+这个数组的数据类型必须为 int32。这里画一个黄色的具有四个顶点的多边形。
+
+pts=np.array([[10,5],[20,30],[70,20],[50,10]], np.int32)
+ pts=pts.reshape((-1,1,2))
+ 
+ # 这里 reshape 的第一个参数为-1, 表明这一维的长度是根据后面的维度的计算出来的。
+
+
+要在图片上绘制文字，你需要设置下列参数：
+• 你要绘制的文字
+• 你要绘制的位置
+• 字体类型（通过查看 cv2.putText() 的文档找到支持的字体）
+• 字体的大小
+• 文字的一般属性如颜色，粗细，线条的类型等。为了更好看一点推荐使用
+linetype=cv2.LINE_AA。
+在图像上绘制白色的 OpenCV。
+cv2.putText(img,"opencv",(10,500),font,4,(255,255,255),2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
