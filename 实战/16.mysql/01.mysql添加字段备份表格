@@ -1,0 +1,106 @@
+mysql如何把一个表直接拷贝到一个新的表
+一：在新表已经建立好的情况下
+
+1，拷贝所有的字段
+
+insert into new_table select * from old_table
+
+2,拷贝部分字段表
+
+insert into new_table(id,name,sex) select id,name,sex from old_table
+
+3,拷贝部分的行
+
+insert into new_table select  *  from old_table where id="1"
+
+4,拷贝部分的行和字段
+
+insert into new_table(id,name,sex) select id,name,sex form old_table where id='1'
+
+二：在新表还没有建的情况下
+
+方案一：
+
+create table new_table (select * from old_table)
+
+这种方案建的话，只是拷贝的查询的结果，新表不会有主键和索引
+
+方案二：
+
+create table new_table LIKE old_table
+
+该方案只能拷贝表结构到新表中，不会拷贝数据
+
+方案三：
+
+如果要真正的复制一个数据到新表，我们可以直接执行下面的语句
+
+create table new_table LIKE old_table；
+
+insert into new_table select * from old_table；
+
+三：我们也可以操作其它的数据库中的表
+
+create table new_table LIKE ortherdatabase.old_table；
+
+insert into new_table select * from ortherdatabase.old_table；
+
+ortherdatabase.old_table中的ortherdatabase是指定的数据库名
+
+四：我们也可以在新建表时改名字
+
+create table new_table (select id,name as username from old_table)
+
+=====================================================================
+查看建表语句
+1 查看系统支持的存储引擎
+
+show engines;
+
+2 查看表使用的存储引擎
+
+两种方法：
+
+a、show table status from db_name where name='table_name';
+
+b、show create table table_name;
+
+如果显示的格式不好看，可以用\g代替行尾分号
+
+有人说用第二种方法不准确，我试了下，关闭掉原先默认的Innodb引擎后根本无法执行show create table table_name指令，因为之前建的是Innodb表，关掉后默认用MyISAM引擎，导致Innodb表数据无法被正确读取。
+
+3 修改表引擎方法
+
+alter table table_name engine=innodb;
+
+4 关闭Innodb引擎方法
+
+关闭mysql服务： net stop mysql
+
+找到mysql安装目录下的my.ini文件：
+
+找到default-storage-engine=INNODB 改为default-storage-engine=MYISAM
+
+找到#skip-innodb 改为skip-innodb
+
+启动mysql服务：net start mysql
+
+============================================================================
+添加字段修改字段
+1添加表字段
+
+alter table table1 add transactor varchar(10) not Null;
+
+alter table   table1 add id int unsigned not Null auto_increment primary key
+
+2.修改某个表的字段类型及指定为空或非空
+alter table 表名称 change 字段名称 字段名称 字段类型 [是否允许非空];
+alter table 表名称 modify 字段名称 字段类型 [是否允许非空];
+
+alter table 表名称 modify 字段名称 字段类型 [是否允许非空];
+
+3.修改某个表的字段名称及指定为空或非空
+alter table 表名称 change 字段原名称 字段新名称 字段类型 [是否允许非空
+
+4如果要删除某一字段，可用命令：ALTER TABLE mytable DROP 字段名;
+
