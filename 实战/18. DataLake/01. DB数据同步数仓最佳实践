@@ -1,0 +1,5 @@
+来自美团开发团队
+美团DB数据同步到数据仓库的架构与实践
+https://tech.meituan.com/binlog_dw.html
+
+一般都是冲DB抽取到HIVE,但是考虑到后期可能单独补数据如何做,HIVE中有动态分区和静态分区可以了解下.
