@@ -30,7 +30,7 @@ InfluxDB shell version: 1.2.2
 >show databases （列出所有数据库）
 >drop database test_db （删除数据库）
 >use test_db ( 转入test_db数据库下 )
->create measurement test_table ( 创建test_table表，measurements==table(关系型数据库中的) )
+>insert test_table,host=web1 cpu=22,memory=33 ( 创建test_table表，measurements==table(关系型数据库中的) )
 >show measurements  （列出所有表）
 >drop measyrement test_table （删除表test_able）
 
