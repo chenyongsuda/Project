@@ -12,6 +12,8 @@ $ systemctl status grafana-server
 
 访问grafana 我是在192.168.1.1上面安装的，grafana服务端默认访问端口是3000，访问地址为192.168.1.1:3000
 
+
+使用 admin/admin登录
 安装zabbix插件
 ====================================使用grafana-cli工具安装
  
