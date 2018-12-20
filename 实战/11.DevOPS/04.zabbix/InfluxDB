@@ -19,6 +19,9 @@ reporting-disabled = true ( 这个要设置真，关闭定时上传数据到infl
 ## 本人并没有开启web界面，所以这里讲一下命令行的操作。就类似与常用数据库。
 $ systemctl start influxdb （启动influxdb）
 $ systemctl enable influxdb （设为开机启动）
+
+启动失败查看系统日志 sudo tail /var/log/messages 会发现问题
+
 $ influx ( 进入influxdb )
 Connected to http://localhost:8086 version 1.2.2
 InfluxDB shell version: 1.2.2
