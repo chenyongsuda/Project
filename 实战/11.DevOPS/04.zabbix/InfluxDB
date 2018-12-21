@@ -34,6 +34,53 @@ InfluxDB shell version: 1.2.2
 >show measurements  （列出所有表）
 >drop measyrement test_table （删除表test_able）
 
+1.创建新表并添加数据
+InfluxDB没有提供单独的建表语句，可以通过以下方式创建数据库并添加数据。
+
+格式：
+insert <tbname>,<tags> <values> [timestamp]    
+说明：
+tbname : 数据表名称
+tags : 表的tag域
+values : 表的value域
+timestamp ：当前数据的时间戳（可选，没有提供的话系统会自带添加）
+
+示例如下：
+> use testdb;
+Using database testdb
+> insert students,stuid=s123 score=89
+> show measurements;
+name: measurements
+name
+----
+students
+
+2.series操作
+series操作
+series表示这个表里面的数据，可以在图表上画成几条线，series主要通过tags排列组合算出来。
+show series from weather
+
+3.查询
+查询
+格式：
+select <fields> from <tbname> [ into_clause ] [ where_clause ]              
+          [ group_by_clause ] [ order_by_clause ] [ limit_clause ]              
+          [ offset_clause ] [ slimit_clause ] [ soffset_clause ]                
+说明：
+fields : 要查询的字段，查询全部可以用*
+tbname : 数据表名称
+into_clause : select ... into （可选）
+where_clause : where条件域（可选）
+group_by_clause : group by相关（可选）
+order_by_clause : order by相关（可选）
+limit_clause : limit相关（可选）
+offset_clause : offset相关（可选）
+slimit_clause : slimit相关（可选）
+soffset_clause : soffset相关（可选）
+
+select * from table where 条件只能加fileld
+
+
 =============================================================================================================
 时序数据库介绍
 https://www.jianshu.com/p/a1344ca86e9b
