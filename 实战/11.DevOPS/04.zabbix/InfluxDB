@@ -30,30 +30,9 @@ InfluxDB shell version: 1.2.2
 >show databases （列出所有数据库）
 >drop database test_db （删除数据库）
 >use test_db ( 转入test_db数据库下 )
->insert test_table,host=web1 cpu=22,memory=33 ( 创建test_table表，measurements==table(关系型数据库中的) )
+>insert test_table,host=web1 cpu=22,memory=33 ( 创建test_table表，measurements==table(关系型数据库中的) 空格分割TAG和Filed, TAG为带索引的)
 >show measurements  （列出所有表）
 >drop measyrement test_table （删除表test_able）
-
-
->insert test_table,host=web1 cpu=22,memory=33 （插入数据，test_table为表名，host为除了tag是，也就是方便用于度量的分类标签，可以是字符串。cpu和memory是数值，不能是字符串，只能是数值，中间用空格隔开）格式如下：
-insert table_name,tags=* values=values,values=values （分别为三段
->curl -i -X POST "http://127.0.0.1:8086/write?db=testDb【&u=username&p=password】" --data-binary "test_table,host=127.0.0.1 cpu=22,memory=33"
-！！！！！！！！！！！！！！！！！！！！！利用http接口远程插入数据，最常用的功能,用密码时，通过u和P的参数进行认证，没有则去掉。也就是利用post提交，默认的连接操作的端口为8086.
-
-
-> select * from test_table （查询语句，类似sql语句）
->select * from test_table where cpu = 22 ( where用法，类似sql)
->select * from test_table where host = 'web1' （同上）
->select * from test_table order by time [desc] （按时间排序，默认为顺序，加上desc为倒序）
-
-
->show users （查看用户）
->create user "username" with password 'password' （创建普通用户）
->create user "username" with password 'password' with all privileges (创建管理员用户)
->drop user "username" （删除用户）
->auth （用户认证，用于设置了密码后，登陆influxdb的认证）
-username: username
-password: password
 
 =============================================================================================================
 时序数据库介绍
