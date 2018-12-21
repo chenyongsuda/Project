@@ -103,6 +103,28 @@ slimit_clause : slimit相关（可选）
 soffset_clause : soffset相关（可选）
 
 select * from table where 条件只能加fileld
+=============================================================================================================
+特色函数
+influxdb函数分为聚合函数，选择函数，转换函数，预测函数等。除了与普通数据库一样提供了基本操作函数外，
+还提供了一些特色函数以方便数据统计计算，下面会一一介绍其中一些常用的特色函数。
+
+聚合函数：FILL(), INTEGRAL()，SPREAD()， STDDEV()，MEAN(), MEDIAN()等。
+选择函数: SAMPLE(), PERCENTILE(), FIRST(), LAST(), TOP(), BOTTOM()等。
+转换函数: DERIVATIVE(), DIFFERENCE()等。
+预测函数：HOLT_WINTERS()。
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
