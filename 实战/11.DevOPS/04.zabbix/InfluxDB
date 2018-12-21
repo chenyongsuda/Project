@@ -1,3 +1,4 @@
+
 1. 安装
 $  wget https://dl.influxdata.com/influxdb/releases/influxdb-1.2.2.x86_64.rpm  (下载包) 
 $ yum localinstall influxdb-1.2.2.x86_64.rpm  (用yum进行本地安装)
@@ -13,6 +14,29 @@ reporting-disabled = true ( 这个要设置真，关闭定时上传数据到infl
   # The default bind address used by the admin service.
   bind-address = ":8083"    （web服务界面的端口）
 ---------------------------------------------------------------------------------------------------------------
+
+文档：
+Usage:
+        connect <host:port>   connects to another node specified by host:port
+        auth                  prompts for username and password
+        pretty                toggles pretty print for the json format
+        use <db_name>         sets current database
+        format <format>       specifies the format of the server responses: json, csv, or column
+        precision <format>    specifies the format of the timestamp: rfc3339, h, m, s, ms, u or ns
+        consistency <level>   sets write consistency level: any, one, quorum, or all
+        history               displays command history
+        settings              outputs the current settings for the shell
+        clear                 clears settings such as database or retention policy.  run 'clear' for help
+        exit/quit/ctrl+d      quits the influx shell
+
+        show databases                  show database names
+        show series from xxx            show series information
+        show measurements               show measurement information
+        show tag keys from xxx          show tag key information
+        show field keys from xxx        show field key information
+
+        A full list of influxql commands can be found at:
+        https://docs.influxdata.com/influxdb/latest/query_language/spec/
 
 
 二，启动influxdb，并使用
@@ -79,6 +103,7 @@ slimit_clause : slimit相关（可选）
 soffset_clause : soffset相关（可选）
 
 select * from table where 条件只能加fileld
+
 
 
 =============================================================================================================
