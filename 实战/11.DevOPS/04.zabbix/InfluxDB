@@ -195,6 +195,11 @@ SELECT MIN(<field_key>)[,<tag_key(s)>] FROM <measurement_name> [WHERE <stuff>] [
 SELECT PERCENTILE(<field_key>, <N>)[,<tag_key(s)>] FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
 示例：
 > SELECT PERCENTILE(water_level,5),location FROM h2o_feet
+=============================================================================================================
+变换类函数
+函数速查：DERIVATIVE()    DIFFERENCE()    ELAPSED()    MOVING_AVERAGE()   NON_NEGATIVE_DERIVATIVE()   STDDEV()
+
+
 
 =============================================================================================================
 时序数据库介绍
