@@ -113,20 +113,88 @@ influxdb函数分为聚合函数，选择函数，转换函数，预测函数等
 转换函数: DERIVATIVE(), DIFFERENCE()等。
 预测函数：HOLT_WINTERS()。
 
+聚合函数：FILL(), INTEGRAL()，SPREAD()， STDDEV()，MEAN(), MEDIAN()等。
+1）count()函数
+返回一个（field）字段中的非空值的数量。
+语法：
+SELECT COUNT(<field_key>) FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+SELECT COUNT(water_level) FROM h2o_feet
 
+2）DISTINCT()函数
+返回一个字段（field）的唯一值。
+语法：
+SELECT DISTINCT(<field_key>) FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+SELECT DISTINCT("level description") FROM h2o_feet
 
+3）MEAN() 函数
+返回一个字段（field）中的值的算术平均值（平均值）。字段类型必须是长整型或float64。
+语法格式：
+SELECT MEAN(<field_key>) FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+SELECT MEAN(water_level) FROM h2o_feet
 
+4）MEDIAN()函数
+从单个字段（field）中的排序值返回中间值（中位数）。字段值的类型必须是长整型或float64格式。
+语法：
+SELECT MEDIAN(<field_key>) FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+SELECT MEDIAN(water_level) from h2o_feet
 
+5）SPREAD()函数
+返回字段的最小值和最大值之间的差值。数据的类型必须是长整型或float64。
+语法：
+SELECT SPREAD(<field_key>) FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+SELECT SPREAD(water_level) FROM h2o_feet
 
+6）SUM()函数
+返回一个字段中的所有值的和。字段的类型必须是长整型或float64。
+语法：
+SELECT SUM(<field_key>) FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+SELECT SUM(water_level) FROM h2o_feet
 
+=============================================================================================
+选择函数: SAMPLE(), PERCENTILE(), FIRST(), LAST(), TOP(), BOTTOM()等。
+1）TOP()函数
+作用：返回一个字段中最大的N个值，字段类型必须是长整型或float64类型。
+语法：
+SELECT TOP( <field_key>[,<tag_key(s)>],<N> )[,<tag_key(s)>|<field_key(s)>] [INTO_clause] FROM_clause [WHERE_clause] [GROUP_BY_clause] [ORDER_BY_clause] [LIMIT_clause] [OFFSET_clause] [SLIMIT_clause] [SOFFSET_clause]
+使用示例
+> SELECT TOP("water_level",3) FROM "h2o_feet"
 
+2）BOTTOM()函数
+作用：返回一个字段中最小的N个值。字段类型必须是长整型或float64类型。
+语法：
+SELECT BOTTOM(<field_key>[,<tag_keys>],<N>)[,<tag_keys>] FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+使用示例
+> SELECT BOTTOM(water_level,3) FROM h2o_feet
 
+3）FIRST()函数
+作用：返回一个字段中最老的取值。
+语法：
+SELECT FIRST(<field_key>)[,<tag_key(s)>] FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+这个语句返回了 在 location为santa_monica条件下，最旧的那个water_level字段的取值和时间。
 
+4）LAST()函数
+作用：返回一个字段中最新的取值。
+语法：
+SELECT LAST(<field_key>)[,<tag_key(s)>] FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
 
+5）MAX()函数
+作用：返回一个字段中的最大值。该字段类型必须是长整型，float64，或布尔类型。
+语法：
+SELECT MAX(<field_key>)[,<tag_key(s)>] FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+示例：
 
+6）MIN()函数
+作用：返回一个字段中的最小值。该字段类型必须是长整型，float64，或布尔类型。
+语法：
+SELECT MIN(<field_key>)[,<tag_key(s)>] FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
 
-
-
+7）PERCENTILE()函数
+作用：返回排序值排位为N的百分值。字段的类型必须是长整型或float64。
+百分值是介于100到0之间的整数或浮点数，包括100。
+语法：
+SELECT PERCENTILE(<field_key>, <N>)[,<tag_key(s)>] FROM <measurement_name> [WHERE <stuff>] [GROUP BY <stuff>]
+示例：
+> SELECT PERCENTILE(water_level,5),location FROM h2o_feet
 
 =============================================================================================================
 时序数据库介绍
