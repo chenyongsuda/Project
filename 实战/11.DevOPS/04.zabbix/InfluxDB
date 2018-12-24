@@ -45,6 +45,30 @@ regex_lit           = "/" { unicode_char } "/" .
 =~是正则匹配运算符，当左操作数符合右操作数的正则表达式时返回非false值（含义比较广泛）。
 具体你可以接收一下返回值，看看。
 
+SHOW DATABASES
+SHOW RETENTION POLICIES ON <database_name>
+SHOW SERIES [FROM <measurement_name> [WHERE <tag_key> [= ‘<tag_value>’ | =~ <regular_expression>]]]
+SHOW MEASUREMENTS [WITH MEASUREMENT <regular_expression>] [WHERE <tag_key> [= ‘<tag_value>’ | =~ <regular_expression>]]
+SHOW TAG KEYS [FROM <measurement_name>]
+SHOW TAG VALUES [FROM <measurement_name>] [WITH KEY [ = “<tag_key>” | IN ("<tag_key1>","<tag_key2")]] [WHERE <tag_key> [= ‘<tag_value>’ | =~ <regular_expression>]]
+SHOW FIELD KEYS [FROM <measurement_name>]
+SHOW RETENTION POLICIES on_clause
+SHOW SHARDS
+SHOW SHARD GROUPS
+例子
+show retention policies on collectd
+show series
+show series where dest=‘10.2.1.40:80’
+show measurements
+show tag keys
+show tag values
+show tag values with key = host
+show tag values with key = dest
+show tag values with key in (dest, host) where dest =~ /./
+show field keys
+show grants
+show queries
+
 二，启动influxdb，并使用
 ## 本人并没有开启web界面，所以这里讲一下命令行的操作。就类似与常用数据库。
 $ systemctl start influxdb （启动influxdb）
