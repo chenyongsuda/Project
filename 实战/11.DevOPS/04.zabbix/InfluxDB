@@ -34,10 +34,16 @@ Usage:
         show measurements               show measurement information
         show tag keys from xxx          show tag key information
         show field keys from xxx        show field key information
+        show tag values with key='xxx'
 
         A full list of influxql commands can be found at:
         https://docs.influxdata.com/influxdb/latest/query_language/spec/
 
+支持正则表达式
+Regular Expressions
+regex_lit           = "/" { unicode_char } "/" .
+=~是正则匹配运算符，当左操作数符合右操作数的正则表达式时返回非false值（含义比较广泛）。
+具体你可以接收一下返回值，看看。
 
 二，启动influxdb，并使用
 ## 本人并没有开启web界面，所以这里讲一下命令行的操作。就类似与常用数据库。
