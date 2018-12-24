@@ -1,1 +1,84 @@
 打造性能监控工具
+TeleGraf由Input Output Aggregator Processor 组成
+参考页面: https://docs.influxdata.com/telegraf/v1.9/plugins/inputs/
+
+Input由很多已经编写好的的Input组成可以直接使用.
+
+
+安装启动项：
+配置文件位置（默认配置）：/etc/telegraf/telegraf.conf
+
+修改telegraf配置文件添加监控项
+vim /etc/telegraf/telegraf.conf
+
+#修改监控数据输出位置，本次测试环境本地安装有influxdb， 可以保持默认：urls = ["http://localhost:8086"]
+58 [[outputs.influxdb]]
+59   ## The full HTTP or UDP endpoint URL for your InfluxDB instance.
+60   ## Multiple urls can be specified as part of the same cluster,
+61   ## this means that only ONE of the urls will be written to each interval.
+62   # urls = ["udp://localhost:8089"] # UDP endpoint example
+63   urls = ["http://172.16.7.12:8086"] # required
+64   ## The target database for metrics (telegraf will create it if not exists).
+
+2：添加监控项：
+1、添加docker 监控项
+参考地址：
+https://github.com/influxdata/telegraf
+[[inputs.docker]]
+  #Docker Endpoint
+  #To use TCP, set endpoint = "tcp://[ip]:[port]"
+  #To use environment variables (ie, docker-machine), set endpoint = "ENV"
+  endpoint = "unix:///var/run/docker.sock"
+  #Only collect metrics for these containers, collect all if empty
+  #container_names = []
+
+2、zookeeper 监控添加
+[[inputs.zookeeper]]
+servers = ["172.16.7.12:2181"]
+
+3、mesos监控项
+[[inputs.mesos]]
+  # Timeout, in ms.
+  timeout = 100
+  # A list of Mesos masters, default value is localhost:5050.
+  masters = ["localhost:5050"]
+  # Metrics groups to be collected, by default, all enabled.
+  master_collections = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
+
+
+以上新加3个监控项，可以通过命令测试配置是否成功。
+telegraf  -config /etc/telegraf/telegraf.conf -input-filter mesos -test
+telegraf  -config /etc/telegraf/telegraf.conf -input-filter docker -test
+telegraf  -config /etc/telegraf/telegraf.conf -input-filter zookeeper  -test
+
+3：修改telegraf  服务启动用户，默认用户无法通过sock 获取doker 数据。
+
+[iyunv@ctn-7-11 grafana]# vi /usr/lib/systemd/system/telegraf.service
+[Unit]
+Description=The plugin-driven server agent for reporting metrics into InfluxDB
+Documentation=https://github.com/influxdata/telegraf
+After=network.target
+
+[Service]
+EnvironmentFile=-/etc/default/telegraf
+#User=telegraf
+#本次测试环境直接改为root
+User=root
+ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d 。。。。。。。
+
+
+4：重启服务，使配置生效
+systemctl daemon-reload
+systemctl restart telegraf
+ps -ef|grep telegraf
+
+1、验证
+root      7244  4292  0 17:44 pts/0    00:00:00 grep --color=auto telegraf
+telegraf (默认启动用户)31793     1  0 15:48 ?        00:00:37 /usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d
+
+
+#启动脚本修改后
+root      3283     1  2 17:24 ?        00:00:00 /usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d
+root      3402  8804  0 17:24 pts/0    00:00:00 grep --color=auto telegraf
+
+
