@@ -1,0 +1,196 @@
+1.操作系统基础监控指标配置标准
+基础监控使用通用的全局配置文件telegraf.conf，以下只贴上采集器input部分代码
+
+telegraf -config /etc/telegraf/telegraf.d/telegraf.conf -input-filter http_response -test
+
+
+# Read metrics about cpu usage
+[[inputs.cpu]]
+  interval = “60s”
+  percpu = true
+  totalcpu = true
+  fielddrop = ["time*"]
+# Read metrics about disk usage by mount point
+[[inputs.disk]]
+  interval = “10m”
+  # mount_points = [“/”]
+  ignore_fs = [“tmpfs”, “devtmpfs”]
+# Read metrics about disk IO by device
+[[inputs.diskio]]
+  interval = “60s”
+# Get kernel statistics from /proc/stat
+[[inputs.kernel]]
+  interval = “10m”
+# Read metrics about memory usage
+[[inputs.mem]]
+  interval = “10m”
+# Get the number of processes and group them by status
+[[inputs.processes]]
+  interval = “10m”
+  fielddrop = [“wait”,”idle”,”unknown”]
+# Read metrics about swap memory usage
+[[inputs.swap]]
+  interval = “1h”
+  fieldpass = [“used_percent”]
+# Read metrics about system load & uptime
+[[inputs.system]]
+  interval = “2m”
+# # Read metrics about network interface usage
+ [[inputs.net]]
+  interval = “60s”
+  fieldpass = [“packets_*”,”bytes_*”,”drop_*”,”err_*”]
+# # Read TCP metrics such as established, time wait and sockets counts.
+ [[inputs.netstat]]
+ interval = “5m”
+ fielddrop = [“tcp_none”,”tcp_closing”,”tcp_close*”]
+# # Read ping metrics
+[[inputs.ping]]
+ urls = [“www.qq.com”]
+ count = 1
+ ping_interval = 0.0
+ timeout = 0.0
+ interface = “eth0”
+
+2.docker容器监控配置标准
+对于基础监控之外的指标监控，需要使用新的配置文件，指定采集器的采集标准和配置，以及输出数据库（可选非必要），下同。
+[[inputs.docker]]
+   interval = “5m”
+   endpoint = “unix:///var/run/docker.sock”
+   container_names = []
+   timeout = “10s”
+   perdevice = true
+   total = false
+3.mysql监控配置标准
+# Read metrics from one or many mysql servers
+[root@10-19-6-138 telegraf.d]# cat telegraf_mysql.conf 
+[[inputs.mysql]]
+  interval = "5m" 采集频率
+  servers = ["root:kgzg789@tcp(127.0.0.1:3306)/?tls=false"] 采集配置
+  perf_events_statements_digest_text_limit  = 120
+  perf_events_statements_limit              = 250
+  perf_events_statements_time_limit         = 86400
+  table_schema_databases                    = [""]
+  gather_table_schema                       = false
+  
+  gather_process_list                       = true
+  
+  gather_info_schema_auto_inc               = true
+  
+  gather_slave_status                       = true
+  gather_binary_logs                        = false
+  gather_table_io_waits                     = false
+  gather_table_lock_waits                   = false
+  gather_index_io_waits                     = false
+  gather_event_waits                        = false
+  gather_file_events_stats                  = false
+  interval_slow                             = "30m"
+
+
+4.haproxy配置标准
+#vim /etc/telegraf/telegraf.d/mysql.conf
+
+[inputs.haproxy]
+        interval = “60s”                   #input采集频率
+        servers = [“/var/run/haproxy.sock”]             #input参数配置
+
+5.nginx配置标准
+[[inputs.nginx]]
+  interval = “60s”
+  urls = [“http://localhost/server_status”]   
+
+6.kafka配置标准
+[[inputs.kafka_consumer]]
+  topics = [“telegraf”]
+  zookeeper_peers = [“localhost:2181”]
+  consumer_group = “telegraf_metrics_consumers”
+  metric_buffer = 100000
+  offset = “oldest”
+  data_format = “influx”
+
+
+7.zookeeper配置标准
+[[inputs.zookeeper]]
+   servers = [“:2181”]
+
+8.ovirt配置标准
+9.redis配置标准
+# # Read metrics from one or many redis servers
+ [[inputs.redis]]
+   interval = “5m”
+   unix:///var/run/redis.sock
+   servers = [“tcp://localhost:6379”]
+
+10.http网站监控
+[[inputs.http_response]]
+
+      interval = “1m”
+      address = “http://abc.com”
+      response_timeout = “15s”
+      method = “GET”
+      follow_redirects = true
+11.Ceph监控
+[[inputs.ceph]]
+  interval = ‘1m’
+  ceph_binary = “/usr/bin/ceph”
+  socket_dir = “/var/run/ceph”
+  mon_prefix = “ceph-mon”
+  osd_prefix = “ceph-osd”
+  socket_suffix = “asok”
+  ceph_user = “client.admin”
+  ceph_config = “/etc/ceph/ceph.conf”
+  gather_admin_socket_stats = true
+  gather_cluster_stats = false
+12.ping监控
+单独使用场景：主要作为WAN链路监控，URL监控的监测手段
+[[inputs.ping]]
+     urls = [“www.qq.com”]
+     count = 1
+     ping_interval = 0.0
+     timeout = 0.0
+     interface = “eth0”
+
+13.tcp端口监控
+使用场景：主要作为本机端口应用监控
+# # Generic TCP listener
+[[inputs.tcp_listener]]
+     service_address = “:8094”
+     allowed_pending_messages = 10000
+     max_tcp_connections = 250
+     data_format = “influx”
+14.端口流量监控
+使用场景：主要作为入口或者外出服务器或者防火墙的端口流量监控
+15.IPMI监控
+使用场景：主要作为物理机器基础电力设施的指标监控
+# #IPMI1# # 
+[[inputs.ipmi_sensor]]
+  servers = [“root:password@lanplus(10.8.81.15)”]
+
+16.http-json格式监控
+使用场景：在特殊应用无任何匹配模板时，可使用json格式化数据后进行指标收集；
+# [[inputs.httpjson]]
+   name = “webserver_stats”
+   servers = [
+     “http://localhost:9999/stats/”,
+     “http://localhost:9998/stats/”,
+                   ]
+   method = “GET”
+   tag_keys = [
+  “my_tag_1”,
+   “my_tag_2”
+                 ]
+
+
+
+17.自定义sh脚本监控
+使用场景：在以上都没有可用的监控采集配置外，可以使用自定义脚本格式收集指标；
+[[inputs.exec]]
+    commands = [“/tmp/test.sh”,]
+    timeout = “15s”
+    data_format = “json”
+    name_suffix = “_mycollector”
+18.SQLserver监控
+使用场景：用于监控SQLserver数据库性能
+[[inputs.sqlserver]]
+   servers = [
+    “Server=192.168.1.30;Port=1433;User Id=telegraf;Password=T$l$gr@f69*;app name=dbname;log=1;”
+    ]
