@@ -1,2 +1,59 @@
 Granfa 阿里对接示例
 https://help.aliyun.com/document_detail/60952.html
+
+
+Template
+=======================================================================================
+Variable 
+  name: 变量名，template的名字，比如我这里取名为group，到时候要使用这个变量名就用$group来调用。 
+  type: 变量类型，变量类型有多种，其中query表示这个变量是一个查询语句，type也可以是datasource，datasource就表示该变量代表一个数据源，如果是datasource你可以用该变量修改整个DashBoard的数据源，变量类型还可以是时间间隔Interval等等。这里我们选择query。 
+  label: 是对应下拉框的名称，默认就是变了名，选择默认即可。 
+  hide: 有三个值，分别为空，label，variable。选择label，表示不显示下拉框的名字。选择variable表示隐藏该变量，该变量不会在DashBoard上方显示出来。默认选择为空，这里也选默认。
+
+Query options 
+  Data source: 数据源，不用多说。 
+  Refresh: 何时去更新变量的值，变量的值是通过查询数据源获取到的，但是数据源本身也会发生变化，所以要时不时的去更新变量的值，这样数据源的改变才会在变量对应的下拉框中显示出来。Refresh有三个值可以选择，Never：永不更新。On Dashboard Load：在DashBoard加载时更新。On Time Range Change：这个还没弄明白怎么用。。此处，选择On Dashboard Load，当数据源发生更新是，刷新一下当前DashBoard，变量的值也会跟着发生更新。 
+  Query：查询表达式，不同的数据源查询表达式都不同（这些可以到官网上查询），这里由于是要查询zabbix的groups信息，所以表达式为*。 
+  Regex：正则表达式，用来对抓取到的数据进行过滤，这里默认不过滤。 
+  Sort：排序，对下拉框中的变量值做排序，排序的方式挺多的，默认是disable，表示查询结果是怎样下拉框就怎样显示。此处选disable。
+--------------------- 
+
+Selection Options 
+  Multi-value：启用这个功能，变量的值就可以选择多个，具体表现在变量对应的下拉框中可以选多个值的组合。 
+  Include All option：启用这个功能，变量下拉框中就多了一个all选项。 
+  Custom all value：启用Include All option这个功能，才会出现Custom all value这个输入框，表示给all这个选项自定义一个值，all这个选项默认是所有值的组合，你也可以自定义，比如我自定义all为cpu五分钟平均负载，则选择all就代表cpu五分钟平均负载。 
+  虽然选择组合值可以在一个panel里面查看多种监控数据，但是由于不同监控数据的数值大小格式都可能不一样，在一个图形里面格式很难兼容，这样就会出现问题，所以此处建议默认都不选。
+--------------------- 
+Value groups/tags 
+组合标签，可以选择多个值组合在一起设置一个标签，这个功能还没弄明白，按照官网上的操作没效果，暂且忽略吧，反正没多大影响。
+
+Preview of values (shows max 20) 
+前面都设置好之后，下方会显示前二十，由于我的groups只有一个zabbix agents，所以只显示了一个。
+
+点击add，group这个template就创建好了。 
+按照这个方式再创建另外三个template（host，application，item）。另外三个的创建和group除了name，query不一样之外其它都一样。
+
+变量host
+Name:host  Query:$group.*
+变量application
+Name:application     Query:$group.$host.*
+变量item
+Name:item    Query:$group.$host.$application.*
+创建完后有红框中的四个就可以了，注意这个先后顺序，是一级一级的，顺序可以在右侧调整。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
