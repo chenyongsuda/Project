@@ -34,7 +34,7 @@ Usage:
         show measurements               show measurement information
         show tag keys from xxx          show tag key information
         show field keys from xxx        show field key information
-        show tag values with key='xxx'
+        SHOW TAG VALUES WITH key = location
 
         A full list of influxql commands can be found at:
         https://docs.influxdata.com/influxdb/latest/query_language/spec/
