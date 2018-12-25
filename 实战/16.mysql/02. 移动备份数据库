@@ -1,0 +1,17 @@
+停掉Mysql
+systemctl stop mariadb.servic
+
+编辑位置
+vi /etc/my.cnf
+
+修改位置
+源
+datadir=/var/lib/mysql
+修改为
+datadir=/appl/mysql
+
+移动
+mv /var/lib/mysql /appl/
+
+移动好后重启
+systemctl start mariadb.servic
