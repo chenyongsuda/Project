@@ -1,0 +1,138 @@
+canal入门
+　　数据抽取简单的来说，就是将一个表的数据提取到另一个表中。有很多的ETL工具可以帮助我们来进行数据的抽取和转换，ETL工具能进行一次性或者定时作业抽取数据，不过canal作为阿里巴巴提供的开源的数据抽取项目，能够做到实时抽取，原理就是伪装成mysql从节点，读取mysql的binlog，生成消息，客户端订阅这些数据变更消息，处理并存储。下面我们来一起搭建一下canal服务
+
+配置mysql
+　　mysql默认没有开启binlog，修改mysql的my.cnf文件，添加如下配置，注意binlog-format必须为row，因为binlog如果为
+STATEMENT或者MIXED,则binlog中记录的是sql语句，不是具体的数据行，canal就无法解析到具体的数据变更了
+
+配置mysql支持binlog
+log-bin=E:/mysql5.5/bin_log/mysql-bin.log 
+binlog-format=ROW
+server-id=123
+
+Canal下载地址
+https://github.com/alibaba/canal/releases
+
+配置canal用户 
+用root用户登录mysql:mysql -uroot -proot 
+创建“canal”用户：CREATE USER canal IDENTIFIED BY 'canal'; 
+为“canal”用户赋予相应权限：GRANT SELECT, REPLICATION SLAVE, REPLICATION CLIENT ON . TO 'canal'@'%'; 
+刷新权限：FLUSH PRIVILEGES;
+
+修改canal配置
+　　下载并安装canal，在conf目录可以看到canal.properties文件，修改该文件为
+
+复制代码
+#设置要监听的mysql服务器的地址和端口
+canal.instance.master.address = 127.0.0.1:3306
+#设置一个可访问mysql的用户名和密码并具有相应的权限，本示例用户名、密码都为canal
+canal.instance.dbUsername = canal
+canal.instance.dbPassword = canal
+#连接的数据库
+canal.instance.defaultDatabaseName =test
+#订阅实例中所有的数据库和表
+canal.instance.filter.regex = .*\\..* 
+#连接canal的端口
+canal.port= 11111
+#监听到的数据变更发送的队列
+canal.destinations= example
+
+启动 bin/startup.sh 或bin/startup.bat
+
+=================================================================================
+客户端代码
+添加canal依赖
+<dependency>
+      <groupId>com.alibaba.otter</groupId>
+      <artifactId>canal.client</artifactId>
+      <version>1.0.21</version>
+</dependency>
+
+package com.cw.demo.canal;
+import com.alibaba.otter.canal.client.CanalConnector;
+import com.alibaba.otter.canal.client.CanalConnectors;
+import com.alibaba.otter.canal.common.utils.AddressUtils;
+import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.alibaba.otter.canal.protocol.Message;
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by chenwei01 on 2017/4/9.
+ */
+public class CanalClient {
+    public static void main(String[] args) {
+        while (true) {
+            //连接canal
+            CanalConnector connector = CanalConnectors.newSingleConnector(new InetSocketAddress(AddressUtils.getHostIp(), 11111), "example", "canal", "canal");
+            connector.connect();
+            //订阅 监控的 数据库.表
+            connector.subscribe("demo_db.user_tab");
+            //一次取5条
+            Message msg = connector.getWithoutAck(5);
+
+            long batchId = msg.getId();
+            int size = msg.getEntries().size();
+            if (batchId < 0 || size == 0) {
+                System.out.println("没有消息，休眠5秒");
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                //
+                CanalEntry.RowChange row = null;
+                for (CanalEntry.Entry entry : msg.getEntries()) {
+                    try {
+                        row = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
+                        List<CanalEntry.RowData> rowDatasList = row.getRowDatasList();
+                        for (CanalEntry.RowData rowdata : rowDatasList) {
+                            List<CanalEntry.Column> afterColumnsList = rowdata.getAfterColumnsList();
+                            Map<String, Object> dataMap = transforListToMap(afterColumnsList);
+                            if (row.getEventType() == CanalEntry.EventType.INSERT) {
+                                //具体业务操作
+                                System.out.println(dataMap);
+                            } else if (row.getEventType() == CanalEntry.EventType.UPDATE) {
+                                //具体业务操作
+                                System.out.println(dataMap);
+                            } else if (row.getEventType() == CanalEntry.EventType.DELETE) {
+                                List<CanalEntry.Column> beforeColumnsList = rowdata.getBeforeColumnsList();
+                                for (CanalEntry.Column column : beforeColumnsList) {
+                                    if ("id".equals(column.getName())) {
+                                        //具体业务操作
+                                        System.out.println("删除的id：" + column.getValue());
+                                    }
+                                }
+                            } else {
+                                System.out.println("其他操作类型不做处理");
+                            }
+
+                        }
+
+                    } catch (InvalidProtocolBufferException e) {
+                        e.printStackTrace();
+                    }
+                }
+                //确认消息
+                connector.ack(batchId);
+            }
+
+
+        }
+    }
+
+    public static Map<String, Object> transforListToMap(List<CanalEntry.Column> afterColumnsList) {
+        Map map = new HashMap();
+        if (afterColumnsList != null && afterColumnsList.size() > 0) {
+            for (CanalEntry.Column column : afterColumnsList) {
+                map.put(column.getName(), column.getValue());
+            }
+        }
+        return map;
+    }
+}
