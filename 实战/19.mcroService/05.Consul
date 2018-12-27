@@ -42,6 +42,42 @@ Successfully joined cluster bycontacting 1 nodes.
 在节点node0上添加node3
 [ceph@node0 consul]$ consul join192.168.192.123
 ==============================================================================================================
+别的集中集群参数组合
+先配置一个单机节点启动,切换用户为root
+[root@s1 vagrant]# consul agent -server -bootstrap-expect 1 -data-dir /etc/consul.d -node=node1 -bind=172.20.20.20 -ui -client 0.0.0.0
+
+集群
+搭建服务集群
+登录虚机s1，切换用户为root，启动consul 设置节点数为3
+[root@s1 vagrant]# consul agent -server -bootstrap-expect 3 -data-dir /etc/consul.d -node=node1 -bind=172.20.20.20 -ui -client 0.0.0.0
+登录虚机s2，切换用户为root，启动consul 设置节点数为3 并加入到s1中,注意 node名称不能重复
+
+[root@s2 vagrant]# consul agent -server -bootstrap-expect 3 -data-dir /etc/consul.d -node=node2 -bind=172.20.20.21 -ui -client 0.0.0.0 -join 172.20.20.20
+登录虚机s3，重复在s2中的操作
+
+[root@s3 vagrant]# consul agent -server -bootstrap-expect 3 -data-dir /etc/consul.d -node=node3 -bind=172.20.20.22 -ui -client 0.0.0.0 -join 172.20.20.20
+
+
+集群搭建其他例子
+服务器1，IP 192.168.1.100
+consul agent -bootstrap-expect 2 -server -data-dir /data/consul -node=swoft01 -bind=0.0.0.0 -client=0.0.0.0 -config-dir /etc/consul.d -enable-script-checks=true -datacenter=sunny -client=0.0.0.0
+ 
+上面这个命令是以服务端模式启动一个代理，进群有两个扩展机器，设置集群持久化数据存放在/data/consul0下面，节点名称是swoft01，绑定0.0.0.0地址，服务配置文件存放在/etc/consul.d，开启检查心跳，数据中心的名称是dc1，可访问的客户端地址是0.0.0.0
+服务器2，IP 192.168.1.110
+consul agent -server -data-dir /data/consul -node=swoft02 -bind=0.0.0.0 -client=0.0.0.0 -config-dir /etc/consul.d -enable-script-checks=true -datacenter=sunny -join 192.168.1.100
+ 
+服务器3，IP 192.168.1.120
+consul agent -server -data-dir /data/consul -node=swoft03 -bind=0.0.0.0 -client=0.0.0.0 -config-dir /etc/consul.d -enable-script-checks=true -datacenter=sunny -join 192.168.1.100
+
+以上服务器2和服务3使用 -join 加入集群，并且使用同一个数据名称sunny
+4、Client配置
+服务器4，IP 192.168.1.130
+consul agent -ui -data-dir /data/consul -node=swoft04 -bind=0.0.0.0 -config-dir /etc/consul.d -enable-script-checks=true -datacenter=sunny -ui -client=0.0.0.0 -join 192.168.1.100
+客户端如果不使用-server就是客户端模式运行，其他参数同上，服务端和客户端都启动了之后可以在浏览器输入 http://192.168.1.130:8500 来查看信息
+
+
+
+==============================================================================================================
 配置文件的解析
 
 Agent有各种各样的配置选项，这些配置选项可以通过命令行参数的方式设定，也可用通过配置文件的方式设定——所有的配置选项都是可选的，当然也是有默认值的。
