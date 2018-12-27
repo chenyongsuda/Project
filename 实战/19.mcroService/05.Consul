@@ -1,7 +1,7 @@
 安装Consul
 下载https://releases.hashicorp.com/consul/1.4.0/consul_1.4.0_linux_amd64.zip
 #unzip consul_1.4.0_linux_amd64.zip
-#mv consul /usr/local/bin/
+#mv consul /usr/bin/
 完成
 
 
