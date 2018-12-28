@@ -218,15 +218,135 @@ Reload配置 并不能reload所有配置选项，下面的选项可以重载：
 【Consul】Consul实践指导-健康检查（Checks）
 
 
+==========================================================================================================
+【Consul】consul HTTP API及实践
+服务增减测试，API和reload优先级测试
+1、手动增减conf.d/*.json，然后操作consul reload，会增减对应的服务
+2、通过HTTP API增减服务后，执行consul reload，会还原成conf.d/*.json的服务配置，之前HTTP API的增减服务操作会被覆盖，
+也就是API会导致json文件和内存中的服务信息不一致。（尚未发现consul提供将当前内存中的服务配置信息dump出.json文件的功能）
 
+实践结论1：consul reload会以conf.d/*.json为准去同步当前consul内存中当前机器注册的服务。
+使用consul建议使用conf.d/*.json文件的方式增减服务，而非API，这样有落地的json文件多一份保障。
 
+实践结论2：
+Node名称唯一，通过修改json然后consul reload方式增加节点时会取当前机器的（内网）IP，具体如何区别的内外外网未知。
+通过API注册服务时，json参数Node和Address必填，会使用Address覆盖掉Node当前的Address
 
+实践结论3：
+consul reload不会reload配置文件consul.json，只reload conf.d/*.json
 
+实践结论4：
+若干agent server会保存同样的数据到设置的data目录，agent client也会保存一部分数据至data目录，重启consul agent(server或client)的时候，
+会重新加载data目录的信息，猜测client存放的是有版本号的服务信息，并且重启时会从server端同步最新的数据。
 
+==============================================================================================================================
+【Consul】consul HTTP API  KV篇
+0、查看当前集群所有服务
+curl -s 127.0.0.1:8500/v1/catalog/services | python -m json.tool
 
+0.5、查看本机配置
+curl -s 127.0.0.1:8500/v1/agent/self | python -m json.tool
 
+1、查看服务状态
+curl -s http://127.0.0.1:8500/v1/catalog/service/prometheus-pushgateway | python -m json.tool
 
+1.5、查看本机服务
+curl -s 127.0.0.1:8500/v1/agent/services | python -m json.tool
 
+2、查看不健康的服务
+curl -s http://localhost:8500/v1/health/state/critical | python -m json.tool
 
+3、添加KV（值为test，url末尾的斜杠会算作key的一部分）
+curl -X PUT-d 'test' http://localhost:8500/v1/kv/key1
+curl -X PUT-d 'test' http://localhost:8500/v1/kv/key1/
 
+4、查看当前所有的KV
+curl -s http://localhost:8500/v1/kv/?recurse | python -m json.tool
 
+5、查看单个KV
+curl -s http://localhost:8500/v1/kv/petanne/key1 | python -m json.tool
+
+6、查看指定路径下的KV（url末尾的斜杠会算作key的一部分，可以理解为以petanne开头的所有key）
+curl-s http://localhost:8500/v1/kv/petanne?recurse | python -m json.tool
+curl-s http://localhost:8500/v1/kv/petanne/?recurse | python -m json.tool
+
+7、删除单个KV
+curl -X DELETE http://localhost:8500/v1/kv/petanne
+
+8、删除指定路径下的KV（末尾斜杠同查看）
+curl -X DELETE http://localhost:8500/v1/kv/petanne?recurse
+
+9、修改单个KV
+curl -X PUT -d 'newval' http://localhost:8500/v1/kv/petanne/key1
+curl -X PUT -d 'newval' http://localhost:8500/v1/kv/petanne/key1?cas=5820778
+
+(cas == ModifyIndex 才能修改成功，防止多人同时修改时冲突)
+
+10、查看KV（查看比指定index大的ModifyIndex的该key的值，最多等待5秒，否则返回当前最新值）
+curl "http://localhost:8500/v1/kv/petanne/key2?index=5820781&wait=5s"
+
+agent篇
+agent endpoints用来和本地agent进行交互，一般用来服务注册和检查注册，支持以下接口
+
+/v1/agent/checks : 返回本地agent注册的所有检查(包括配置文件和HTTP接口)
+/v1/agent/services : 返回本地agent注册的所有 服务
+/v1/agent/members : 返回agent在集群的gossip pool中看到的成员
+/v1/agent/self : 返回本地agent的配置和成员信息
+/v1/agent/join/<address> : 触发本地agent加入node
+/v1/agent/force-leave/<node>>: 强制删除node
+/v1/agent/check/register : 在本地agent增加一个检查项，使用PUT方法传输一个json格式的数据
+/v1/agent/check/deregister/<checkID> : 注销一个本地agent的检查项
+/v1/agent/check/pass/<checkID> : 设置一个本地检查项的状态为passing
+/v1/agent/check/warn/<checkID> : 设置一个本地检查项的状态为warning
+/v1/agent/check/fail/<checkID> : 设置一个本地检查项的状态为critical
+/v1/agent/service/register : 在本地agent增加一个新的服务项，使用PUT方法传输一个json格式的数据
+/v1/agent/service/deregister/<serviceID> : 注销一个本地agent的服务项
+catalog篇
+catalog endpoints用来注册/注销nodes、services、checks
+
+/v1/catalog/register : Registers a new node, service, or check
+/v1/catalog/deregister : Deregisters a node, service, or check
+/v1/catalog/datacenters : Lists known datacenters
+/v1/catalog/nodes : Lists nodes in a given DC
+/v1/catalog/services : Lists services in a given DC
+/v1/catalog/service/<service> : Lists the nodes in a given service
+/v1/catalog/node/<node> : Lists the services provided by a node
+
+health篇
+health endpoints用来查询健康状况相关信息，该功能从catalog中单独分离出来
+
+/v1/healt/node/<node>: 返回node所定义的检查，可用参数?dc=
+/v1/health/checks/<service>: 返回和服务相关联的检查，可用参数?dc=
+/v1/health/service/<service>: 返回给定datacenter中给定node中service
+/v1/health/state/<state>: 返回给定datacenter中指定状态的服务，state可以是"any", "unknown", "passing", "warning", or "critical"，可用参数?dc=
+
+session篇
+session endpoints用来create、update、destory、query sessions
+
+/v1/session/create: Creates a new session
+/v1/session/destroy/<session>: Destroys a given session
+/v1/session/info/<session>: Queries a given session
+/v1/session/node/<node>: Lists sessions belonging to a node
+/v1/session/list: Lists all the active sessions
+
+acl篇
+acl endpoints用来create、update、destory、query acl
+
+/v1/acl/create: Creates a new token with policy
+/v1/acl/update: Update the policy of a token
+/v1/acl/destroy/<id>: Destroys a given token
+/v1/acl/info/<id>: Queries the policy of a given token
+/v1/acl/clone/<id>: Creates a new token by cloning an existing token
+/v1/acl/list: Lists all the active tokens
+
+event篇
+event endpoints用来fire新的events、查询已有的events
+
+/v1/event/fire/<name>: 触发一个新的event，用户event需要name和其他可选的参数，使用PUT方法
+/v1/event/list: 返回agent知道的events
+
+status篇
+status endpoints用来或者consul 集群的信息
+
+/v1/status/leader : 返回当前集群的Raft leader
+/v1/status/peers : 返回当前集群中同事
