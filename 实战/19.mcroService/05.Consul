@@ -250,6 +250,33 @@ curl -s 127.0.0.1:8500/v1/agent/self | python -m json.tool
 1、查看服务状态
 curl -s http://127.0.0.1:8500/v1/catalog/service/prometheus-pushgateway | python -m json.tool
 
+注册个服务
+使用HTTP API 注册个服务，使用[接口API](https://www.consul.io/api/agent/service.html API)调用
+
+调用 http://consul:8500/v1/agent/service/register PUT 注册一个服务。request body:
+
+{
+  "ID": "userServiceId", //服务id
+  "Name": "userService", //服务名
+  "Tags": [              //服务的tag，自定义，可以根据这个tag来区分同一个服务名的服务
+    "primary",
+    "v1"
+  ],
+  "Address": "127.0.0.1",//服务注册到consul的IP，服务发现，发现的就是这个IP
+  "Port": 8000,          //服务注册consul的PORT，发现的就是这个PORT
+  "EnableTagOverride": false,
+  "Check": {             //健康检查部分
+    "DeregisterCriticalServiceAfter": "90m",
+    "HTTP": "http://www.baidu.com", //指定健康检查的URL，调用后只要返回20X，consul都认为是健康的
+    "Interval": "10s"   //健康检查间隔时间，每隔10s，调用一次上面的URL
+  }
+}
+
+发现个服务
+刚刚注册了名为userService的服务，我们现在发现（查询）下这个服务
+curl http://172.17.0.4:8500/v1/catalog/service/userService
+
+
 1.5、查看本机服务
 curl -s 127.0.0.1:8500/v1/agent/services | python -m json.tool
 
