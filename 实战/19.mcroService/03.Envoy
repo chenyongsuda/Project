@@ -1,1 +1,30 @@
 http://www.servicemesher.com/envoy/intro/what_is_envoy.html
+本文介绍Envoy的一些基本概念以及实践操作，以期通过本文的介绍让读者可以了解到Envoy的原理，帮助读者理解Istio的Data Panel层实现。
+写作本文的初衷是源于近期项目中需要做的微服务平台，平台需要针对微服务做控制。在技术选型的过程中比较了Envoy、Istio的实现，
+最终决定以Envoy来完成特定的业务需求。在使用Envoy的过程中，由于文档资料较少，实践中遇到了一些困难，故将实践中的一些理解和过程记录下来，
+方便大家查阅，减少弯路。
+
+我们选择 nginx 是因为它轻巧，经过大量生产环境测试，开源，相对来说易于扩展，并且拥有蓬勃发展的用户群体。然而我们必须做很多额外的工作才能在 nginx 之上
+构建一个全功能的流量管理解决方案。
+服务发现，统计管理和更细粒度的负载均衡是现代基础架构的关键特性。 我们在 nginx 之上来实现这些功能，虽然已经花了很长时间，但仍有很多工作要做。
+相比之下，Envoy 有很多非常有用功能（如 gRPC，tracing 等等），同时提供类似（或更好）的性能，稳定性和社区。
+
+虽然目前的Service Mesh已经进入了以Istio、Conduit为代表的第二代，由Data Panel、Control Panel两部分组成。但是以Istio为例，
+它也没有自己去实现Data Panel，而是在现有的Data Panel实现上做了Control Panel来达成目标。
+所以说要掌握Istio，或者说要理解Service Mesh，首先需要掌握Data Panel的实现，而Envoy就是其中的一种实现方案。关于Envoy是什么，
+可以做什么，有什么优点，可以到Envoy的官网上查看详细信息，本文注重于Envoy的一些实践操作，重点关心怎么利用Envoy实现一些需求。
+
+Envoy术语
+要深入理解Envoy，首先需要先了解一下Envoy中的一些术语。
+
+Host：能够进行网络通信的实体（如服务器上的应用程序）。
+Downstream：下游主机连接到Envoy，发送请求并接收响应。
+Upstream：上游主机接收来自Envoy连接和请求并返回响应。
+Listener：可以被下游客户端连接的命名网络（如端口、unix套接字）。
+Cluster：Envoy连接到的一组逻辑上相似的上游主机。
+Mesh：以提供一致的网络拓扑的一组主机。
+Runtime configuration：与Envoy一起部署的外置实时配置系统。
+
+
+
+
