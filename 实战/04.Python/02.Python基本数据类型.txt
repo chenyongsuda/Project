@@ -164,6 +164,44 @@ max(),min()求序列中的最大最小元素
 >>> min('abcd')
 'a'
 
+============================================================================================
+tuple 比较大小
+print((6,8) > (8,8))  先比第一个再比第二个
+
+
+
+=============================================================================================
+Python for循环可以遍历任何序列的项目，如一个列表或者一个字符串。
+
+语法：
+
+for循环的语法格式如下：
+
+for iterating_var in sequence:
+   statements(s)
+for letter in 'Python':     # 第一个实例
+   print '当前字母 :', letter
+ 
+fruits = ['banana', 'apple',  'mango']
+for fruit in fruits:        # 第二个实例
+   print '当前水果 :', fruit
+ 
+print "Good bye!"
+
+
+通过序列索引迭代
+另外一种执行循环的遍历方式是通过索引，如下实例：
+
+实例
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+ 
+fruits = ['banana', 'apple',  'mango']
+for index in range(len(fruits)):
+   print '当前水果 :', fruits[index]
+ 
+print "Good bye!"
+
 
 
 
