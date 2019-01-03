@@ -543,6 +543,21 @@ print d.iterkeys()
 print d.itervalues()
 
 
+1、检查是否存在于键中，示例代码1：
+
+spam = {'color': 'red', 'age': 42}#定义一个字典
+if 'color' in spam.keys():#使用in判断'color'是否存在于spam的键中
+    print('True')
+else:
+    print('False')
+
+2、检查是否存在于值中，示例代码1：
+
+spam = {'color': 'red', 'age': 42}#定义一个字典
+if 'red' in spam.values():#使用in判断'color'是否存在于spam的键中
+    print('True')
+else:
+    print('False')
 
 
 
