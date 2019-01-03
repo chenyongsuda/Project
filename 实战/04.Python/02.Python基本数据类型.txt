@@ -217,3 +217,109 @@ enumerate(sequence, [start=0])
 >>> list(enumerate(seasons, start=1))       # 下标从 1 开始
 [(1, 'Spring'), (2, 'Summer'), (3, 'Fall'), (4, 'Winter')]
 enumerate参数为可遍历的变量，如 字符串，列表等； 返回值为enumerate类。
+
+=====================================================================================
+字符串的常用操作
+1. mystr.find(str, start=0, end=len(mystr))
+　　检测str是否包含在mystr中，如果是返回开始的索引值，否则返回-1.
+  
+2. mystr.index(str, start=0, end=len(mystr))
+ 　　跟find()方法一样，只不过如果str不在mystr中会报一个异常.
+
+3. mystr.count(str, start=0, end=len(mystr))
+ 　　返回str在star和end之间 在mystr里面出现的次数
+   
+4.  mystr.replace(str1, str2, mystr.count(str1))
+　　把mystr中的str1替换成str2，若果count指定，则替换不超过count次。  
+
+5. mystr.split(str, maxsplit)
+　　以str为分隔符切片mystr， 如果maxsplit有指定值，则仅分隔maxsplit个字符串。
+  
+6. mystr.capitalize()
+　　把字符串的第一个字符大写
+  
+7. mystr.title()
+　　把字符串的每个单词首字母大写
+  
+8. mystr.startswith(obj)
+　　检查字符串是否以obj开头，是则返回True，否则返回False. 
+
+9. mystr.endswith(obj)
+　　检查字符串是否以obj结束，是则返回True，否则返回False. 
+  
+10. mystr.lower()
+　　转换字符串中所有大写字符为小写. 
+
+11. mystr.upper()
+　　转换字符串中所有大写字符为小写. 
+　　----可以用于用户退出输入字符的判断。
+
+12. mystr.ljust(width)
+　　返回一个原字符串左对齐，并使用空格填充至长度width的新字符串. 
+
+13. mystr.rjust(width)
+　　返回一个原字符串右对齐，并使用空格填充至长度width的新字符串. 
+　　----请回想print（）左对齐展示和右对齐展示。
+
+14. mystr.center(width)
+　　返回一个原字符串居中，并使用空格填充至长度width的新字符串. 
+  
+15. mystr.lstrip()
+　　删除mystr字符串左端的空白字符.
+
+16. mystr.rstrip()
+　　删除mystr字符串末尾的空白字符.
+
+17. mystr.strip()
+　　删除mystr字符串两端的空白字符.
+  
+18. mystr.rfind()
+　　类似于find()，不过是从右边开始查找.
+
+19. mystr.rindex()
+　　类似于index()，不过是从右边开始.
+  
+20. mystr.partition(str)
+　　把mystr分割成三部分，str前，str和str后.
+
+21. mystr.rpartition(str)
+　　类似于partition()，不过是从右边开始.
+
+22. mystr.splitlines()
+　　 按照行分隔，返回一个包含各行作为元素的列表。
+　　----文件的读取
+
+23. mystr.isalpha()
+　　如果mystr所有字符都是字母则返回True, 否则返回False. 
+
+24. mystr.isdigit()
+　　如果mystr只包含数字则返回True, 否则返回False. 
+
+25. mystr.isalnum()
+　　 如果mystr所有字符都是字母或数字则返回True, 否则返回False. 
+
+26. mystr.isspace()
+　　如果mystr只包含空格，则返回True, 否则返回False. 
+  
+27. str.join(mystr)
+　　mystr中每个字符后面插入str, 构造出一个新的字符串。 链接列表。
+
+
+1. List的组合
+join()
+sep.join(seq) 连接字符串数组。将字符串、元组、列表中的元素以指定的字符(分隔符)连接生成一个新的字符串
+# 创建一个列表
+name = ['张学友','刘德华','郭富城','黎明']
+print('--'.join(name))
+
+输出结果如下:
+张学友--刘德华--郭富城--黎明
+
+
+2. count()
+String.count() 统计字符出现的次数
+name = 'xiaoming'
+name_num = name.count('i')
+print(name_num)  # 2
+
+
