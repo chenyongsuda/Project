@@ -322,4 +322,229 @@ name = 'xiaoming'
 name_num = name.count('i')
 print(name_num)  # 2
 
+===========================================================================================
+List常用操作
+List多数操作比如remove pop等操作没元素会报error
+list 增加元素
+>>> li 
+['a', 'b', 'mpilgrim', 'z', 'example']
+>>> li.append("new")
+>>> li 
+['a', 'b', 'mpilgrim', 'z', 'example', 'new']
+>>> li.insert(2, "new")
+>>> li 
+['a', 'b', 'new', 'mpilgrim', 'z', 'example', 'new']
+>>> li.extend(["two", "elements"]) 
+>>> li 
+['a', 'b', 'new', 'mpilgrim', 'z', 'example', 'new', 'two', 'elements']
+
+
+
+list 搜索
+>>> li 
+['a', 'b', 'new', 'mpilgrim', 'z', 'example', 'new', 'two', 'elements']
+>>> li.index("example")
+5
+>>> li.index("new")
+2
+>>> li.index("c")
+Traceback (innermost last):
+ File "<interactive input>", line 1, in ?
+ValueError: list.index(x): x not in list
+>>> "c" in li
+False
+
+
+list 删除元素
+>>> li 
+['a', 'b', 'new', 'mpilgrim', 'z', 'example', 'new', 'two', 'elements']
+>>> li.remove("z")  
+>>> li 
+['a', 'b', 'new', 'mpilgrim', 'example', 'new', 'two', 'elements']
+>>> li.remove("new")    # 删除首次出现的一个值
+>>> li 
+['a', 'b', 'mpilgrim', 'example', 'new', 'two', 'elements']    # 第二个 'new' 未删除
+>>> li.remove("c")     #list 中没有找到值, Python 会引发一个异常
+Traceback (innermost last): 
+ File "<interactive input>", line 1, in ? 
+ValueError: list.remove(x): x not in list
+>>> li.pop()      # pop 会做两件事: 删除 list 的最后一个元素, 然后返回删除元素的值。
+'elements'
+>>> li 
+['a', 'b', 'mpilgrim', 'example', 'new', 'two']
+
+
+list 运算符
+>>> li = ['a', 'b', 'mpilgrim']
+>>> li = li + ['example', 'new']
+>>> li 
+['a', 'b', 'mpilgrim', 'example', 'new']
+>>> li += ['two']         
+>>> li 
+['a', 'b', 'mpilgrim', 'example', 'new', 'two']
+>>> li = [1, 2] * 3
+>>> li 
+[1, 2, 1, 2, 1, 2] 
+
+
+使用join链接list成为字符串
+>>> params = {"server":"mpilgrim", "database":"master", "uid":"sa", "pwd":"secret"}
+>>> ["%s=%s" % (k, v) for k, v in params.items()]
+['server=mpilgrim', 'uid=sa', 'database=master', 'pwd=secret']
+>>> ";".join(["%s=%s" % (k, v) for k, v in params.items()])
+'server=mpilgrim;uid=sa;database=master;pwd=secret'
+
+
+list 分割字符串
+>>> li = ['server=mpilgrim', 'uid=sa', 'database=master', 'pwd=secret']
+>>> s = ";".join(li)
+>>> s 
+'server=mpilgrim;uid=sa;database=master;pwd=secret'
+>>> s.split(";")   
+['server=mpilgrim', 'uid=sa', 'database=master', 'pwd=secret']
+>>> s.split(";", 1) 
+['server=mpilgrim', 'uid=sa;database=master;pwd=secret']
+
+list 的映射解析
+>>> li = [1, 9, 8, 4] 
+>>> [elem*2 for elem in li]    
+[2, 18, 16, 8] 
+>>> li
+[1, 9, 8, 4] 
+>>> li = [elem*2 for elem in li] 
+>>> li 
+[2, 18, 16, 8] 
+
+
+dictionary中的解析
+>>> params = {"server":"mpilgrim", "database":"master", "uid":"sa", "pwd":"secret"}
+>>> params.keys()
+['server', 'uid', 'database', 'pwd']
+>>> params.values()
+['mpilgrim', 'sa', 'master', 'secret']
+>>> params.items()
+[('server', 'mpilgrim'), ('uid', 'sa'), ('database', 'master'), ('pwd', 'secret')]
+>>> [k for k, v in params.items()]
+['server', 'uid', 'database', 'pwd']
+>>> [v for k, v in params.items()]
+['mpilgrim', 'sa', 'master', 'secret']
+>>> ["%s=%s" % (k, v) for k, v in params.items()]
+['server=mpilgrim', 'uid=sa', 'database=master', 'pwd=secret']
+
+
+list 过滤
+>>> li = ["a", "mpilgrim", "foo", "b", "c", "b", "d", "d"]
+>>> [elem for elem in li if len(elem) > 1]
+['mpilgrim', 'foo']
+>>> [elem for elem in li if elem != "b"]
+['a', 'mpilgrim', 'foo', 'c', 'd', 'd']
+>>> [elem for elem in li if li.count(elem) == 1]
+['a', 'mpilgrim', 'foo', 'c']
+
+=================================================================================================
+元组的基本操作
+
+满足序列的基本操作
+
+比如.+ * len max min in not in 索引 切片 
+
+delete 删除元祖
+
+cmp(tuple1, tuple2)  比较元祖大小 按顺序比较元素
+
+================================================================================================
+字典的常用操作
+
+#字典操作之：增
+d={'name':'Tom','age':'22'}
+d['sex'] = 'man'
+print d
+
+#字典操作之：删 pop()
+'''通过指定的key值，删除字典的一个键值对
+返回被删除的key对应的value
+'''
+d={'name':'Tom','age':'22'}
+print d.pop('name')
+print d
+
+#字典操作之：删 clear()
+d={'name':'Tom','age':'22'}
+d.clear()
+print d
+
+#字典操作之：改
+d={'name':'Tom','age':'22'}
+d['age'] = '11'
+print d
+
+#字典操作之：查 get(),setdefault(),has_key()
+'''
+get()
+功能：通过给定的key，查找对应的value，如果给定的可以在字典中无，则返回None
+参数：key
+
+setdefault()
+功能：通过给定的key，查找对应的value，如果给定的可以在字典中无，则返回None,
+      同时在字典中增加'test': None键值对，
+参数：key,value
+
+'''
+d={'name':'Tom','age':'22'}
+print d.get('name')
+print d.get('test')
+
+print d.setdefault('name')
+print d.setdefault('test_1')
+print d.setdefault('test_2',80)
+print d
+
+print d.has_key('name')--------------------------------这个函数好像没有了2.2后
+
+#字典操作之：旧貌新颜 items()
+'''
+把原字典的键值对佾来，组成一个元组，最后以列表的形式返回
+'''
+d={'name':'Tom','age':'22'}
+print d.items()
+
+#字典操作之：半壁江山 keys(),values()
+'''
+以列表的形式返回字典的所有键或者值
+'''
+d={'name':'Tom','age':'22'}
+print d.values()
+
+#字典操作之：永结同心 update()
+'''
+把字典d2的键/值对更新到d里
+'''
+d={'name':'Tom','age':'22'}
+d2 = {'height':170,'tel':110}
+d.update(d2)
+print d
+
+#字典操作之：为我所用 iteritems(),iterkeys(),itervalues()
+'''
+iteritems()
+功能：返回字典所有元素的迭代器
+iterkeys()
+功能：返回字典所有keys的迭代器
+itervalues()
+功能：返回字典所有values的迭代器
+'''
+d={'name':'Tom','age':'22'}
+print d.iteritems()
+for i in d.iteritems():
+    print i
+
+print d.iterkeys()
+
+print d.itervalues()
+
+
+
+
+
+
 
