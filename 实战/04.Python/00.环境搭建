@@ -11,7 +11,17 @@ vscode 安装所需插件
 6 插件名称： topper ， 插件功能：  这个插件的作用是在.py文件的开头添加一些说明header
 
 然后写个文件按F5就可以调试了.
+这时候是内部编译器
+==================================================
+配置自动提示
+"python.autoComplete.extraPaths": [
+    "C:\\Users\\CHNHO02796\\AppData\\Local\\Programs\\Python\\Python37-32\\Lib\\site-packages",
+    "C:\\Users\\CHNHO02796\\AppData\\Local\\Programs\\Python\\Python37-32\\Scripts"
+],
+"python.pythonPath": "C:\\Users\\CHNHO02796\\AppData\\Local\\Programs\\Python\\Python37-32\\Python.exe",
+"python.autoComplete.addBrackets": true,
 
+配置OK
 ==================================================
 安装opencv
 pip install --upgrade setuptools
