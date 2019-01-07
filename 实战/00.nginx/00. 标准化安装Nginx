@@ -1,0 +1,32 @@
+1. 安装Nginx后,把Nginx的目录用户设置为nginx:nginx普通用户
+2. 使用普通用户启动nginx
+  -方式一通过sudo切换普通用户
+    usermod -s /bin/bash nginx
+    su - nginx -c '/data/nginx/sbin/nginx'
+    usermod -s /sbin/nologin  nginx
+  -方式二配置成为service然后指定用普通用户启动
+ 3. 注意nginx启动时候会生成一些临时文件比如:
+    client_body_temp
+    fastcgi_temp
+    proxy_temp
+    scgi_temp
+    uwsgi_temp
+    临时文件可以考虑放入/tmp或者/var/tmp
+    那些常用变化的得额外放出来并且修改权限. id文件也可以放出来.
+    
+    有几个可以编译的时候配置其他的还没查过
+    --http-client-body-temp-path=/tmp/client_body_temp 
+    --http-proxy-temp-path=/tmp/proxy_temp 
+    --http-fastcgi-temp-path=/tmp/fastcgi_temp
+    
+    启动前就有的文件夹
+    conf
+    html
+    logs
+    sbin
+    
+    
+    
+    
+    
+    
