@@ -1,0 +1,151 @@
+Linux接口包含两种
+          1. 图像接口
+          2. 命令行接口
+
+操作系统功能：
+          1. 驱动程序
+          2. 进程管理功能
+          3. 安全功能
+          4. 网络功能
+          5. 内存管理
+          6. 文件系统
+          
+查看端口使用情况
+ss -ltn   --表示listen  tcp    number 查看本机的监听端口
+
+确保防火墙是关闭的：
+      systemctl disable firewalld.service
+      systemctl stop firewalld.service
+
+输出当前的shell
+# echo $SHELL
+
+Linux思维一切皆终端
+硬件设备表示为文件
+      物理终端： /dev/console  (控制台/console)
+      虚拟终端：/dev/tty[1,6]  
+      图形终端：/dev/tty7
+      串行终端：/dev/ttyS#
+      伪终端：  /dev/pty/#
+      
+输入tty就能显示使用的终端
+
+注意：启动设备后,在其上关联一个用户接口程序即可实现和用户交互.输入echo $SHELL 能看到接口程序是什么,输入tty能看到终端是什么.
+tty1 –tty6等称为虚拟终端，而tty0则是当前所使用虚拟终端的一个别名， 系统所产生的信息会发送到该终端上。
+启动图形界面 startx &
+
+操作系统的组成：
+1. 硬件
+2. 内核
+3. 库
+4. shell
+
+[root@vm02 etc]# 这个叫工作提示符
+
+文件的路径：/etc/sysconfig/network-scripts/ifcfg-ens6666
+          组成部分basename 和 dirname
+[root@vm02 etc]# basename /etc/sysconfig/network-scripts/ifcfg-enp0s3 
+ifcfg-enp0s3
+[root@vm02 etc]# firname /etc/sysconfig/network-scripts/ifcfg-enp0s3 
+-bash: firname: command not found
+[root@vm02 etc]# dirname /etc/sysconfig/network-scripts/ifcfg-enp0s3 
+/etc/sysconfig/network-scripts
+
+
+
+切换家目录
+cd ~         切换到家目录
+cd ~USERNAME 切换到别人的家目录
+cd -         切换到上一个目录
+
+变量当前目录 echo $PWD
+变量上一层目录 echo $OLDPWD
+
+ls命令：
+      -a 全部
+      -A 除了. ..
+      -l 长格式
+      -h 人类可识别的方式
+      -d 查看当前目录的属性
+      -r 逆序
+      -R 循环
+      -t 时间排序
+
+查看文件的类型 file  filename
+
+cat file01 file02 file03 ...
+      -n 显示number
+      
+tac 文本文件查看工具:文本文件是逆序的和cat一样只是顺序不一样
+
+file 命令用来确定文件类型
+
+echo 命令
+  -n 结尾不进行换行
+  -e 让转义符号生效
+  
+  
+字符串：
+  单引号：强引用,变量引用不执行替换    echo '$SHELL'
+  双引号：弱引用,变量引用执行替换      echo "$SHELL"
+  
+日期相关的命令：
+  date      --显示和修改时间的
+  clock     -- 硬件时钟和hwclock是同一套东西
+  hwclock   -- 硬件时间,主板上的纽扣电池一直在供电
+  cal       -- 日历,
+  
+  
+  Linux启动后从硬件读取启动时间然后就不和硬件相关联了.然后按照内核评率来计时.date看到是系统时钟
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+      
+      
+      
+    
+    
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
+      
+
