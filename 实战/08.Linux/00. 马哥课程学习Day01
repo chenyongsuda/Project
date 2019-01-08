@@ -98,6 +98,14 @@ echo 命令
   
   Linux启动后从硬件读取启动时间然后就不和硬件相关联了.然后按照内核评率来计时.date看到是系统时钟
   
+  Linux系统 普通命令放在  /bin        /usr/bin            /usr/local/bin
+            管理命令放在  /sbin      /usr/sbin            /usr/local/sbin
+  
+  共享库     32位       /lib      /usr/lib               /usr/local/lib
+            64位       /lib64    /usr/lib64               /usr/local/lib64
+  
+  内部SHELL命令使用方式：    help COMMAND        
+            
   
   
   
