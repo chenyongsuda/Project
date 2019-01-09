@@ -167,8 +167,42 @@ echo 命令
   history  命令的历史 命令能保存多少个,重启时候会持久保存在文件中. 定制history功能可以通过环境变量的方式.
           HISTSIZE表示存储的长度
   
+  mkdir命令：
+          -p 创建父目录
+          {,}以逗号隔开可以展开为多个参数  mkdir {a,b} 创建两个文件夹 a 和 b 
+                    例子 make {a,b}_{c,d} -> a_b a_c b_c b_d
   
-           
+  
+  命令的返回结果
+  每个shell命令执行完后都会有个执行的成功失败的值
+  0 表示成功  1- 255 表示失败.
+  $! 表示该执行结果
+  
+  引用命令的返回结果
+  $(COMMAND)或者'COMMAND'
+  比如 mkdir $(date +%H-%M-%S)
+  
+  bash快捷键
+  
+  ctrl + a 到首部
+  ctrl + e 到尾部
+  ctrl + u 到行首
+  ctrl + k 删除光标所在处到行尾
+  ctrl + l 请屏幕
+  
+  
+  cat 
+  
+          cat -n 看行数
+          more
+          less
+          head
+          
+  
+  
+  
+          
+         
          
   
   
