@@ -156,6 +156,16 @@ echo 命令
   好书推荐：奇点临近
   
   
+  which命令 显示shell command命令在哪里
+  
+  whereis 显示命令二进制 source 手册页
+  
+  who  显示谁在登陆
+  
+  w    增强版的whi命令 哪些人在干什么
+  
+  history  命令的历史 命令能保存多少个,重启时候会持久保存在文件中. 定制history功能可以通过环境变量的方式.
+          HISTSIZE表示存储的长度
   
   
            
