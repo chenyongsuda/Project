@@ -18,7 +18,7 @@ glob是shell使用的路径匹配符，类似于正则表达式，但是与正�
     
 2. IO重定向
     >或者<
-    >>或者<<
+    >>
     标准输入 用0表示
     标准输出 用1表示
     标准错误 用2表示
@@ -35,7 +35,22 @@ glob是shell使用的路径匹配符，类似于正则表达式，但是与正�
     比如：
     tr [a-z] [A-Z] < a.txt
     将a.txt中的小写字母都在换成大写字母
+    tr -d SET < file 删除包含set的字符
     
+    Here Doc： <<
+    使用方式
+    cat << EOD
+    cat > file << EOD
+    
+    管道：
+    COMMAND01 | COMMNAD02 | COMMAND03
+    
+        tee命令(不仅输出到文件在拷贝一份到标准输出)：
+            COMMOND | tee file
+        
+        
+        
+        
     
     
     
