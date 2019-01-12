@@ -49,11 +49,31 @@ glob是shell使用的路径匹配符，类似于正则表达式，但是与正�
             COMMOND | tee file
         
         
-        
-        
+==========================================================
+Linux用户和用户组
+Linux系统用户 0 管理员
+             1-499(centos6) 系统用户 
+             1-999(centos6) 系统用户
+             
+    /etc/passwd
     
+    用户的组：
+            用户的主组
+            用户的附加组
+    /etc/group
+    密码存储在/etc/shadow
+    组也有密码/etc/gshadow
     
+    加密算法
+    md5
+    sha
+    sha224
+    sha256
+    sha 384
+    sha 512
     
+    查看密码说明
+    passwd
     
     
     
