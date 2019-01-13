@@ -1,0 +1,116 @@
+极客时间课程训练
+文件的基本操作
+===================================================================
+文件操作基本函数
+文件的内建函数
+open
+read
+readline 读取一行
+readlines
+seek
+write
+writeline 写入一行
+writelines
+close
+tell  告知文件指针在哪
+
+例子
+file01 = open("hello","w")
+file01.write("诸葛亮")
+file01.close()
+
+file02 = open("hello","a")
+file02.write("刘备")
+file02.close()
+
+file03 = open("hello","a")
+file03.write("马超")
+file03.close()
+
+文件多行读取其中一行
+readline
+如果读取后要回到文件的开头需要用seek
+
+=====================================================================
+网络操作也会用到相应的读写操作
+
+
+=====================================================================
+异常
+墨菲定律：会出错的问题无论概率多么小都会出错
+程序检测错误发生,坚持到错误引发异常
+
+try:
+  监控异常
+except Exception
+finally:
+  无论异常是否发生都会执行
+
+
+比如try中放打开文件
+在finally放关闭异常
+
+try:
+    year = int(input("input year"))
+except ValueError:
+    print("please input number")
+finally:
+    pass
+
+可以捕获多种异常
+try:
+    year = int(input("input year"))
+except (ValueError,AttributeError,KeyError):
+    print("please input number")
+finally:
+    pass
+    
+如果还要打印出异常
+try:
+    year = int(input("input year"))
+except ValueError as e:
+    print("please input number %s" %e)
+finally:
+    pass
+
+捕获全部的异常Exception
+try:
+    year = int(input("input year"))
+except Exception as e:
+    print("please input number %s" %e)
+finally:
+    pass
+
+自定义异常
+使用NameError
+try:
+    raise NameError("customer error")
+except NameError as e:
+    print("please input number %s"%e)
+finally:
+    pass
+
+python的文件处理和异常处理
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
