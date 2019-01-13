@@ -84,7 +84,9 @@ Linux系统用户 0 管理员
 mktemp 创建临时格式文件需要手动指定创建在/tmp 如果不指定在tmp系统是不会自动删除的
 mktemp tmp.xxxxxxx
 
-    
+mktemp tmp.xxxx 命令会返回 创建的文件名
+如何获取呢
+file_name=$(mktemp tmp.xxxx) $()是变量赋值 
     
     
     
