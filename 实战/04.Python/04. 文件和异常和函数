@@ -92,6 +92,26 @@ finally:
 
 python的文件处理和异常处理
 
+=================================================================
+方法
+def functionname():
+  pass
+
+变长参数
+def functionname(var1,*var234):
+  pass
+
+函数变量的范围：
+var01 = 123
+def func()
+    print(var01)
+
+外面定义会影响内部的.
+如果要内部能影响外部的
+需要内部加上global var01
+
+
+
 
 
 
