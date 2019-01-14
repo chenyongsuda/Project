@@ -126,6 +126,31 @@ print(next(it))
 
 带yield的函数为生成器或者叫迭代器
 
+要创建一个generator，有很多种方法。第一种方法很简单，只要把一个列表生成式的[]改成()，就创建了一个generator：
+
+>>> L = [x * x for x in range(10)]
+>>> L
+[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+>>> g = (x * x for x in range(10))
+>>> g
+<generator object <genexpr> at 0x1022ef630>
+创建L和g的区别仅在于最外层的[]和()，L是一个list，而g是一个generator。
+
+===========================================================================
+常用内置函数
+filter      过滤可迭代对象
+map         对每个可迭代对象进行处理
+reduce      对可迭代对象内部数据做内部加和或者乘法等等.
+zip         zip((1,2,3),(4,5,6)) => (1,4) (2,5) (3,6)
+            zip对调key value zip(dic.values(),dict.keys())
+            比较智能:转为print(dict(zip([1,2],[3,4])))
+                    转为print(list(zip([1,2],[3,4])))
+            
+            
+            
+            
+            
+
 
 
 
