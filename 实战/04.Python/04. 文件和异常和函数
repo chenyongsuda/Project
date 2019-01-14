@@ -110,7 +110,21 @@ def func()
 如果要内部能影响外部的
 需要内部加上global var01
 
+方法的迭代器,什么是迭代器比如for in 迭代每个元素
+iter和next方法
+list01 = [1,2,3,4,5,6]
+it = iter(list01)
+print(next(it))
+print(next(it))
+print(next(it))
+print(next(it))
+print(next(it))
+print(next(it))
+print(next(it))
+最后一个到结束了抛出异常
 
+
+带yield的函数为生成器或者叫迭代器
 
 
 
