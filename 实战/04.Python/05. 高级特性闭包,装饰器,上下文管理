@@ -121,6 +121,20 @@ def hello(x,y):
     print(x+y)
 
 hello(1,2)
+======================================================================
+上下文管理器
+
+with as:
+
+
+相当于
+try:
+    xxxxxxxxxxxx
+finally：
+    xxxxxxxxxx
+
+
+
 
 
 
