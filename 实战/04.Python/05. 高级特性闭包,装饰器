@@ -1,0 +1,49 @@
+什么是闭包
+参考https://www.cnblogs.com/JohnABC/p/4076855.html
+
+闭包基本写法
+
+def demo01():
+    xxxxxxxx
+    def demo02(x):
+        xxxxxxxx
+        return xxxxxxxx
+    return demo02
+
+简单一点就是内部函数将外部函数的变量放进自己范围区间,这里就是demo02会引用demo01中定义的变量
+
+另一个比较明显的作用是全局化demo1的变量,不是真正的全局化
+
+def demo01():
+    count = 0
+    def demo02(x):
+        nonlocal count
+        count += x
+        return count
+    return demo02
+
+
+fun = demo01()
+print(fun(1))
+print(fun(2))
+print(fun(3))
+
+输出是
+1
+3
+6
+
+这里count类似全局化了.
+
+
+
+
+
+
+
+
+
+
+
+
+
