@@ -164,8 +164,105 @@ with DealWithExp() :
 
 用with的话会先进__enter__再进__exit__
 
+===================================================
+例子：
+一个例子:
+class TmpTest:
+    def __init__(self,filename):
+        self.filename=filename
+    def __enter__(self):
+        self.f = open(self.filename, 'r')
+       # return self.f
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.f.close()
+
+test=TmpTest('file')
+
+with test as t:
+    print ('test result: {}'.format(t))
+
+返回:
+test result: None
+
+这个例子里面__enter__没有返回，所以with语句里的"as t"到的是None，修改一下上面的例子:
+
+===================================================
+class TmpTest:
+    def __init__(self,filename):
+        self.filename=filename
+    def __enter__(self):
+        self.f = open(self.filename, 'r')
+        return self.f
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.f.close()
+
+test=TmpTest('file')
+
+with test as t:
+    print ('test result: {}'.format(t))
+
+返回:
+test result: <_io.TextIOWrapper name='file' mode='r' encoding='cp936'>
+
+===================================================
+如果在__init__或者__enter__中抛出异常，则不会进入到__exit__中:
+class TmpTest:
+    def __init__(self,filename):
+        self.filename=filename
+        print("__init__")
+        raise ImportError
+    def __enter__(self):
+        self.f = open(self.filename, 'r')
+        print("__enter__")
+        return self.f
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print("__exit__")
+        self.f.close()
+
+test=TmpTest('file')
+with test as t:
+    print ('test result: {}'.format(t))
 
 
+返回:
+__init__
+Traceback (most recent call last):
+  File "D:/pythonScript/leetcode/leetcode.py", line 14, in <module>
+    test=TmpTest('file')
+  File "D:/pythonScript/leetcode/leetcode.py", line 5, in __init__
+    raise ImportError
+ImportError
+
+===================================================
+如果在__exit__中返回True,则不会产生异常:
+复制代码
+class TmpTest:
+    def __init__(self,filename):
+        self.filename=filename
+        print("__init__")
+
+    def __enter__(self):
+        self.f = open(self.filename, 'r')
+        print("__enter__")
+        return self.f
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print("__exit__ {} ".format(exc_type))
+        self.f.close()
+        return True
+
+test=TmpTest('file')
+with test as t:
+    print ('test result: {}'.format(t))
+    raise ImportError
+print("no error")
+
+返回:
+__init__
+__enter__
+test result: <_io.TextIOWrapper name='file' mode='r' encoding='cp936'>
+__exit__ <class 'ImportError'>
+no error
 
 
 
