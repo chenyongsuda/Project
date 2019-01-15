@@ -51,12 +51,118 @@ player02.displayRole()
 如果类的属性前面加__比如name变成__name在实例前面访问instance.__name就无法修改.表示类属性为私有.
 
 
+================================================================================
+类的继承
+class Base():
+    def __init__(self,hp):
+        self.hp = hp
+    def run(self):
+        print("this is %d" %self.hp)
+
+
+class Xman(Base):
+    def __init__(self,hp):
+        self.hp = hp
+    
+    def xman_run(self):
+        print("xman run %d" %self.hp)
+
+
+sample = Xman(1)
+sample.xman_run()
+
+print(isinstance(sample,Base))
+
+不过一般在初始化下级类的话也可以直接初始化话上级类的变量使用
+如下:
+class Xman(Base):
+    def __init__(self,hp):
+        super().__init__(hp)
+    
+    def xman_run(self):
+        print("xman run %d" %self.hp)
+
+======================================================================================
+划重点
+super不是父类，而是继承顺序的下一个类
+在多重继承时会涉及继承顺序，super（）相当于返回继承顺序的下一个类，而不是父类，类似于这样的功能：
+
+#mro()用来获得类的继承顺序。
+
+
+例如：
+
+class Base(object):
+    def __init__(self):
+        print 'Base create'
+ 
+class childA(Base):
+    def __init__(self):
+        print 'enter A '
+        # Base.__init__(self)
+        super(childA, self).__init__()
+        print 'leave A'
+ 
+ 
+class childB(Base):
+    def __init__(self):
+        print 'enter B '
+        # Base.__init__(self)
+        super(childB, self).__init__()
+        print 'leave B'
+ 
+class childC(childA, childB):
+    pass
+ 
+c = childC()
+print c.__class__.__mro__
+
+#输出：
+
+enter A 
+enter B 
+Base create
+leave B
+leave A
+(<class '__main__.childC'>, <class '__main__.childA'>, <class '__main__.childB'>, <class '__main__.Base'>, <type 'object'>)
+
+复制代码
+supder和父类没有关联，因此执行顺序是A —> B—>—>Base
+执行过程相当于：初始化childC()时，先会去调用childA的构造方法中的 super(childA, self).__init__()， 
+super(childA, self)返回当前类的继承顺序中childA后的一个类childB；然后再执行childB().__init()__,这样顺序执行下去。
+在多重继承里，如果把childA()中的 super(childA, self).__init__() 换成Base.__init__(self)，
+在执行时，继承childA后就会直接跳到Base类里，而略过了childB：
+
+enter A 
+Base create
+leave A
+(<class '__main__.childC'>, <class '__main__.childA'>, <class '__main__.childB'>, <class '__main__.Base'>, <type 'object'>)
+
+从super()方法可以看出，super（）的第一个参数可以是继承链中任意一个类的名字，
+如果是本身就会依次继承下一个类；
+如果是继承链里之前的类便会无限递归下去；
+如果是继承链里之后的类便会忽略继承链汇总本身和传入类之间的类；
+比如将childA()中的super改为：super(childC, self).__init__()，程序就会无限递归下去。
 
 
 
 
+===================================================================================================
+class和with连起来用
+class DealWithExp():
+    def __enter__(self):
+        print("start...")
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_tb is None :
+            print("end success")
+        else:
+            print("end error")
 
 
+with DealWithExp() :
+    raise NameError("system error")
+
+用with的话会先进__enter__再进__exit__
 
 
 
