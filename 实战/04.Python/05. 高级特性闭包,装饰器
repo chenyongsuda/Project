@@ -35,6 +35,103 @@ print(fun(3))
 
 这里count类似全局化了.
 
+=======================================================================
+包装器
+类似于函数修饰符将函数包裹住实现在函数调用前或者调用后的一些操作
+def justlog(func):
+    def wapper():
+        print("before")
+        func()
+        print("after")
+    return wapper
+    
+@justlog
+def hello():
+    print("hello")
+=====================================================    
+标准格式
+def justlog(func):
+    def wapper():
+        xxxxxxxxxxxx
+        func()
+        xxxxxxxxxxxx
+    return wapper
+
+类似于闭包如果按照闭包的思维
+这个过程就是调用justlog
+tmp = justlog(hello())
+tmp()
+这种方式写起来挺复杂的
+就简化为@符号
+
+=====================================================
+带参数格式,如果函数带参数怎么办
+如函数：
+def hello(x,y):
+    print(x+y)
+
+这时候只需要在内层函数加同样的变量就行了
+
+def justlog(func):
+    def wapper(x,y):
+        print("before")
+        func(x,y)
+        print("after")
+    return wapper
+
+
+
+
+======================================================
+如果修饰符带参数怎么办
+比如justlog(type)
+那就在外层再套一层
+def new_justlog(type):
+    def justlog(func):
+        def wapper(x,y):
+            print("before")
+            func(x,y)
+            print("after")
+        return wapper
+    return justlog
+
+写好看点
+def justlog(type):
+    def wapper_outer(func):
+        def wapper_inner(x,y):
+            print("before %s",type)
+            func(x,y)
+            print("after %s",type)
+        return wapper_inner
+    return wapper_outer
+    
+=========================================================
+示例
+def justlog(type):
+    def wapper_outer(func):
+        def wapper_inner(x,y):
+            print("before %s",type)
+            func(x,y)
+            print("after %s",type)
+        return wapper_inner
+    return wapper_outer
+
+@justlog("New Type")
+def hello(x,y):
+    print(x+y)
+
+hello(1,2)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
