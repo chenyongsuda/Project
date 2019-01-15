@@ -1,0 +1,15 @@
+模块
+导入模块
+import xxx
+或者如果模块名字太长可以简写as
+import xxx as xxx
+如果导入子功能
+from xxx import xxx
+例如
+from time import sleep
+
+如何写一个模块呢.
+有个单独文件就是一个模块.导入就可以了.
+
+import 模块的时候会首先包含模块的内容.
+所有说如果是模块一般不在里面直接调用方法.
