@@ -13,3 +13,55 @@ from time import sleep
 
 import 模块的时候会首先包含模块的内容.
 所有说如果是模块一般不在里面直接调用方法.
+
+
+==============================================================
+类       面向对象的编程
+
+以前都是面向过程的编程
+user01 = {"name" : "tom","hp":100}
+user02 = {"name" : "jerry","hp":100}
+
+def display_info(user):
+    print("name is %s hp is %d" %(user["name"],user["hp"]))
+
+display_info(user01)
+display_info(user02)
+
+面向对象的写法写类
+class Player:
+    '''
+    类的描述信息
+    '''
+    def __init__(self, name, hp):
+        self.name = name
+        self.hp = hp
+    
+    def displayRole(self):
+        print("name is %s hp is %d" %(self.name,self.hp))
+
+
+player01 = Player("tom", 100)
+player02 = Player("jerry", 100)
+player01.displayRole()
+player02.displayRole()
+
+
+类属性的私有和共有(也叫类的封装)
+如果类的属性前面加__比如name变成__name在实例前面访问instance.__name就无法修改.表示类属性为私有.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
