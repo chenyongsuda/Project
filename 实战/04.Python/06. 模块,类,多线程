@@ -299,6 +299,7 @@ for i in range(1,6,1):
 用新的类继承threading.Thread,重写run方法.就能自己的线程类
 
 线程还有线程的依赖关系
+线程的join方法.线程join入其他线程.
 
 
 
