@@ -264,6 +264,42 @@ test result: <_io.TextIOWrapper name='file' mode='r' encoding='cp936'>
 __exit__ <class 'ImportError'>
 no error
 
+==============================================================================
+线程
+py3 中导入import threading
+
+import threading
+import time
+
+def my_th_test(i,j):
+    time.sleep(1)
+    print("%s %s \n" %(i,j))
+
+for i in range(1,6,1):
+    # my_th_test(i, i+1)
+    t = threading.Thread(target=my_th_test,args=(i,i+1))
+    t.start()
+
+加入current thread 信息的代码示例
+import threading
+import time
+
+def my_th_test(i,j):
+    print("%s start",threading.current_thread().name)
+    time.sleep(1)
+    print("%s %s" %(i,j))
+    print("%s end",threading.current_thread().name)
+
+for i in range(1,6,1):
+    # my_th_test(i, i+1)
+    t = threading.Thread(target=my_th_test,args=(i,i+1))
+    t.start()
+
+调用线程的start方法相当于调用线程的内部run方法.
+用新的类继承threading.Thread,重写run方法.就能自己的线程类
+
+线程还有线程的依赖关系
+
 
 
 
