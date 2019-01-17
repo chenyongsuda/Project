@@ -246,3 +246,64 @@ SSL 秘钥密码：SSL 私钥文件密码。在这里可以使用用户定义的
 
 =========================================================================================================================
 图形设置
+
+=========================================================================================================================
+监控文件是否存在
+vfs.file.cksum[file]
+计算文件校验 UNIX cksum.
+file - 文件完整路径
+
+vfs.file.contents[file,<encoding>]
+获取文本内容若为空，只返回 LF/CR characters.
+file - 文件完整路径
+例如: vfs.file.contents[/etc/passwd] 文件不可以超过64KB. 
+
+ 
+
+vfs.file.exists[file]
+检测文件是否存在1 – 存在 0 – 不存在
+file - 文件完整路径
+
+vfs.file.md5sum[file]
+文件MD5校验码文件MD5哈希值
+file - 完整路径
+
+vfs.file.regexp[file,regexp,<encoding>,<start line>,<end line>,<output>]
+文件中搜索字符串包含字符串的行，或者为空
+file - 文件完整路径
+regexp - GNU正则表达式
+encoding - 编码
+start line - 从哪一行开始，默认第一行
+end line - 从哪一行结束，默认最后一行
+如: vfs.file.regexp[/etc/passwd,zabbix]
+    vfs.file.regexp[/path/to/some/file,”([0-9]+)$”,,3,5,\1]
+    vfs.file.regexp[/etc/passwd,^zabbix:.:([0-9]+),,,,\1]
+
+ vfs.file.regmatch[file,regexp,<encoding>,<start line>,<end line>]
+
+文件中搜索字符串0 – 未找到 1 – 找到
+file - 文件完整路径
+regexp - GNU 正则表达式
+encoding - 编码
+start line - 哪行开始，默认第一行
+end line - 哪行结束，默认最后一行
+例如: vfs.file.regmatch[/var/log/app.log,error]
+ vfs.file.size[file]
+文件大小字节fzabbix必须有可读此文件的权限
+ vfs.file.time[file,<mode>]
+文件时间信息Unix 时间戳.
+mode -  modify (默认, 修改时间), access – 最后访问时间, change – 最后改变时间
+例如: vfs.file.time[/etc/passwd,modify] 备注：文件大小有限制
+vfs.fs.discovery
+列出挂载的文件系统 用于lld.JSON对象
+
+ vfs.fs.inode[fs,<mode>]
+inodes数量数字
+fs - 文件系统
+mode - total (默认), free, used, pfree (空闲百分比), pused (使用百分比)
+例如: vfs.fs.inode[/,pfree]
+vfs.fs.size[fs,<mode>]
+磁盘空间，返回本地文件系统的使用量字节
+fs - 文件系统
+mode -  total (默认), free, used, pfree (空闲百分比), pused (使用百分比).
+例如: vfs.fs.size[/tmp,free]
