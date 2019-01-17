@@ -1,4 +1,5 @@
 massively parallel processing MPP数据库
 vertica 是MPP的一种
 
-
+数据分析流程:
+指标  =>   指标口径(管理,同一个指标出口一直)  =>  维度 => 事实表
