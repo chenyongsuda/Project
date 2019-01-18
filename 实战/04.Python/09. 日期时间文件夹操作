@@ -293,5 +293,72 @@ random.randomint(s,e) 常用
 ===============================================================================================
 os.路径库
 os.path和pathlib
+python遍历文件夹os.path与pathlib
 
+      首先我们来一个需求，这个函数接受文件夹的名称作为输入参数，返回该文件夹中文件的路径，以及其包含文件夹中文件的路径。
+      def print_dir_contents(sPath):
+          import os
+          for sChild in os.listdir(sPath):
+              sChildPath = os.path.join(sPath,sChild)
+              if os.path.isdir(sChildPath):
+                  # 迭代
+                  print_dir_contents(sChildPath)
+              else:
+                  print(sChildPath)
+
+      os.path模块是在python2和3中都存在的模块，如果项目的最终测试环境不是确定在py3中，还是建议使用os.path,它还是很简单适用的。
+      同时os.path模块还包括很多属性，比如说读取一个文件，但是可能存在文件不存在的情况，一般都是采用try,catch,也可以使用一条语句判断
+      os.path.isfile(fname)
+
+      列举几个
+      os.path.abspath()
+      获取绝对路径
+      
+      os.path.split(path)
+      ('c:\csv', 'test.csv')
+      将path分割成目录和文件名二元组返回。
+      os.path.commonprefix(list)
+      返回list中，所有path共有的最长的路径。
+      os.path.exists(path)
+      如果path存在，返回True；如果path不存在，返回False。
+      os.path.isabs(path)
+      如果path是绝对路径，返回True。
+      os.path.normpath(path)
+      规范化路径。
+      os.path.splitext(path)
+      分离文件名与扩展名
+      os.path.getmtime(path)
+      返回path所指向的文件或者目录的最后修改时间
+
+
+
+自python3开始，加入了pathlib库
+      导入库
+      from pathlib import Path
+      root = Path("../PycharmProject")
+      config_dir = root/Path("config")
+      # 等价于config_dir = os.path.join(root, 'config')
+      print(str(config_dir))
+
+      从这里可以看出pathlib更加简化
+      config.files = config_dir.rglob("*.json")
+
+      正则匹配文件
+      Path.iterdir()　　#遍历目录的子目录或者文件
+      Path.is_dir()　　#判断是否是目录
+      Path.glob()　　#过滤目录(返回生成器)
+      Path.resolve()　　#返回绝对路径
+      Path.exists()　　#判断路径是否存在
+      Path.open()　　#打开文件(支持with)
+      Path.unlink()　　#删除文件或目录(目录非空触发异常)
+      Path.chmod()　　#更改路径权限, 类似os.chmod()
+      Path.expanduser()　　#展开~返回完整路径对象
+      Path.mkdir()　　#创建目录
+      Path.rename()　　#重命名路径
+      Path.rglob()　　#递归遍历所有子目录的文件
+      Path.parts　　#分割路径 类似os.path.split(), 不过返回元组
+      path.suffix　　　　#文件后缀
+      path.stem　　　　　 #文件名不带后缀
+      path.name　　　　　　#带后缀的完整文件名
+      path.parent　　　　#路径的上级目录
 
