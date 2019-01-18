@@ -1,0 +1,66 @@
+
+Queue.Queue是进程内非阻塞队列，multiprocess.Queue是跨进程通信队列。
+
+1.from queue import Queue 
+这个是普通的队列模式，类似于普通列表，先进先出模式，get方法会阻塞请求，直到有数据get出来为止
+
+2.from multiprocessing.Queue import Queue（各子进程共有）
+这个是多进程并发的Queue队列，用于解决多进程间的通信问题。普通Queue实现不了。例如来跑多进程对一批IP列表进行运算，运算后的结果都存到Queue队列里面，
+这个就必须使用multiprocessing提供的Queue来实现
+======================================================================================================
+Python之queue模块
+
+一、queue——同步的队列类
+　　queue模块实现了多生产者，多消费者的队列。当 要求信息必须在多线程间安全交换，这个模块在 线程编程时非常有用 。Queue模块实现了所有要求的锁机制。  说了半天就是Queue模块主要是多线程，保证线程安全使用的。
+　　这个类实现了三种类型的queue，区别仅仅在于进去和取出的位置。在一个FIFO（First In，First Out）队列中，先加先取。在一个LIFO（Last In First Out）的队列中，最后加的先出来（操作起来跟stack一样）。priority队列，有序保存，优先级最低的先出来。
+　　内部实现是在抢占式线程加上临时锁。但是没有涉及如何去处理线程的重入。
+  
+二、queue模块的内容
+
+　　1. class queue.Queue(maxsize = 0)
+　　　　构造一个FIFO队列，maxsize可以限制队列的大小。如果队列的大小达到了队列的上限，就会加锁，加入就会阻塞，直到队列的内容被消费掉。maxsize的值小于等于0，那么队列的尺寸就是无限制的
+
+　　2. class queue.LifoQueue(maxsize = 0)
+　　　　构造一个Lifo队列
+
+　　3. class PriorityQueue(maxsize = 0)
+　　　　优先级最低的先出去，优先级最低的一般使用sorted(list(entries))[0])。典型加入的元素是一个元祖(优先级, 数据)
+
+　　4. queue.empty异常
+　　　　只有非阻塞的时候，队列为空，取数据才会报异常
+
+　　5. queue.Full异常
+　　　　只有非阻塞的时候，队列满了，继续放数据才会出现异常
+
+ 
+
+三、队列对象的方法：
+　　Queue.qsize() ：返回queue的近似值。注意：qsize>0 不保证(get)取元素不阻塞。qsize< maxsize不保证(put)存元素不会阻塞
+
+　　Queue.empty():判断队列是否为空。和上面一样注意
+
+　　Queue.full():判断是否满了。和上面一样注意
+
+　　Queue.put(item, block=True, timeout=None): 往队列里放数据。如果满了的话，blocking = False 直接报 Full异常。如果blocking = True，就是等一会，timeout必须为 0 或正数。None为一直等下去，0为不等，正数n为等待n秒还不能存入，报Full异常。
+
+ 　 Queue.put_nowait(item):往队列里存放元素，不等待
+
+　　Queue.get(item, block=True, timeout=None): 从队列里取数据。如果为空的话，blocking = False 直接报 empty异常。如果blocking = True，就是等一会，timeout必须为 0 或正数。None为一直等下去，0为不等，正数n为等待n秒还不能读取，报empty异常。
+  
+  
+  ============================================================================================
+  
+
+ 　 Queue.get_nowait(item):从队列里取元素，不等待
+
+ 
+　　两个方法跟踪入队的任务是否被消费者daemon进程完全消费
+
+　　Queue.task_done()
+　　　　表示队列中某个元素呗消费进程使用，消费结束发送的信息。每个get()方法会拿到一个任务，其随后调用task_done()表示这个队列，这个队列的线程的任务完成。就是发送消息，告诉完成啦！
+　　　　如果当前的join()当前处于阻塞状态，当前的所有元素执行后都会重启（意味着收到加入queue的每一个对象的task_done()调用的信息）
+　　　　如果调用的次数操作放入队列的items的个数多的话，会触发ValueError异常
+
+　　Queue.join()
+　　　　一直阻塞直到队列中的所有元素都被取出和执行
+　　　　未完成的个数，只要有元素添加到queue中就会增加。未完成的个数，只要消费者线程调用task_done()表明其被取走，其调用结束。当未完成任务的计数等于0，join()就会不阻塞
