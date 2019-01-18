@@ -51,6 +51,8 @@ $  以什么结束
       print(p.match("qqq"))
       #OK
       
-      
-      
-      
+find
+findall
+例子：
+      p = re.compile("(\d+)-(\d+)-(\d+)")
+      print(p.findall("2018-01-18---------2019-09-20"))
