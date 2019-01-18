@@ -59,4 +59,22 @@ $  以什么结束
             print(p.findall("2018-01-18---------2019-09-20"))
       
       sub函数
-      re.sub()
+            re.sub(pattern, repl, string, count=0, flags=0)
+            pattern：表示正则表达式中的模式字符串；
+            repl：被替换的字符串（既可以是字符串，也可以是函数）；
+            string：要被处理的，要被替换的字符串；
+            count：匹配的次数, 默认是全部替换
+            flags：具体用处不详
+            
+      replace
+            str.replace(old, new[, max])
+            参数
+            old -- 将被替换的子字符串。
+            new -- 新字符串，用于替换old子字符串。
+            max -- 可选字符串, 替换不超过 max 次
+            
+      strip()
+      对于这个函数要记住3点：
+      1. 默认删除行首或者行尾的空白符（包括'\n', '\r',  '\t',  ' ')
+      2. 能使用，分隔去除多个值
+      3.lstrip()表示删除左边的，rstrip()表示删除右边的
