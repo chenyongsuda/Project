@@ -64,3 +64,40 @@ Python之queue模块
 　　Queue.join()
 　　　　一直阻塞直到队列中的所有元素都被取出和执行
 　　　　未完成的个数，只要有元素添加到queue中就会增加。未完成的个数，只要消费者线程调用task_done()表明其被取走，其调用结束。当未完成任务的计数等于0，join()就会不阻塞
+=============================================================================================
+生产者消费者实例
+import threading
+import queue
+import time
+import random
+
+#define a public list
+item_queue = queue.Queue(10)
+
+#define Productor
+class Productor(threading.Thread):
+    def run(self):
+        while True:
+            item = random.randint(1,1000000)
+            print("Put a new Item %s" % item)
+            item_queue.put(item)
+            time.sleep(random.randint(1,3))
+
+
+class Consumer(threading.Thread):
+    def run(self):
+        while True:
+            print("Take %s" %item_queue.get())
+            time.sleep(random.randint(1,3))
+
+
+p1 = Productor()
+p1.start()
+p2 = Productor()
+p2.start()
+p3 = Productor()
+p3.start()
+
+c1 = Consumer()
+c1.start()
+
