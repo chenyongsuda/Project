@@ -101,3 +101,37 @@ p3.start()
 c1 = Consumer()
 c1.start()
 
+==============================================================================================
+
+Queues
+使用方法跟threading里的queue差不多，注意在执行的时候，queue是一个备份，而不是原来的queue，不过实现了数据共享。
+
+Pipe管道
+和队列的功能差不多，实现两个进程之间数据的传递:
+
+Manager管道
+上面两种都是实现数据传递，现在实现数据共享，
+
+import Queue
+myqueue = Queue.Queue()
+
+from multiprocessing import Queue
+myqueue = Queue.Queue()
+
+import multiprocessing
+manager=multiprocessing.Manager()
+myqueue=manager.Queue()
+
+Queue.Queue 是进程内非阻塞队列
+multiprocess.Queue 是跨进程通信队列
+前者是各自进程私有, 后者是各子进程共有
+
+
+
+
+
+
+
+
+
+
