@@ -1,0 +1,108 @@
+解决如何写出完整有用的程序
+1. 不知道从哪里开始编写
+2. 没办法把模块和事情结合
+3. 如何设计代码的逻辑结构,分多少个文件
+
+一般程序会提供如何使用的文档
+如：python -m dbdb.tool 
+会有
+useage:
+  xxxxxxxxxxxxxxxxxxxxxxxx
+  xxxxxxxxxxxxxxxxxxxxxxxx
+  xxxxxxxxxxxxxxxxxxxxxxxx
+
+使用
+import sys
+import dbdb
+OK = 0
+BAD_ARGS = 1
+BAD_VERB = 2
+BAD_KEY = 3
+
+
+def usage():
+    print("Usage:", file=sys.stderr)
+    print("\tpython -m dbdb.tool DBNAME get KEY", file=sys.stderr)
+    print("\tpython -m dbdb.tool DBNAME set KEY VALUE", file=sys.stderr)
+    print("\tpython -m dbdb.tool DBNAME delete KEY", file=sys.stderr)
+
+
+def main(argv):
+    if not (4 <= len(argv) <= 5):
+        usage()
+        return BAD_ARGS
+    dbname, verb, key, value = (argv[1:] + [None])[:4]
+    if verb not in {'get', 'set', 'delete'}:
+        usage()
+        return BAD_VERB
+    db = dbdb.connect(dbname)
+    try:
+        if verb == 'get':
+            sys.stdout.write(db[key])
+        elif verb == 'set':
+            db[key] = value
+            db.commit()
+        else:
+            del db[key]
+            db.commit()
+    except KeyError:
+        print("Key not found", file=sys.stderr)
+        return BAD_KEY
+    return OK
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
+    
+
+从这里看到 1.处理输入如果输入不合理输出useage
+          2.if __name__ == '__main__':当单独执行的时候执行main
+          
+这样的话一个项目首先有个入口类
+首先有个启动的文件夹 bin
+然后有个配置的文件夹 conf
+最后有个某块的文件夹 models
+可能有个日志的文件夹 logs
+
+总体的启动文件在bin下创建startup.py文件(总的项目的启动文件,设置整体的环境变量,然后调用main的方法)
+
+解析参数
+例如执行python时候是这样的
+xxx.py start -p 8080
+使用optparse模块
+
+optparse模块的使用
+self.op = optparse.OptionParser()
+self.op.add_option('-s', '--server', dest='server')
+self.op.add_option('-p', '--port', dest='port')
+options, args = self.op.parse_args()
+print(options) 以server port的键值对
+print(args) 其他的单个参数
+
+用过反射来启动方法
+class ParamsHandler:
+    def __init__(self):
+        self.op = optparse.OptionParser()
+        self.op.add_option('-s', '--server', dest='server')
+        self.op.add_option('-p', '--port', dest='port')
+        options, args = self.op.parse_args()
+        self.server = server.TCPServer()
+        self.checkParams(options, args)
+
+    def checkParams(self, options, args):
+        cmd = args[0]
+        if hasattr(self, cmd):
+            func = getattr(self, cmd)
+            func()
+
+    def start(self):
+        self.server.start()
+
+    def stop(self):
+        self.server.stop()
+        
+要互相能访问到每个类中增加一切以跟目录问导入基准
+BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_PATH)
+
+from models import main
