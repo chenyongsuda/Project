@@ -76,6 +76,8 @@ header = {
     'User-Agent': userAgent,
 }
 
+注意登录的时候如果用post或者get碰见302跳转登录页面的话需要加个参数忽略跳转否则会直接返回后面页面的200状态就无法区分登录成功或者失败了
+resp = requests.post(loginURL, loginData,allow_redirects=False)
 
 # 马蜂窝模仿 登录
 def mafengwoLogin(account, password):
