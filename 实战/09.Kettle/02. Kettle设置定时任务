@@ -1,0 +1,12 @@
+Linux
+
+设置定时任务
+0 8 * * * /xxx/kettle/xxxxxx.sh >> /xxx/kettle/logs/sync.log 2>&1
+
+脚本内容
+#!/bin/sh
+YMD=`date +%Y%m%d`
+/xxx/kettle/pan.sh -file /xxx/kettle/jobs/task01.ktr -logfile /xxx/kettle/logs/task01_${YMD}.log;
+/xxx/kettle/pan.sh -file /xxx/kettle/jobs/task02.ktr  -logfile /xxx/kettle/logs/task02_${YMD}.log;
+
+
