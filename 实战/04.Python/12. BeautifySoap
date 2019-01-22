@@ -1,0 +1,174 @@
+BeautifySoap https://www.crummy.com/software/BeautifulSoup/bs4/doc/index.zh.html
+（1）Tag
+  创建 beautifulsoup 对象
+  soup = BeautifulSoup(html)
+　　另外，我们还可以打开本地的html文件。
+
+  soup = BeautifulSoup(open('index.html'))
+　格式化输入
+  soup = BeautifulSoup(html,"lxml")
+  print(soup.prettify())
+  <html>
+   <head>
+    <title>
+     The Dormouse's story
+    </title>
+   </head>
+   
+  四大对象种类
+　Beautiful Soup将复杂HTML文档转换成一个复杂的树形结构,每个节点都是Python对象,所有对象可以归纳为4种
+　　（1）Tag
+　　（2）NavigableString
+　　（3）BeautifulSoup
+　　（4）Comment
+  
+    Tag 对象与XML或HTML原生文档中的tag相同:
+    soup = BeautifulSoup('<b class="boldest">Extremely bold</b>')
+    tag = soup.b
+    type(tag)
+    # <class 'bs4.element.Tag'>
+    Tag有很多方法和属性,在 遍历文档树 和 搜索文档树 中有详细解释.现在介绍一下tag中最重要的属性: name和attributes
+
+    Name
+    每个tag都有自己的名字,通过 .name 来获取:
+
+    tag.name
+    # u'b'
+    如果改变了tag的name,那将影响所有通过当前Beautiful Soup对象生成的HTML文档:
+
+    tag.name = "blockquote"
+    tag
+    # <blockquote class="boldest">Extremely bold</blockquote>
+    Attributes
+    一个tag可能有很多个属性. tag <b class="boldest"> 有一个 “class” 的属性,值为 “boldest” . tag的属性的操作方法与字典相同:
+
+    tag['class']
+    # u'boldest'
+    也可以直接”点”取属性, 比如: .attrs :
+
+    tag.attrs
+    # {u'class': u'boldest'}
+    tag的属性可以被添加,删除或修改. 再说一次, tag的属性操作方法与字典一样
+
+    tag['class'] = 'verybold'
+    tag['id'] = 1
+    tag
+    # <blockquote class="verybold" id="1">Extremely bold</blockquote>
+
+    del tag['class']
+    del tag['id']
+    tag
+    # <blockquote>Extremely bold</blockquote>
+
+    tag['class']
+    # KeyError: 'class'
+    print(tag.get('class'))
+    # None
+    多值属性
+    HTML 4定义了一系列可以包含多个值的属性.在HTML5中移除了一些,却增加更多.最常见的多值的属性是 class (一个tag可以有多个CSS的class). 还有一些属性 rel , rev , accept-charset , headers , accesskey . 在Beautiful Soup中多值属性的返回类型是list:
+
+    css_soup = BeautifulSoup('<p class="body strikeout"></p>')
+    css_soup.p['class']
+    # ["body", "strikeout"]
+
+    css_soup = BeautifulSoup('<p class="body"></p>')
+    css_soup.p['class']
+    # ["body"]
+    如果某个属性看起来好像有多个值,但在任何版本的HTML定义中都没有被定义为多值属性,那么Beautiful Soup会将这个属性作为字符串返回
+
+    id_soup = BeautifulSoup('<p id="my id"></p>')
+    id_soup.p['id']
+    # 'my id'
+    将tag转换成字符串时,多值属性会合并为一个值
+
+    rel_soup = BeautifulSoup('<p>Back to the <a rel="index">homepage</a></p>')
+    rel_soup.a['rel']
+    # ['index']
+    rel_soup.a['rel'] = ['index', 'contents']
+    print(rel_soup.p)
+    # <p>Back to the <a rel="index contents">homepage</a></p>
+    如果转换的文档是XML格式,那么tag中不包含多值属性
+
+    xml_soup = BeautifulSoup('<p class="body strikeout"></p>', 'xml')
+    xml_soup.p['class']
+    # u'body strikeout'
+    
+    NavigableString
+　　1、我们已经通过tag方法找到标签，但是如果想找某个标签的内容怎么办。
+    bs = BeautifulSoup('<p class="title" name="dromouse"><b>The Dormouse\'s story</b></p>',"html.parser")
+    print(bs.p.string)
+    print(bs.p.b.string)
+    #The Dormouse's story
+    
+    BeautifulSoup对象
+    BeautifulSoup 对象表示的是一个文档的全部内容.大部分时候,可以把它当作 Tag 对象,它支持 遍历文档树 和 搜索文档树 中描述的大部分的方法.
+    
+    如果想要得到所有的<a>标签,或是通过名字得到比一个tag更多的内容的时候,就需要用到 Searching the tree 中描述的方法,比如: find_all()
+    soup.find_all('a')
+    # [<a class="sister" href="http://example.com/elsie" id="link1">Elsie</a>,
+    #  <a class="sister" href="http://example.com/lacie" id="link2">Lacie</a>,
+    #  <a class="sister" href="http://example.com/tillie" id="link3">Tillie</a>]
+    
+    查询
+    name_list = soup.find_all("span",{'class': 'green'})#find_all抓取所有绿色字体，返回list
+    for name in name_list:
+      print(name.get_text()) #get_text()函数剔除字符串中所有tag符号只保留tag中包含的文本
+      
+    .contents
+    tag 的 .content 属性可以将tag的子节点以列表的方式输出
+    #["<meta charset='utf-8'/>","<title>The Dormouse's story</title>"]
+
+    输出方式为列表，我们可以用列表索引来获取它的某一个元素
+    print(soup.head.contents[0])
+    #<meta charset="utf-8"/>
+
+    .children
+    它返回的不是一个 list，不过我们可以通过遍历获取所有子节点。
+    我们打印输出 .children 看一下，可以发现它是一个 list 生成器对象
+    print(soup.head.children)
+    #<list_iterator object at 0x105c1cf28>
+
+    获取里面的内容
+    for child in  soup.body.children:
+        print(child)
+
+
+    所有子孙节点
+    知识点：.descendants 属性
+
+    .descendants
+    .contents 和 .children 属性仅包含tag的直接子节点，.descendants 属性可以对所有tag的子孙节点进行递归循环，和 children类似，我们也需要遍历获取其中的内容。
+    节点内容
+    知识点：.string 属性
+
+    多个内容
+    知识点： .strings  .stripped_strings 属性
+
+    .strings
+    获取多个内容，不过需要遍历获取，比如下面的例子
+    .stripped_strings
+    输出的字符串中可能包含了很多空格或空行,使用 .stripped_strings 可以去除多余空白内容
+
+    父节点
+    知识点： .parent 属性
+
+    全部父节点
+    知识点：.parents 属性
+    通过元素的 .parents 属性可以递归得到元素的所有父辈节点，例如
+    content = soup.head.title.string
+    for parent in  content.parents:
+        print parent.name
+
+    兄弟节点
+    知识点：.next_sibling  .previous_sibling 属性
+    兄弟节点可以理解为和本节点处在统一级的节点，.next_sibling 属性获取了该节点的下一个兄弟节点，.previous_sibling 则与之相反，如果节点不存在，则返回 None
+    注意：实际文档中的tag的 .next_sibling 和 .previous_sibling 属性通常是字符串或空白，因为空白或者换行也可以被视作一个节点，所以得到的结果可能是空白或者换行
+    全部兄弟节点
+
+    知识点：.next_siblings  .previous_siblings 属性
+    通过 .next_siblings 和 .previous_siblings 属性可以对当前节点的兄弟节点迭代输出
+    for sibling in soup.a.next_siblings:
+        print(repr(sibling))
+
+    前后节点
+    知识点：.next_element  .previous_element 属性
