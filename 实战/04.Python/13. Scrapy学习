@@ -1,1 +1,16 @@
+创建一个scrapy项目
+
+在开始爬取之前，我们首先要创建一个scrapy项目，在命令行输入一下命令即可创建
+
+scrapy startproject mingyan
+scrapy  startproject这里是固定的，注意scrapy和startproject和mingyan中间是有空格的！后面的：mingyan是我们创建的蜘蛛名字，后面我们运行的时候用得到，你需要根据你的情况创建，比如你是想爬取淘宝你可以这样创建：
+
+scrapy startproject taobao
+当然如果你是想爬取苍老师的图片，你可以这样：
+
+scrapy startproject xxoo
+命名随你开心，只要你知道你命名的是干嘛就OK了！我是在 F:\scrapy-china\scrapycode这个目录下面运行的命令，当然，你想在哪个目录，哪个盘符运行cmd命令，随你喜欢！神马，你不知道肿么打开命令行？更不知道怎么进入D盘？没办法，那你只能先问问你度娘了！
+
+
+==================================================================================
 
