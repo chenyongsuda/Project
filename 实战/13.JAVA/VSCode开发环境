@@ -1,0 +1,68 @@
+1. 准备JAVA环境 JAVA_HOME
+2. 准备Maven环境 配置maven可联网
+3. 配置VSCODE
+
+参考https://www.jianshu.com/p/619567d31311配置
+安装Java开发的插件Java Extension Pack
+可以看到默认会关联安装
+-Language Support for Java by Red Hat
+-Debugging for Java
+-Java Test Runner
+-Maven Project Explorer
+-Java Dependency Viewer
+
+安装Spring Boot的插件Spring Boot Extension Pack
+可以看到默认会关联安装
+-Spring Boot Tools
+-Spring Initiallizr Java
+-Spring Boot Dashboard
+-Concourse Cl Pipeline
+-Cloud Foundary Deployment Manifest
+
+4.以上这两个就足以开发一个SpringBoot的项目了，然后需要为插件配置下执行路径，打开File->Preferences->settings->User Settings
+
+5.Ctrl+Shift+p打开终端，输入Spring initializr创建个Maven项目
+
+参考配置：
+{
+    // prettier:每行在这个字符数内整合代码，如果你的屏幕较宽分辨率较高可以适当加大
+    "prettier.printWidth": 120,
+    // prettier:是否在每行末尾加上分号
+    "prettier.semi": false,
+    // prettier:如果为true，将使用单行否则使用双引号
+    "prettier.singleQuote": true,
+    // vetur:对html的内容使用js-beautify-html
+    "vetur.format.defaultFormatter.html": "js-beautify-html",
+    "terminal.integrated.shell.windows": "C:\\WINDOWS\\System32\\cmd.exe",
+    "editor.renderIndentGuides": false,
+    "python.autoComplete.extraPaths": [
+        "xxxxxxxxxxxx\\Python\\Python37-32\\Lib\\site-packages",
+        "xxxxxxxxxxxx\\Python\\Python37-32\\Scripts"
+    ],
+    "python.pythonPath": "xxxxxxxxxxxx\\Python\\Python37-32\\Python.exe",
+    "python.autoComplete.addBrackets": true,
+    "javascript.suggest.completeFunctionCalls": true,
+    "typescript.suggest.completeFunctionCalls": true,
+    "python.jediEnabled": true,
+    "python.workspaceSymbols.exclusionPatterns": [],
+    "java.configuration.maven.userSettings": "xxxxxxxxxxxx/apache-maven-3.5.4/conf/settings.xml",
+    "search.exclude": {
+        "**/logs": true,
+        "**/target": true
+    },
+    "java.home": "C:/Program Files/Java/jdk1.8.0_191",
+    "maven.executable.path": "xxxxxxxxxxxx/apache-maven-3.5.4/bin/mvn",
+    "http.proxy": "http://username:password@proxy:port/",
+    "http.proxyStrictSSL": false,
+    "http.proxySupport": "on"
+}
+
+主要配置以下这几个：
+ "java.configuration.maven.userSettings": "xxxxxxxxxxxx/apache-maven-3.5.4/conf/settings.xml",
+"search.exclude": {
+    "**/logs": true,
+    "**/target": true
+},
+"java.home": "C:/Program Files/Java/jdk1.8.0_191",
+"maven.executable.path": "xxxxxxxxxxxx/apache-maven-3.5.4/bin/mvn",
+
