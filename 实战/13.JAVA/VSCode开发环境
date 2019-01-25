@@ -66,3 +66,69 @@
 "java.home": "C:/Program Files/Java/jdk1.8.0_191",
 "maven.executable.path": "xxxxxxxxxxxx/apache-maven-3.5.4/bin/mvn",
 
+项目创建后会自动创建DemoApplication.java文件，在DemoApplication 文件目录下新建文件夹 Controller，新建文件HomeController.java。效果如下：
+package com.example.demo.contorller;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class HomeController {
+    @RequestMapping("/test")
+    public String Index(){
+        return "Hello This Index";
+    }
+}
+
+Ps:SpringBoot项目的Bean装配默认规则是根据DemoApplication类所在的包位置从上往下扫描。所以必须放在同一目录下否则会无法访问报如下所示错误：
+
+在spring boot 中访问html需要引入Thymeleaf （模板引擎）包，在创建项目时已引用该包这里不需在重复引用。在resources-->templates目录下创建Index.html文件，效果如下：
+
+
+html内容：
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8"/>
+    <title>第一个HTML页面</title>
+</head>
+<body>
+<h1>Hello Spring Boot!!!</h1>
+<p th:text="${hello}"></p>
+</body>
+</html>
+ 在controller目录下新建TestController.java文件，代码如下：
+
+@Controller
+public class TestController {
+
+    /**
+     * 本地访问内容地址 ：http://localhost:8080/hello
+     * @param map
+     * @return
+     */
+    @RequestMapping("/hello")
+    public String helloHtml(HashMap<String, Object> map) {
+        map.put("hello", "欢迎进入HTML页面");
+        return "/index";
+    }
+}
+Ps:如果要访问html页面注解必须为Controller不能为RestController。否则无法访问。
+
+RestController和Controller的区别：
+
+@RestController is a stereotype annotation that combines @ResponseBody and @Controller.
+意思是：
+@RestController注解相当于@ResponseBody ＋ @Controller合在一起的作用。
+1)如果只是使用@RestController注解Controller，则Controller中的方法无法返回jsp页面，配置的视图解析器InternalResourceViewResolver不起作用，返回的内容就是Return 里的内容。
+
+例如：本来应该到success.html页面的，则其显示success.
+
+2)如果需要返回到指定页面，则需要用 @Controller配合视图解析器InternalResourceViewResolver才行。
+
+3)如果需要返回json或者xml或者自定义mediaType内容到页面，则需要在对应的方法上加上@ResponseBody注解
+到处基础配置结束，可以愉快的玩耍Spring Boot!
+
+
+
