@@ -1,0 +1,11 @@
+配置代理：
+配置PROXY代理在安装目录的xml文件里
+
+如果mvn出现Not authorized by proxy , ReasonPhrase:Proxy Authentication Required.问题
+参照：
+
+Not authorized by proxy , ReasonPhrase:Proxy A
+uthentication Required.
+这如何是好,明明不需要密码的, baidu一把, oh,原来有人碰到类似情况, 如果是NTLM proxy(搞不清楚这个代理类型,可能是微软的东东吧),需要添加一个附加包,如下:
+Download the wagon-http-lightweight-2.2.jar , copy到lib\ext目录下, 问题解决!
+
