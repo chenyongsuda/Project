@@ -51,10 +51,368 @@ json	否	页面配置
   还有{{ ? : }}
 
 列表渲染
-  
+      wx:for
+      在组件上使用wx:for控制属性绑定一个数组，即可使用数组中各项的数据重复渲染该组件。
+      默认数组的当前项的下标变量名默认为index，数组当前项的变量名默认为item
+      <view wx:for="{{items}}">
+        {{index}}: {{item.message}}
+      </view>
+      Page({
+          data:{
+            items: [{
+              message: 'foo',
+            },{
+              message: 'bar'
+            }]
+          }
+      })
+
+      使用wx:for-item可以指定数组当前元素的变量名
+
+      使用wx:for-index可以指定数组当前下标的变量名：
+
+      <view wx:for="{{array}}" wx:for-index="idx" wx:for-item="itemName">
+        {{idx}}: {{itemName.message}}
+      </view>
+      wx:for也可以嵌套，下边是一个九九乘法表
+
+      <view wx:for="{{[1, 2, 3, 4, 5, 6, 7, 8, 9]}}" wx:for-item="i">
+        <view wx:for="{{[1, 2, 3, 4, 5, 6, 7, 8, 9]}}" wx:for-item="j">
+          <view wx:if="{{i <= j}}">
+            {{i}} * {{j}} = {{i * j}}
+          </view>
+        </view>
+      </view>
+
+      block wx:for
+      类似block wx:if，也可以将wx:for用在<block/>标签上，以渲染一个包含多节点的结构块。例如：
+      <block wx:for="{{[1, 2, 3]}}">
+        <view> {{index}}: </view>
+        <view> {{item}} </view>
+      </block>
+      wx:key
+      如果列表中项目的位置会动态改变或者有新的项目添加到列表中，并且希望列表中的项目保持自己的特征和状态（如 <input/> 中的输入内容，<switch/> 的选中状态），需要使用 wx:key 来指定列表中项目的唯一的标识符。
+
+      wx:key 的值以两种形式提供
+      字符串，代表在 for 循环的 array 中 item 的某个 property，该 property 的值需要是列表中唯一的字符串或数字，且不能动态改变。
+      保留关键字 *this 代表在 for 循环中的 item 本身，这种表示需要 item 本身是一个唯一的字符串或者数字，如：
+      当数据改变触发渲染层重新渲染的时候，会校正带有 key 的组件，框架会确保他们被重新排序，而不是重新创建，以确保使组件保持自身的状态，并且提高列表渲染时的效率。
+
+      如不提供 wx:key，会报一个 warning， 如果明确知道该列表是静态，或者不必关注其顺序，可以选择忽略。
+
+      示例代码：
+      <switch wx:for="{{objectArray}}" wx:key="unique" style="display: block;"> {{item.id}} </switch>
+      <button bindtap="switch"> Switch </button>
+      <button bindtap="addToFront"> Add to the front </button>
+
+      <switch wx:for="{{numberArray}}" wx:key="*this" style="display: block;"> {{item}} </switch>
+      <button bindtap="addNumberToFront"> Add to the front </button>
+      Page({
+        data: {
+          objectArray: [
+            {id: 5, unique: 'unique_5'},
+            {id: 4, unique: 'unique_4'},
+            {id: 3, unique: 'unique_3'},
+            {id: 2, unique: 'unique_2'},
+            {id: 1, unique: 'unique_1'},
+            {id: 0, unique: 'unique_0'},
+          ],
+          numberArray: [1, 2, 3, 4]
+        },
+        switch: function(e) {
+          const length = this.data.objectArray.length
+          for (let i = 0; i < length; ++i) {
+            const x = Math.floor(Math.random() * length)
+            const y = Math.floor(Math.random() * length)
+            const temp = this.data.objectArray[x]
+            this.data.objectArray[x] = this.data.objectArray[y]
+            this.data.objectArray[y] = temp
+          }
+          this.setData({
+            objectArray: this.data.objectArray
+          })
+        },
+        addToFront: function(e) {
+          const length = this.data.objectArray.length
+          this.data.objectArray = [{id: length, unique: 'unique_' + length}].concat(this.data.objectArray)
+          this.setData({
+            objectArray: this.data.objectArray
+          })
+        },
+        addNumberToFront: function(e){
+          this.data.numberArray = [ this.data.numberArray.length + 1 ].concat(this.data.numberArray)
+          this.setData({
+            numberArray: this.data.numberArray
+          })
+        }
+      })
 
 
 
 条件渲染
+      01简单的条件渲染
+代码：
+// pages/test/test.js
+Page({
+  data: {
+    id:1,
+    bol:true
+  },
+  //事件处理函数
+  bindtoLog:function(){
+    wx.switchTab({
+      url: '../logs/logs',
+    })
+  },
+  bindtoIndex:function(){
+    wx.switchTab({
+      url: '../index/index',
+    })
+  },
+  show:function(){
+    this.setData({
+      bol:!this.data.bol
+    })
+  }
+})
 
-模板引用
+// pages/test/test.js
+Page({
+  data: {
+    id:2,
+    bol:true
+  },
+  //事件处理函数
+  bindtoLog:function(){
+    wx.switchTab({
+      url: '../logs/logs',
+    })
+  },
+  bindtoIndex:function(){
+    wx.switchTab({
+      url: '../index/index',
+    })
+  },
+  show:function(){
+    this.setData({
+      bol:!this.data.bol
+    })
+  }
+})
+运行结果： 
+id不为1时：这里将id的值改为2 
+===============================================================
+模板
+要注意import作用域，其仅仅引用目标文件中template。如：C import B，B import A，在C中可以使用B定义的template，在B中可以使用A定义的template，但是C不能使用A定义的template。
+
+<!--pages/templates/template.wxml-->
+<template name="msgItem">
+  <view>
+  <text> {{index}}: {{msg}} </text>
+  <text> Time: {{time}} </text>
+ </view>
+</template>
+ 
+<template is="msgItem" data="{{...item}}"/>
+<template is="msgItem" data="{{...item}}"/>
+<template is="msgItem" data="{{...item}}"/>
+ 
+<template name="odd">
+  <view>{{motto}} </view>
+</template>
+<template name="o">
+  <view> even </view>
+</template>
+ 
+<!-- is属性使用Mustache语法动态渲染template -->
+<block wx:for="{{[1, 2, 3, 4,5]}}">
+  <template is="{{item % 2 == 0 ? 'o' : 'odd'}}" />
+</block>
+
+--------------------- 
+作者：csl125 
+来源：CSDN 
+原文：https://blog.csdn.net/csl125/article/details/79106613 
+版权声明：本文为博主原创文章，转载请附上博文链接！
+
+
+传数据时item前面加三个点... 模板里面就不需要写item了,
+如果要传多个数据到模板
+<view class="tab-list" wx:for="{{list}}" wx:key="index">
+          <template is="day-tab" data="{{item,index:index,currentTarget:currentTarget}}" wx:key="index"></template>
+ </view>
+用逗号分开,item 是对象,index是单个数据,要用键值对,template就介绍到这来
+--------------------- 
+作者：高小川 
+来源：CSDN 
+原文：https://blog.csdn.net/u013128651/article/details/79736485 
+版权声明：本文为博主原创文章，转载请附上博文链接！
+
+================================================================================================
+微信小程序template模板与component组件的区别和使用
+前言：
+除了component，微信小程序中还有另一种组件化你的方式template模板，这两者之间的区别是，template主要是展示，方法则需要在调用的页面中定义。而component组件则有自己的业务逻辑，可以看做一个独立的page页面。简单来说，如果只是展示，使用template就足够了，如果涉及到的业务逻辑交互比较多，那就最好使用component组件了。
+一. template模板:
+1. 模板创建：
+建议单独创建template目录，在template目录中创建管理模板文件。
+由于模板只有wxml、wxss文件，而且小程序开发工具并不支持快速创建模板，因此就需要直接创建wxml、wxss文件了，一个template的模板文件和样式文件只需要命名相同即可。如果模板较多，建议在template目录下再创建子目录，存放单独的模板。
+
+ 
+2. 模板文件：
+template.wxml文件中能写多个模板，用name区分：
+复制代码
+1 <template name="demo">
+2 <view class='tempDemo'>
+3   <text class='name'>FirstName: {{firstName}}, LastName: {{lastName}}</text>
+4   <text class='fr' bindtap="clickMe" data-name="{{'Hello! I am '+firstName+' '+LastName+'!'}}"> clcikMe </text>
+5 </view>
+6 </template>
+复制代码
+3. 样式文件：
+
+模板拥有自己的样式文件（用户自定义）。
+
+1 /* templates/demo/index.wxss */
+2 .tempDemo{
+3   width:100%;
+4 }
+5 view.tempDemo .name{color:darkorange}
+4. 页面引用：
+
+page.wxml
+
+复制代码
+1 <!--导入模板-->
+2 <import src="../../templates/demo/index.wxml" />
+3 <!--嵌入模板-->
+4 <view>
+5   <text>嵌入模板</text>
+6   <template is="demo" data="{{...staffA}}"></template><!--传入参数，必须是对象-->
+7   <template is="demo" data="{{...staffB}}"></template><!--传入参数，必须是对象-->
+8   <template is="demo" data="{{...staffC}}"></template><!--传入参数，必须是对象-->
+9 </view>
+复制代码
+page.wxss
+
+1 @import "../../templates/demo/index.wxss" /*引入template样式*/
+page.js
+
+复制代码
+ 1 Page({
+ 2   /**
+ 3    * 页面的初始数据
+ 4    */
+ 5   data: {
+ 6     staffA: { firstName: 'Hulk', lastName: 'Hu' },
+ 7     staffB: { firstName: 'Shang', lastName: 'You' },
+ 8     staffC: { firstName: 'Gideon', lastName: 'Lin' }
+ 9   },
+10   clickMe(e) {
+11     wx.showToast({ title: e.currentTarget.dataset.name, icon: "none", duration: 100000 })
+12   }
+13   ......
+14 })
+复制代码
+备注：
+
+一个模板文件中可以有多个template,每个template均需定义name进行区分，页面调用的时候也是以name指向对应的template;
+
+template模板没有配置文件(.json)和业务逻辑文件（.js）,所以template模板中的变量引用和业务逻辑事件都需要在引用页面的js文件中进行定义；
+
+template模板支持独立样式，需要在引用页面的样式文件中进行导入；
+
+页面应用template模板需要先导入模板 <import src="../../templates/demo/index.wxml" /> ，然后再嵌入模板 <template is="demo" data="{{...staffA}}"></template> 
+
+二. Component组件：
+
+1. 组件创建：
+
+新建component目录——创建子目录——新建Component;
+
+ 
+
+2. 组件编写：
+
+新建的component组件也由4个文件构成，与page类似，但是js文件和json文件与页面不同。
+
+js代码：
+
+复制代码
+ 1 // components/demo/index.js
+ 2 Component({
+ 3   /**
+ 4    * 组件的属性列表
+ 5    */
+ 6   properties: {
+ 7     name: {
+ 8       type: String,
+ 9       value: ''
+10     }
+11   },
+12 
+13   /**
+14    * 组件的初始数据
+15    */
+16   data: {
+17     type: "组件"
+18   },
+19 
+20   /**
+21    * 组件的方法列表
+22    */
+23   methods: {
+24     click: function () {
+25       console.log("component!");
+26     }
+27   }
+28 })
+复制代码
+json配置文件：
+
+1 {
+2   "component": true,
+3   "usingComponents": {}
+4 }
+3. 组件引用：
+
+页面中引用组件需要在json配置文件中进行配置，代码如下：
+
+1  {
+2    "navigationBarTitleText": "模板demo",
+3    "usingComponents": {
+4      "demo": "../../components/demo/index" 
+5    }
+6  }
+然后在模板文件中进行使用就可以了，其中name的值为json配置文件中usingComponents的键值：
+
+1       <demo name="comp" />
+2       <!--使用demo组件，并传入值为“comp”的name属性（参数）-->
+ 
+
+这样就可以了。 
+
+PS：组件中不会自动引用公共样式，如果需要则需在样式文件中引入：
+
+1 @import "../../app.wxss";
+个人原创博客，转载请注明来源地址：https://www.cnblogs.com/xyyt/p/9559326.html
+
+个人原创博客，转载请注明来源地址：https://www.cnblogs.com/xyyt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import
+小程序中有两种引用方式一种是直接引用include，通过它相当于把<templete/>标注的以外的代码全部copy过来当前位置，而import则是相反，它是只引用模板
+
