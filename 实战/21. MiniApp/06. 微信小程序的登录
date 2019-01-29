@@ -11,3 +11,12 @@
 
 session_key在微信服务器有效期是30天
 
+获取简单的用户信息:不需要授权
+<open-data></open-data> ：只是简单的获取信息用于显示
+有两种type
+type="userAvatarUrl"是获取用户头像，type="userNickName"是获取用户昵称
+<open-data type="userAvatarUrl"></open-data> 
+<open-data type="userNickName"></open-data> 
+
+
+
