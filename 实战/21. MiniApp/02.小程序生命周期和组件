@@ -113,3 +113,44 @@
       不要在定义于 App() 内的函数中调用 getApp() ，使用 this 就可以拿到 app 实例。
       不要在 onLaunch 的时候调用 getCurrentPages()，此时 page 还没有生成。
       通过 getApp() 获取实例之后，不要私自调用生命周期函数。
+
+
+3.页面事件处理函数
+onPullDownRefresh()
+监听用户下拉刷新事件。
+
+onReachBottom()
+监听用户上拉触底事件。
+
+onShareAppMessage(Object)
+监听用户点击页面内转发按钮（<button> 组件 open-type="share"）或右上角菜单“转发”按钮的行为，并自定义转发内容。
+在开发者工具中预览效果
+
+Page({
+  onShareAppMessage(res) {
+    if (res.from === 'button') {
+      // 来自页面内转发按钮
+      console.log(res.target)
+    }
+    return {
+      title: '自定义转发标题',
+      path: '/page/user?id=123'
+    }
+  }
+})
+
+onResize(object)
+基础库 2.4.0 开始支持，低版本需做兼容处理。
+
+onTabItemTap(Object)
+示例代码：
+
+Page({
+  onTabItemTap(item) {
+    console.log(item.index)
+    console.log(item.pagePath)
+    console.log(item.text)
+  }
+})
+
+
