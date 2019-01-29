@@ -156,3 +156,99 @@ Page({
 })
 
 
+
+==============================================================================
+微信小程序之页面路由
+
+一、哪些情况会触发页面跳转
+小程序启动，初始化第一个页面
+打开新页面，调用 API wx.navigateTo 或使用<navigator />组件
+页面重定向，调用 API wx.redirectTo 或使用<navigator />组件
+页面返回，调用 API wx.navigateBack或用户按左上角返回按钮
+tarbar切换
+所有页面都必须在app.json中注册,例如：
+
+{
+    "pages": [
+        "pages/index/index",
+        "pages/logs/index"
+    ]
+}
+二、如何跳转页面
+使用wx.navigateTo接口跳转,原页面保留。
+wx.navigateTo({
+        //目的页面地址
+        url: 'pages/logs/index',
+        success: function(res){},
+        ...
+})
+使用wx.redirectTo接口跳转，关闭原页面,不能返回。
+wx.redirectTo({
+        //目的页面地址
+        url: 'pages/logs/index',
+        success: function(res){},
+        ...
+})
+3.使用组件
+
+<navigator url="pages/logs/index" hover-class="navigator-hover">跳转</navigator>
+当该组件添加redirect属性时，等同于wx.redirectTo接口；默认redirect属性为false，等同于wx.navigateTo接口。
+
+用户点击左上角返回按钮，或调用wx.navigateBack接口返回上一页。
+wx.navigateBack({
+    delta: 1
+})
+delta为1时表示返回上一页，为2时表示上上一页，以此类推；如果dalta大于已打开的页面总数，则返回到首页。返回后，元界面会销毁。
+
+》》》页面跳转传值
+其实这个很简单,形如：
+
+url?key=value&key1=value1
+经过测试，传递的参数没有被URIEncode,传递中文没有乱码。参数长度未测试。
+
+三、如何正确使用页面跳转
+官方规定小程序最多只能有五个页面同时存在，意思是在不关闭页面的情况，最多新开五个页面，页面深度为5。
+
+对于可逆操作，使用wx.navigateTo,比如从首页跳转到二级页面，从二级页面返回是不需要重新渲染首页
+对于不可逆操作，使用wx.redirectTo,比如用户登录成功后，关闭登录页面，不能返回到登录界面。
+对于一些介绍性等不常用页面wx.redirectTo或wx.navigatrBack
+对于类似九宫格、列表项，使用
+不要在首页使用wx.redirectTo，这样会导致应用无法返回首页
+简化需求、简化流程；核心功能在两三个页面完成便是张小龙追求『小而美』的体现
+四、页面栈
+页面栈以栈（先进后出）的形式维护页面与页面之间的关系；
+小程序提供了getCurrentPages()函数获取页面栈，第一个元素为首页，最后一个元素为当前页面。
+
+使用wx.navigateTo每新开一个页面，页面栈大小加1,直到页面栈大小为5为止；
+
+
+使用wx.navigateTo重复打开界面
+
+
+上图中，假如使用wx.navigateTo从四级页面跳转到二级页面，此时会在页面栈顶添加一个与二级页面初始状态一样的界面，但两个页面状态是独立的。页面栈大小会加1，如果页面栈大小为5，则wx.navigateTo无效
+
+使用wx.redirectTo重定向
+
+上图中，假如使用wx.redirectTo从四级页面重定向到二级页面，此时会将关闭四级页面，并使用二级页面替换四级页面，但两个页面状态是独立的。此时的页面栈大小不变，请注意和使用wx.navigateTo的区别。
+
+使用wx.navigateBack返回
+
+上图中，假如当前页面为五级页面，使用wx.navigateBack：
+
+当delta为1，关闭五级页面，当前页面为四级页面，页面栈大小减1；
+当delta为2，关闭依次五级页面和四级页面，当前页面为三级页面，页面栈大小减2；
+以此类推，直到栈底为止，也就是首页。
+以上使用wx.navigateTo、wx.redirectTo、wx.navigateBack页面出入栈操作对页面栈的影响，平时不一定用得上，但是还是有必要了解背后的原理。
+
+通过学习页面栈，你至少可以知道：
+
+小程序运行时你可以获取到已经初始化了的页面的属性和方法
+动态获取当前页面路径
+页面自动跳转
+你可以通过getCurrentPages()获取页面page对象，执行非当前页js里的方法
+总结
+
+wx.navigateTo会增加页面栈大小，直到页面栈大小为5
+wx.redirectTo不会增加页面栈大小
+wx.navigateBack会减少页面栈大小，直到页面栈大小为1
+最后，值得庆祝的是在12月17日第二届中国深商大会上马化腾透露，小程序会在春节前全面推出。
