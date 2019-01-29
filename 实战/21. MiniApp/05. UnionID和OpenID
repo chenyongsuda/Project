@@ -15,4 +15,58 @@ UnionID获取途径
 获取用户的openid是无需用户同意的，获取用户的基本信息则需要用户同意
 
 
+=================================================================================================
+小程序登录流程
+
+小程序调用wx.login() 获取 临时登录凭证code ，并回传到开发者服务器。
+开发者服务器以code换取 用户唯一标识openid 和 会话密钥session_key。
+之后开发者服务器可以根据用户标识来生成自定义登录态，用于后续业务逻辑中前后端交互时识别用户身份。
+
+登录凭证校验
+临时登录凭证校验接口是一个 HTTPS 接口，开发者服务器使用 临时登录凭证code 获取 session_key 和 openid 等。
+
+注意：
+
+会话密钥session_key 是对用户数据进行加密签名的密钥。为了应用自身的数据安全，开发者服务器不应该把会话密钥下发到小程序，也不应该对外提供这个密钥。
+UnionID 只在满足一定条件的情况下返回。具体参看UnionID机制说明
+临时登录凭证code只能使用一次
+
+接口地址：
+https://api.weixin.qq.com/sns/jscode2session?appid=APPID&secret=SECRET&js_code=JSCODE&grant_type=authorization_code
+
+请求参数
+        参数	必填	说明
+        appid	是	小程序唯一标识
+        secret	是	小程序的 app secret
+        js_code	是	登录时获取的 code
+        grant_type	是	填写为 authorization_code
+在不满足UnionID下发条件的情况下，返回参数
+        参数	说明
+        openid	用户唯一标识
+        session_key	会话密钥
+在满足UnionID下发条件的情况下，返回参数
+        参数	说明
+        openid	用户唯一标识
+        session_key	会话密钥
+        unionid	用户在开放平台的唯一标识符
+        
+返回说明
+//正常返回的JSON数据包
+{
+  	"openid": "OPENID",
+  	"session_key": "SESSIONKEY",
+}
+
+//满足UnionID返回条件时，返回的JSON数据包
+{
+    "openid": "OPENID",
+    "session_key": "SESSIONKEY",
+    "unionid": "UNIONID"
+}
+//错误时返回JSON数据包(示例为Code无效)
+{
+	"errcode": 40029,
+	"errmsg": "invalid code"
+}
+
 
