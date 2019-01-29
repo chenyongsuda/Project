@@ -1,0 +1,74 @@
+小程序事件
+
+什么是事件
+  事件是视图层到逻辑层的通讯方式。
+  事件可以将用户的行为反馈到逻辑层进行处理。
+  事件可以绑定在组件上，当达到触发事件，就会执行逻辑层中对应的事件处理函数。
+  事件对象可以携带额外信息，如 id, dataset, touches。
+
+事件的使用方式
+在组件中绑定一个事件处理函数。
+如bindtap，当用户点击该组件的时候会在该页面对应的Page中找到相应的事件处理函数。
+
+<view id="tapTest" value='cc' data-hi="WeChat" bindtap="tapName"> Click me! </view>
+在相应的Page定义中写上相应的事件处理函数，参数是event。
+Page({
+  tapName: function(event) {
+    console.log(event)
+  }
+})
+可以看到log出来的信息大致如下：
+{
+  "type":"tap",
+  "timeStamp":895,
+  "target": {
+    "id": "tapTest",
+    "dataset":  {
+      "hi":"WeChat"
+    }
+  },
+  "currentTarget":  {
+    "id": "tapTest",
+    "dataset": {
+      "hi":"WeChat"
+    }
+  },
+  "detail": {
+    "x":53,
+    "y":14,value:"cc"
+  },
+  "touches":[{
+    "identifier":0,
+    "pageX":53,
+    "pageY":14,
+    "clientX":53,
+    "clientY":14
+  }],
+  "changedTouches":[{
+    "identifier":0,
+    "pageX":53,
+    "pageY":14,
+    "clientX":53,
+    "clientY":14
+  }]
+}
+
+
+1. 使用 bind 开头的事件绑定，这种绑定不会阻止冒泡事件向上冒泡
+2. 使用 catch 开头的事件绑定，这种绑定可以阻止冒泡事件向上冒泡
+
+比如：outer-container 使用了bind属性绑定了tap事件的处理函数 
+     innner-container 使用了catch属性进行tap事件绑定
+     content          使用了bind属性绑定了tap事件的处理函数 
+     
+     
+    点击内部Content
+    发现innner-container 和 content上的事件机制调用了. 上面的事件被catch干掉了.
+    在content的tap事件处理函数中，event里面的target和currentTarget的id都是content。
+    而在inner-container中的event对象里，target的id为content，而currentTarget的id是inner-content。
+    由此我们可以知道，event对象中的target是事件产生的源头组件，而currentTarget则是当前捕获这个事件的组件。event对象中还包含其他一些有用的信息，如touches和changedTouches表示一个或多个手指在屏幕上的触摸位置和变动位置等信息，可以用来实现多点触摸的高级手势处理。最后，关于事件冒泡，有一点是值得注意一下的：在微信小程序中，并不是所有事件都是冒泡的，从官方文档了解到，<canvas>组件的触摸事件不可冒泡。
+     
+     
+     
+     
+     
