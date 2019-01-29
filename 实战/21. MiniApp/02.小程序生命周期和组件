@@ -116,6 +116,8 @@
 
 
 3.页面事件处理函数
+https://developers.weixin.qq.com/miniprogram/dev/framework/app-service/page.html 参考页面
+
 onPullDownRefresh()
 监听用户下拉刷新事件。
 
