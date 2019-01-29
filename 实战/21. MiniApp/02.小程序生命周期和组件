@@ -1,0 +1,115 @@
+1. 小程序的生命周期有四个
+    onLaunch 生命周期函数--监听小程序初始化 当小程序初始化完成时，会触发 onLaunch（全局只触发一次）
+
+    onShow 生命周期函数--监听小程序显示 当小程序启动，或从后台进入前台显示，会触发 onShow
+
+    onHide 生命周期函数--监听小程序隐藏 当小程序从前台进入后台，会触发 onHide
+
+    onError 错误监听函数 当小程序发生脚本错误，或者 api 调用失败时，会触发 onError 并带上错误信息
+
+    其他 Any 开发者可以添加任意的函数或数据到 Object 参数中，用 this 可以访问
+
+    我们在app.js文件中定义以下方法 ，并打印出来
+
+    App({
+      onLaunch: function (options) {
+        console.log("app.js ---onLaunch---" + JSON.stringify(options));
+      },
+      onShow:function(){
+        console.log("app.js ---onShow---");
+      },
+      onHide:function(){
+        console.log("app.js ---onHide---");
+      },
+      onError: function (msg){
+        console.log("app.js ---onError---" + msg);
+      },
+      globalData: {
+        userInfo: null
+      }
+    })
+
+
+    这是我们打开一个小程序打印出来的一些方法
+    ---app.js onLaunch
+    ---app.js onShow
+    ---page   onLoad
+    ---page   onShow
+    ---page   onReady
+    
+    
+    
+    可以看出， 打开程序依次执行了app.js下面onLaunch和onShow方法，以及page页面中的onLoad，onShow和onReady方法
+
+    其中 ， onLaunch, onShow 方法会返回一个参数对象， 里面包含了三个参数 ， path,query和scene ，path是打开小程序的路径
+
+    query是打开小程序页面url的参数，scene是打开小程序的场景值
+
+    更多场景值可以查看
+    https://mp.weixin.qq.com/debug/wxadoc/dev/framework/app-service/scene.html
+
+    小程序切换到后台会执行以下2个方法
+    ---page   onHide
+    ---app.js onHide  
+
+
+    返回小程序前台
+    ---app.js onShow
+    ---page   onShow
+    
+2.页面的生命周期
+
+      在page页面中定义的生命周期方法
+
+      onLoad 生命周期函数--监听页面加载
+      onReady 生命周期函数--监听页面初次渲染完成
+      onShow 生命周期函数--监听页面显示
+      onHide 生命周期函数--监听页面隐藏
+      onUnload 生命周期函数--监听页面卸载
+
+      Page({
+        onLoad: function (options) {
+          console.log("page ---onLoad---");
+        },
+        onReady: function () {
+          console.log("page ---onReady---");
+        },
+        onShow: function () {
+          console.log("page ---onShow---");
+        },
+        onHide: function () {
+          console.log("page ---onHide---");
+        },
+        onUnload: function () {
+          console.log("page ---onUnload---");
+        }
+      })
+      其中，打开小程序后会依次执行onLoad，onReady和onShow方法
+      前后台切换会分别执行onHide和onShow方法，
+      当小程序页面销毁时会执行 onUnload方法
+      
+      例如，我们在details.js中定义onUnload方法
+      onUnload: function () {
+          console.log("details.js  --onUnload")
+        },
+      当我们从首页打开一个新页面details.wxml，然后再关闭着这个页面
+
+
+      从上图可以看到页面执行了onUnload方法
+      另外， 小程序为我们提供了全局数据管理 ，在page页面中通过getApp()方法获取app.js实例
+      例如：
+      我们在app.js通过定义一个globalData数据对象
+      App({
+        globalData: {
+          userInfo: null
+        }
+      })
+
+      // other.js
+      var appInstance = getApp()
+      console.log(appInstance.globalData)
+      注意：
+      App() 必须在 app.js 中注册，且不能注册多个。
+      不要在定义于 App() 内的函数中调用 getApp() ，使用 this 就可以拿到 app 实例。
+      不要在 onLaunch 的时候调用 getCurrentPages()，此时 page 还没有生成。
+      通过 getApp() 获取实例之后，不要私自调用生命周期函数。
