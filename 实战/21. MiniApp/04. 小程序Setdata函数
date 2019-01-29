@@ -1,0 +1,56 @@
+微信小程序setData()使用：
+      Page.prototype.setData(Object data, Function callback)
+      setData 函数用于将数据从逻辑层发送到视图层（异步），同时改变对应的 this.data 的值（同步）。
+
+注意：
+      直接修改this.data，而不调用this.setData()，是无法改变当前页面的状态的，会导致数据不一致
+      仅支持可以JSON化的数据
+      单次设置的数据不能超过1024KB，尽量避免一次设置过多的数据
+      不要把data中的任何一项的value设为undefined，否则这一项将不能被设置，可能会有潜在的问题
+      
+
+在wx:request()的success回调函数中使用this.setData()会报这样一个错误：
+      我们可以这样解决：因为这里的wx:rewuest()是在页面加载时调用，所以我们可以在onLoad（）中定义一个变量that ，将this赋值给that，
+      那么此时的that代表相对于onLoad（）的当前对象，然后在success回调函数中直接使用that.setData()即可。
+
+  完整代码如下：
+  //js代码
+  onLoad: function (options) {
+      console.log(options);
+      var that = this;
+      var userid = options.userid;
+      that.setData({
+        username: userid
+      })
+      // this.data.username = JSON.stringify(options);
+      console.log(this.data.username);
+
+      wx:wx.request({
+        url: 'http://180.169.225.27:7011/ibeacon/mobile.asmx/getRequest',
+        data:{userid:this.data.username},
+        header: {
+          'content-type': 'application/json'
+        },
+        method: 'POST',
+        dataType: 'json',
+
+        success: function(res) {
+
+          console.log(JSON.parse(res.data.d));  
+          var value = JSON.parse(res.data.d);
+          that.setData({
+            postData:value
+          })
+
+        },
+        fail: function(res) {},
+        complete: function(res) {},
+      });
+  }
+  
+  
+  
+  
+  
+  
+如果在onReady（）函数中调用setData（）方法，那么通过这个方法设置的值只能刷新一次，若需要再次刷新，需要清除缓存。
