@@ -268,3 +268,11 @@ A（wx.navigateTo）B (wx.navigateTo) C (wx.redirectTo) B
 此时页面B回退的顺序是
 B->B->A
 wx.redirectTo的逻辑跳转是本页面不加入页面栈， 并跳转，将下一个页面加入页面栈。
+
+=========================================================================================================================
+切换tabbar页面用switchTab
+    因为wx.switchTab是唯一能跳转到 tabBar 页面，并关闭其他所有非 tabBar 页面
+wx.redirectTo
+    跳转到不带tab的页面
+    
+
