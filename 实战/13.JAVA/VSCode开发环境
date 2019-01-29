@@ -131,4 +131,13 @@ RestController和Controller的区别：
 到处基础配置结束，可以愉快的玩耍Spring Boot!
 
 
+VSCode JavaDebug出错
 
+清理用户空间解决
+
+Clean the workspace directory
+In some occasions, deleting the Java Language Server workspace directory is helpful to go back to a clean slate. Generally speaking, on the different platforms, the VS Code user workspace storage area can be found under these locations :
+
+Windows : %APPDATA%\Code[ - Variant]\User\workspaceStorage\
+MacOS : $HOME/Library/Application Support/Code[ - Variant]/User/workspaceStorage/
+Linux : $HOME/.config/Code[ - Variant]/User/workspaceStorage/
