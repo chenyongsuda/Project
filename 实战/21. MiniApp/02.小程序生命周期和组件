@@ -251,3 +251,20 @@ url?key=value&key1=value1
 wx.navigateTo会增加页面栈大小，直到页面栈大小为5
 wx.redirectTo不会增加页面栈大小
 wx.navigateBack会减少页面栈大小，直到页面栈大小为1
+
+================================================================================================
+1. wx.navigateTo 会压栈， 每次调用页面栈+1。 直到页面栈数字为10.
+此后在调用wx.navigateTo 则无效。
+
+2. 解释｛使用wx.redirectTo重定向｝ 的图片有问题。
+
+A（wx.navigateTo）B (wx.navigateTo) C (wx.navigateTo) B
+此时B 的页面栈为【A ,B ,C ,B】
+此时页面B回退的顺序是
+B->C->B->A
+
+A（wx.navigateTo）B (wx.navigateTo) C (wx.redirectTo) B
+此时B 的页面栈为【A ,B，B】
+此时页面B回退的顺序是
+B->B->A
+wx.redirectTo的逻辑跳转是本页面不加入页面栈， 并跳转，将下一个页面加入页面栈。
