@@ -1,0 +1,81 @@
+一、下载安装包 
+
+ 打开mysql官网下载页面：http://dev.mysql.com/downloads/mysql/
+
+选择相应的版本和平台
+
+这里选择的是5.7.13版本64位的 压缩包， 文件有310M比较大。
+
+点击Download进入真正的下载页面，发现要登录才能下载 ，要细心点会发现下面有No thanks, just start my download. 就点这个链接就可以了。
+
+下载解压到相应的目录，这里统一放在C:\wamp-all
+
+解压后根据自己喜好文件夹改名字为mysql-5.7.13， 所有的mysql解压文件都在这个目录下了：C:\wamp-all\mysql-5.7.13
+
+ 
+
+二、mysql配置
+
+打开刚刚解压的文件夹C:\wamp-all\mysql-5.7.13 ，发现里面有my-default.ini配置文件，这个是默认的配置文件，复制一个自己的改名字为my.ini
+
+编辑my.ini配置以下基本信息：
+
+[mysql]
+# 设置mysql客户端默认字符集
+default-character-set=utf8
+ 
+[mysqld]
+# 设置3306端口
+port = 3306
+# 设置mysql的安装目录
+basedir=C:\wamp-all\mysql-5.7.13
+# 设置mysql数据库的数据的存放目录
+datadir=C:\wamp-all\sqldata
+# 允许最大连接数
+max_connections=20
+# 服务端使用的字符集默认为8比特编码的latin1字符集
+character-set-server=utf8
+# 创建新表时将使用的默认存储引擎
+default-storage-engine=INNODB
+三、安装启动mysql
+
+用管理员身份打开cmd命令行工具，cd到解压文件的bin目录：C:\wamp-all\mysql-5.7.13\bin
+
+输入mysqld install回车运行，出现安装成功就可以了。
+
+输入net start mysql 启动mysql （或打开windows服务手动启动mysql）
+
+在cmd里启动发现没法启动
+
+
+
+网上搜索了下发现是5.7版本才有这个问题，要在bin目录下手动初始化data目录
+
+cd到bin目录下先初始化
+
+1. mysqld --initialize-insecure自动生成无密码的root用户，
+
+2. mysqld --initialize自动生成带随机密码的root用户
+
+这里选择1 mysqld --initialize-insecure 
+
+初始化后再运行net start mysql 成功启动mysql  ..
+
+四、进入mysql环境
+
+1. cmd到bin目录下执行mysql -uroot （无需密码） ，
+
+2. 给用户设置一个密码：mysqladmin -u root -p password  ，设置密码时发现报错：Access denied for user 'root'@'localhost' (using password: YES)
+
+是因为未给localhost root用户授权，这里新建一个用户，然后授权给他
+create user 'test'@'localhost' identified by '你的密码';
+grant all privileges on *.* to test@'localhost';
+运行这两句sql语句，再次用test的身份输入密码进入
+
+3. 在命令行输入：mysql -utest -p 回车 ， 再输入刚刚设置的密码即可进入。
+
+如果要退出sql环境回到正常的cmd环境，输入exit回车即可。 再次进入mysql 执行第3条即可。
+
+五、执行sql语句
+
+show databases; 可以看到默认的数据库
