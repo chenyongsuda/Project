@@ -71,3 +71,48 @@ $ sudo systemctl reload nginx.service
  
 #停止
 $ sudo systemctl stop nginx.service
+
+
+
+
+
+
+
+===============================================================================================================================
+/usr/lib/systemd/system/nginx.service
+[Unit]
+Description=The NGINX HTTP and reverse proxy server
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=forking
+LimitNOFILE=65536
+PIDFile=/data/nginx/nginx.pid
+ExecStart=/data/nginx/sbin/nginx -c /data/nginx/conf/nginx.conf
+ExecReload=/data/nginx/sbin/nginx -s reload
+ExecStop=/data/nginx/sbin/nginx -s stop
+User=nginx
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
+==============================================================================================================================
+/usr/lib/systemd/system/tomcat.service
+[Unit]
+Description=Tomcat Service
+After=syslog.targetnetwork.target remote-fs.target nss-lookup.target
+ 
+[Service]
+Type=forking
+LimitNOFILE=65536
+PIDFile=/data/tomcat/bin/tomcat.pid
+ExecStart=/data/tomcat/bin/startup.sh
+ExecReload=/bin/kill-s HUP $MAINPID
+ExecStop=/bin/kill-s QUIT $MAINPID
+User=tomcat
+PrivateTmp=true
+ 
+[Install]
+WantedBy=multi-user.target
+
