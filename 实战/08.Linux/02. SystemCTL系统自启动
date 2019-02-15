@@ -120,3 +120,52 @@ WantedBy=multi-user.target
 
 重新导入服务刷新服务
 systemctl daemon-reload
+
+============================================================================================================
+自定义系统服务systemctl java jar
+
+启动脚本xxx-start
+#!/bin/sh
+
+export JAVA_HOME=/usr/local/jdk1.8.0_131
+export PATH=$JAVA_HOME/bin:$PATH
+
+nohup java -jar /java-service/lib/xxx.jar > /java-service/logs/xxx.log &
+echo $! > /var/run/xxx.pid
+
+注意 
+JAVA_HOME=/usr/local/jdk1.8.0_131、 
+/java-service/lib/xxx.jar、 
+/java-service/logs/xxx.log、 
+/var/run/xxx.pid
+
+停止脚本xxx-stop
+#!/bin/sh
+PID=$(cat /var/run/xxx.pid)
+kill -9 $PID
+注意 
+/var/run/xxx.pid
+
+开机自启脚本xxx.service
+cd /usr/lib/systemd/system
+
+[Unit]
+Description=service for description
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=forking
+ExecStart=/java-service/shell/xxx-start
+ExecStop=/java-service/shell/xxx-stop
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+注意 
+ExecStart=/java-service/shell/xxx-start 
+ExecStop=/java-service/shell/xxx-stop
+
+然后就可以使用 
+systemctl enable xxx 
+systemctl stop xxx 
+system start xxx
