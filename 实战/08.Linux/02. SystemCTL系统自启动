@@ -169,3 +169,28 @@ ExecStop=/java-service/shell/xxx-stop
 systemctl enable xxx 
 systemctl stop xxx 
 system start xxx
+
+==========================================================================
+自制直接用命令在做自启动的时候如下配置
+supplier.service 
+[Unit]
+Description=Supplier Service
+After=syslog.targetnetwork.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=forking
+LimitNOFILE=65536
+PIDFile=/tmp/supplierportal.pid
+ExecStart=/usr/bin/nohup /usr/java/jdk1.8.0_144/bin/java -jar  /home/xxxxx/sso.war > /home/xxxxx/sso.log 2>&1 &
+ExecReload=/bin/kill-s HUP $MAINPID
+ExecStop=/bin/kill-s QUIT $MAINPID
+User=xxxxx
+
+PrivateTmp=true
+ 
+[Install]
+WantedBy=multi-user.target
+
+使用启动命令时候老是卡住. 所以换成Type=simple就好了.正在研究为为什么会这样.
+
+
