@@ -66,4 +66,13 @@
    2)显示/var目录下的所有文件或者目录并将结果找那个的小写字母转为大写字母后显示
    3)创建临时文件/tmp/myfile.xxxx
    
-   
+
+8.SHELL 登录类型
+   交互式登录 profile
+      1. 直接账号名密码
+      2. su - username
+   非交互式登录 bashrc
+      1. su username
+      2. 图形界面打开shell
+      3. 运行脚本时候 SHELL 脚本是在子shell中运行的.属于非交互式的登录
+      
