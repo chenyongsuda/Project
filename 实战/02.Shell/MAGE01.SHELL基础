@@ -29,3 +29,18 @@
 4.多命令一起执行
   ~]# COMMAND01;COMMAND02;COMMAND03
   
+
+5.逻辑运算
+   真 (true,yes,on,1)
+   假 (false,no,off,0)
+   
+   与     &&
+   或     ||
+   非     ！
+   异或   ^
+   
+   运算符的短路法则   COMMAND01 && COMMAND02 第一个命令失败第二个不会执行
+                     COMMAND01 || COMMAND02 第一个命令失败第二个就会执行
+                     
+                     
+   
