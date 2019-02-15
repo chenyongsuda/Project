@@ -193,4 +193,9 @@ WantedBy=multi-user.target
 
 使用启动命令时候老是卡住. 所以换成Type=simple就好了.正在研究为为什么会这样.
 
+测试如果把一大串java命令放在一个shell文件里
+就会报
+Feb 15 14:35:35 SWPZ1APPS11 systemd[1]: xxxxxx.service never wrote its PID file. Failing.
+Feb 15 14:35:35 SWPZ1APPS11 systemd[1]: Failed to start Supplier Portal Service.
 
+是不是就是如果安装这种方式要设置脚本里面写的PID然后写到这里.这里面再读取.需要脚本里面写.
