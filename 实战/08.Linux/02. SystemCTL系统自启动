@@ -199,3 +199,33 @@ Feb 15 14:35:35 SWPZ1APPS11 systemd[1]: xxxxxx.service never wrote its PID file.
 Feb 15 14:35:35 SWPZ1APPS11 systemd[1]: Failed to start Supplier Portal Service.
 
 是不是就是如果安装这种方式要设置脚本里面写的PID然后写到这里.这里面再读取.需要脚本里面写.
+
+====================================================================================================
+具体知道什么意思了可以看
+如果是Forking的话需要提供Forking后的主ID供systemctl读取
+如下sudo systemctl status nginx
+● nginx.service - The NGINX HTTP and reverse proxy server
+   Loaded: loaded (/etc/systemd/system/nginx.service; enabled; vendor preset: disabled)
+   Active: active (running) since Fri 2019-02-15 13:12:22 CST; 1h 29min ago
+  Process: 24656 ExecStop=/usr/local/nginx/sbin/nginx -s stop (code=exited, status=0/SUCCESS)
+  Process: 24701 ExecStart=/usr/local/nginx/sbin/nginx (code=exited, status=0/SUCCESS)
+ Main PID: 24702 (nginx)
+   CGroup: /system.slice/nginx.service
+           ├─24702 nginx: master process /usr/local/nginx/sbin/nginx
+           ├─24703 nginx: worker process
+           ├─24704 nginx: worker process
+           ├─24705 nginx: worker process
+           └─24706 nginx: worker process
+
+如果是普通命令的话为simple
+sudo systemctl status supplierportal
+● supplierportal.service - Supplier Portal Service
+   Loaded: loaded (/etc/systemd/system/xxxx.service; enabled; vendor preset: disabled)
+   Active: active (running) since Fri 2019-02-15 14:39:55 CST; 18s ago
+ Main PID: 561 (java)
+   CGroup: /system.slice/supplierportal.service
+           └─561 /usr/java/jdk1.8.0_144/bin/java -jar /home/xxxx/sso.war > /home/xxxx/sso.log 2>&1 &
+           
+如果运行命令就是程序的话执行的时候systemctl就能获取不需要我设置PID告诉他们.
+
+
