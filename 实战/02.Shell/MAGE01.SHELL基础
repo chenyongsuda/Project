@@ -90,7 +90,25 @@
       
       用途： 定义本地变量和定义别名
    交互式加载顺序: /etc/profile===>/etc/profile.d/*===>~/.bash_profile===>~/bashrc===>/etc/bashrc
-   非交互是加载顺序: ~/bashrc===>/etc/bashrc
+   非交互是加载顺序: ~/bashrc===>/etc/bashrc===>/etc/profile.d/*.sh
    让配置文件立即生效 source 或者 .
-   
-   
+================================================================================================   
+交互式登录shell和非交互式登录shell的区别
+交互式登录：(清除掉所有变量，通过文件重新读入)
+(1)直接通过终端输入账号密码登录
+(2)使用“su - UserName”切换的用户
+执行顺序：（影响该shell的配置文件）
+/etc/profile --> /etc/profile.d/*.sh --> ~/.bash_profile--> ~/.bashrc--> /etc/bashrc
+
+非交互式登录：（会继承上一个shell的全部变量）
+(1)su UserName
+(2)图形界面下打开的终端
+(3)执行脚本   （当我们执行脚本的时候.我们就已经进入到了一个子shell）
+(4)任何其它的bash实例
+执行顺序：（影响该shell的配置文件）
+
+~/.bashrc--> /etc/bashrc--> /etc/profile.d/*.sh
+
+ 使用./test.sh或者 bash ./test.sh执行脚本的时候，是开启一个子shell，这个子shell能继承上一个父shell的变量，而这个子shell的变量，随着子shell的退出而消失。当我们用. test.sh 或者source test.sh时，不开启子shell，在当前shell运行，子shell中的所有值都影响当前。
+
+ 一般我们对shell进行一些配置的时候，通常都是对~/.bashrc 和/etc/bashrc这两个文件进行一些配置。
