@@ -116,3 +116,7 @@ PrivateTmp=true
 [Install]
 WantedBy=multi-user.target
 
+
+
+重新导入服务刷新服务
+systemctl daemon-reload
