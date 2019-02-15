@@ -1,0 +1,31 @@
+1. shell是什么
+   shell是一个应用进程
+2. shell的变量范围
+   本地变量
+    作用范围：本shell
+   环境变量
+    作用范围：本shell和子shell
+   
+3. shell定义
+   本地变量
+         变量赋值 name=value
+         变量引用 ${name}, $name
+              强引用 ''
+              弱引用 ""
+         查看变量 set
+         取消变量 unset
+         定义只读变量 readonly name=value
+                     declare -r name=value
+   
+   环境变量
+         1. export name=value
+         2. name=value 
+            export name
+         3. declare -x name=value
+         4. name=value 
+            declare -x 
+    bash许多内置环境变量为全大写.
+
+4.多命令一起执行
+  ~]# COMMAND01;COMMAND02;COMMAND03
+  
