@@ -41,6 +41,29 @@
    
    运算符的短路法则   COMMAND01 && COMMAND02 第一个命令失败第二个不会执行
                      COMMAND01 || COMMAND02 第一个命令失败第二个就会执行
-                     
-                     
+   
+   
+6.shell脚本的本质
+   shell脚本是命令的堆积,命令自上而下执行,由于命令的非幂等性所有脚本中要进行判断比如命令useradd name如果name存在还会往下执行
+   导致脚本停顿的原因会是exit或者命令的拼写错误.
+   
+   不如如下的写法
+   id user3 || useradd user3 表示如果有了就不创建了,没有的话就执行创建.
+   
+   脚本执行的时候比如脚本test.sh的话
+   如果>$ test.sh 这样写的话会去path环境变量找这个,因此需要制定绝对路径 ./test.sh
+   
+   通过./test.sh 这样执行的话会判断首行中的#!/bin/bash 来使用bash解释器.
+   或者手动制定解释器如下：
+   bash /xxx/xxx/test.sh
+   
+插播一个shell写法,纯粹备忘无上下文关系   
+#echo hello | passwd --stdin user3 
+
+
+7.实验
+   1)显示/etc目录下以大写或者小写p开头的文件或者目录
+   2)显示/var目录下的所有文件或者目录并将结果找那个的小写字母转为大写字母后显示
+   3)创建临时文件/tmp/myfile.xxxx
+   
    
