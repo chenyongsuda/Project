@@ -69,10 +69,28 @@
 
 8.SHELL 登录类型
    交互式登录 profile
+      全局用户范围：
+            /etc/profile
+            /etc/profile.d/xxx.sh
+      个人范围
+            在个人目录的~/.bash_profile
       1. 直接账号名密码
       2. su - username
+      
+      用途：定义环境变量运行命令或者脚本
+      
    非交互式登录 bashrc
+      全局:
+         /etc/bashrc
+      个人:
+         ~/bashrc
       1. su username
       2. 图形界面打开shell
       3. 运行脚本时候 SHELL 脚本是在子shell中运行的.属于非交互式的登录
       
+      用途： 定义本地变量和定义别名
+   交互式加载顺序: /etc/profile===>/etc/profile.d/*===>~/.bash_profile===>~/bashrc===>/etc/bashrc
+   非交互是加载顺序: ~/bashrc===>/etc/bashrc
+   让配置文件立即生效 source 或者 .
+   
+   
