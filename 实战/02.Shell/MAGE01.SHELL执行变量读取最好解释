@@ -1,0 +1,110 @@
+https://www.jianshu.com/p/a9b3e685eb3c
+linux环境变量之profile .bash_profile .bash_login .profile .bashrc 加载详解
+
+这里讨论的shell都是bash shell 使用哪种shell形式可以通过修改/etc/passwd 文件配置(bash sh csh)
+
+讨论的配置文件包括 ：
+/etc/profile
+/etc/bashrc
+~/.bash_login
+~/.bash_profile
+~/.profile
+~/.bashrc
+
+在shell以不同的形式打开时，加载以上不同配置文件
+
+shell的几种形式
+登陆的维度划分:login shell , non-login shell
+交互的维度划分:interactive shell , non-interactive shell
+
+login shell 和 non-login shell
+login shell
+
+需要用户名、密码登录后才能进入的shell。在大多数情况下 ，远程终端工具(secureCRT xshell putty)通过ssh连接都是login shell
+
+non-login shell
+一般是在图形界面中启动一个终端shell
+或者在login shell终端输入bash 会打开一个新的shell，这个shell也是non-login的 或者通过su username 切换到新用户得到一个non-login shell
+
+切换
+在login模式下 通过输入"bash"即可打开一个non-login shell 如果是"bash --login" 则打开一个login shell
+通过su - username 模式切换可以获得一个login shell 如果不加"-" 如：su username 则获得一个non-login shell
+interactive shell 和 non-interactive shell
+interactive shell
+
+在大多数远程工具连接服务器后打开的都是interactive shell( 交互式shell ) 改模式下，shell等待你输入命令并解释和执行这些命令，然后继续等待下一个命令。
+non-interactive shell
+
+一般是指执行shell脚本时的模式，通过"bash test.sh"这种形式执行脚本文件，它并不与用户交互 而是一次性执行脚本 当脚本执行完毕 shell即终止。
+通过"echo $-"可以查看当前是否为交互式shell。 输出为"himBH" 标识interactive shell 。如果为 "hB" 表示non-interactive shell
+
+一般以"#!/bin/bash" 开头的shell脚本是non-login non-interactive shell
+如果以"#!/bin/bash --login"开头的shell脚本时login non-interactive shell
+
+不同登录模式所读取的配置文件不同
+一、login shell (包括interactive shell或者non-interactive shell)读取:
+
+/etc/profile
+这是全局的配置，不管哪个用户登录，都会读取
+
+~/.bash_profile 或~/.bash_login 或~/.profile
+按照顺序 找到其中任意一个即执行读取，不会再找下一个了。
+
+查看这三个文件的内容可以发现基本上都是去读取~/.bashrc这个文件
+
+ # .bash_profile
+  2 
+  3 # Get the aliases and functions
+  4 if [ -f ~/.bashrc ]; then
+  5         . ~/.bashrc
+  6 fi
+  7 
+  8 # User specific environment and startup programs
+查看~/.bashrc文件可以发现它是去加载/etc/bashrc
+
+# .bashrc
+  2 
+  3 # User specific aliases and functions
+  4 
+  5 alias rm='rm -i'
+  6 alias cp='cp -i'
+  7 alias mv='mv -i'
+  8 
+  9 # Source global definitions
+ 10 if [ -f /etc/bashrc ]; then
+ 11         . /etc/bashrc
+ 12 fi
+
+二、non-login shell
+~/.bashrc
+non-login shell只会读取该配置
+
+三、non-interactive non-login shell
+这种模式下(执行最普通的shell脚本 bash test.sh 即时该模式) 不读取任何配置文件，而是会读取环境变量 BASH_ENV所指向的脚本文件。通过以下脚本验证
+
+//创建临时环境变量BASH_ENV
+[root@xxx~]# export BASH_ENV='~/hello.sh'
+
+//编写脚本hello.sh  内容如下
+1 #!/bin/bash
+2 echo "this is hello.sh"
+
+//编写脚本test.sh  内容如下
+1 #!/bin/bash
+2 echo "this is test.sh"
+
+[root@xxx ~]# bash test.sh 
+this is hello.sh
+this is test.sh
+环境变量修改示例
+通过对上面几个概念的理解，在配置环境变量的时候，我们应该尽量不去修改/etc/profile文件，因为这是对全部登录用户都有效的。对于~/.bash_profile , ~/.bash_login , ~/.profile 通过将他们都指向~/.bashrc 再通过修改用户目录下的~/.bashrc来新增或者修改环境变量
+
+[@xxx xxx]#vim ~/.bashrc
+//在打开的.bashrc文件中增加一个边境变量入 /home/java/jdk-8/bin
+
+export JDK_ROOT=/home/java/jdk-8/bin
+//最后一句  将上面定义的JDK_ROOT通过:拼接到$PATH之后即可，添加多个环境变量的时候 每个都用:拼接即可
+export PATH=$PATH:$JDK_ROOT
+
+//让修改的环境变量立即生效
+[@xxx xxx]#source ~/.bashrc
