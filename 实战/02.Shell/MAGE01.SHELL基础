@@ -253,3 +253,25 @@ sw@gentoo ~ $
 --login使得执行脚本的子shell成为一个login shell，login shell会读取系统和用户的profile及rc文件，因此用户自定义的.bashrc文件中的内容将在执行脚本的子shell中生效。
 还有一个简单的办法让执行脚本的shell读取.bashrc，在脚本中主动source ~/.bashrc即可。
 
+====================================================================================================
+2、sh/bash
+sh a.sh
+bash a.sh
+都是打开一个subshell去读取、执行a.sh，而a.sh不需要有"执行权限"
+通常在subshell里运行的脚本里设置变量，不会影响到父shell的。
+
+
+3、./
+./a.sh
+#bash: ./a.sh: 权限不够
+chmod +x a.sh
+./a.sh
+打开一个subshell去读取、执行a.sh，但a.sh需要有"执行权限"
+可以用chmod +x添加执行权限
+
+如果脚本上加上
+#!/bin/bash --login
+并用bash xxx.sh 就会先loadrc等文件 类似于通过bash 然后再这个新bash里面执行命令
+如果./xxx.sh就不会重新load rc等文件.
+
+如果是#!/bin/bash表示非登陆非交互脚本,无论bash或者./都不会loadrc等文件.
