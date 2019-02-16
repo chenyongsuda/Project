@@ -187,5 +187,29 @@ bash.bashrc 是交互式shell的初始化文件。
 6. 执行自定义的shell文件时，若使用“bash -l a.sh”的方式，则bash会读取行：/etc/profile和~/.bash_profile，若使用其它方式，如：bash a.sh， ./a.sh，sh a.sh（这个不属于bash shell），则不会读取上面的任何文件。 
 7. 上面的例子凡是读取到~/.bash_profile的，若该文件不存在，则读取~/.bash_login，若前两者不存在，读取~ /.profile。
 
+================================================================================================================
+linux读取profile文件和bashrc文件的情况
+    最近研究linux，对linux的profile文件和bashrc文件有些不清楚，于是深入研究了一下。
+    如果想知道这些文件什么时候被执行，还需要知道几个关于shell的小知识。（CentOS6.5 linux）
+
+    1.login shell，登录shell，即init 3启动linux后，需要输入用户名和密码，进入的shell就是loginshell。
+       注意：在shell里使用su - user_name 切换用户，登录的shell也是login shell
+       login shell会读取的文件有：/etc/profile，$HOME/.bash_profile,$HOME/.bash_login，$HOME/.profile，按以上顺序读取。
+
+    2.有login shell就有no login shell。
+       no login shell有，在login  shell中输入bash，没有输入用户名和密码，那么这个就是no login shell。
+
+       在图形界面下，打开一个shell也是no login shell
+        no login shell 在打开的时候，执行的文件是$HOME/.bashrc,而.bashrc又会执行/etc/bashrc文件（可查看家目录的.bashrc文件）。
+
+       下面是一张简单的流程图：
+       举例：1.在非图形界面，如果要配置PS1这个环境变量，最好配置到/etc/profile或是$HOME/.bash_profile中，这样登出在登录一下，就会执行这个命令
+            2.如果是图形界面的用户，配置PS1，需要配置的时$HOME/.bashrc文件，或是/etc/bashrc文件，因为打开no login shell的时候，读取的时
+            $HOME/.bashrc(这个文件会读取/etc/bashrc)这个文件。
+            
+说成login和no login更好理解点.
+
+实际测试的时候发现使用命令#bash的话会调用/etc/bashrc
+但是执行脚本bash xxx.sh 或者 ./xxx.sh 不会调用想不通继续查清楚.
 
 
