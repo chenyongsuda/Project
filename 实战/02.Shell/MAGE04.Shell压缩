@@ -1,0 +1,111 @@
+在Linux的环境中，压缩文件的扩展名大多是：“*.tar, *.tar.gz, *.gz, *.Z, *.bz2, *.xz”，因为 Linux 支持的压缩指令非常多，且不同的指令所用的压缩技术并不相同，当然彼此之间可能就无法互通压缩/解压缩文件，当你下载到某个压缩文件时，自然就需要知道该文件是由哪种压缩指令所制作出来的，好用来对照着解压缩，虽然 Linux 文件的属性基本上是与文件名没有绝对关系的， 但是为了便于识别，所以适当的扩展名还是必要的！常见的压缩文件扩展名
+
+1,gzip/gunzip/zcat
+
+    gzip 选项….file….
+
+    -d:解压缩，相当于gunzip;
+
+    -#:指定压缩比，默认是6；数字越大压缩比越大；（1-9）
+
+    -c:将压缩结果输出至标准输出；
+
+    gzip -c file > /path/to/sumfile.gz
+
+2,bzip2/bunzip2/bzcat
+
+    bzip2 选项…file…
+
+    -d:解压缩
+
+    -#:指定压缩比，默认是6，数字越大压缩比越大；（1-9）
+
+    -k:keep,保留原文件
+
+3，xz/unxz/xzcat
+
+    lzma/unlzma,lzma
+
+     xz 选项…file…
+
+    -d:解压缩
+
+    -#:指定压缩比，默认是6，数字越大压缩比越大；（1-9）
+
+    -k:保留原文件
+
+    重点说tar虽然 gzip, bzip2, xz 也能够针对目录来进行压缩，不过， 这两个指令对目录的压缩指的是“将目录内的所有文件 "分别" 进行压缩”的动作！而不像在 Windows 的系统，可以使用类似 WinRAR 这一类的压缩软件来将好多数据“包成一个文件”的样式。tar 可以将多个目录或文件打包成一个大文件，同时还可以通过 gzip/bzip2/xz 的支持，将该文件同时进行压缩！ 
+
+归档:tar,cpio
+
+    tar命令:
+
+    tar 选项… fike…
+
+    (1)创建归档
+
+        -c -f /path/to/sumfile.tar file…
+
+        -cf /path/to/sumfile.tar file…
+
+    (2)展开归档
+
+        -xf /path/from/somefile.tar
+
+        -xf /path/from/somefile.tar -C /path/to/somedir
+
+    (3)查看归档文件的文件列表
+
+        -tf /path/to/somefile.tar
+
+        du -sh /etc/:此命令可查看目录的大小
+
+  归档完成后通常需要压缩，结合此前的压缩工具，就能实现压缩多个文件了；
+
+    (4)归档并压缩
+
+    -z:gzip2
+
+    -zcf /path/to/somefile.tar.gz file…
+
+    解压缩并展开归档-zxf /path/to/somefile.tar.gz
+
+    -j:bzip2
+
+        -jcf 压缩
+
+        -jxf 解压
+
+    -J:xz
+
+        -Jcf 压缩
+
+        -Jxf 解压 
+
+ 
+
+最简单的使用 tar 
+
+压缩 tar -Jcvf filename tar.xz 要被压缩的文件或目录名称（以xz格式压缩）
+
+   tar -jcvf filename tar.bz2 要被压缩的文件或目录名称（以bzip2格式压缩）
+
+   tar -zcvf filename tar.gz 要被压缩的文件或目录名称（以gzip格式压缩）
+
+   特别留意，-z, -j, -J 不可以同时出现在一串命令行中，那个filename.tar.xz是我们自己取的文件名，tar并不会主动的产生创建的文件名
+
+查询  
+
+   tar -Jtvf filename tar.xz （查看以xz格式压缩后的文件名）
+
+   tar -jtvf filename tar.bz2 （查看以bzip2格式压缩的文件名）
+
+   tar -ztvf filename tar.gz （查看以gzip格式压缩的文件名） 
+解压   
+
+   tar -Jxvf filename tar.xz （解压以xz格式压缩的包）
+
+   tar -jxvf filename tar.bz2（解压以bzip2格式压缩包）
+
+   tar -zxvf filename tar.gz （解压以gzip格式压缩包）
+   
