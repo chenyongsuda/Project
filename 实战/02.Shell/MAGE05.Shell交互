@@ -1,0 +1,52 @@
+bash脚本编程之用户交互：
+
+read [option]... [name ...]
+
+    -p 'PROMPT'    读取输入的内容
+
+    -t TIMEOUT    超时时间，如果超过了该时间，继续执行下面代码
+
+bash -n /path/to/some_script
+
+    检测脚本中的语法错误
+
+bash -x /path/to/some_script
+
+    调试执行
+
+示例：
+
+输入一个磁盘文件信息，使用fdisk -l显示该磁盘信息
+
+#!/bin/bash
+read -p "Enter a disk special file: " diskfile
+[ -z "$diskfile" ] && echo "Fool" && exit 1
+if fdisk -l | grep "^Disk $diskfile" &> /dev/null; then
+    fdisk -l $diskfile
+else
+    echo "Wrong disk special file."
+    exit 2
+fi
+输入一个用户名，如果不存在该用户则添加该用户并设置用户名为密码
+
+#!/bin/bash
+#
+read -p "Enter a username: " name
+[ -z "$name" ] && echo "a username is needed." && exit 2
+read -p "Enter password for $name, [password]: " password
+[ -z "$password" ] && password="password"
+if id $name &> /dev/null; then
+    echo "$name exists."
+else
+    useradd $name
+    echo "$password" | passwd --stdin $name &> /dev/null
+    echo "Add user $name finished."
+fi
+bash -n /path/to/some_script
+
+    检测脚本中的语法错误
+
+bash -x /path/to/some_script
+
+    调试执行
+
