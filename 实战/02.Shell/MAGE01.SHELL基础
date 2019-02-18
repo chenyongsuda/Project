@@ -323,9 +323,1005 @@
    
    运算符的短路法则   COMMAND01 && COMMAND02 第一个命令失败第二个不会执行
                      COMMAND01 || COMMAND02 第一个命令失败第二个就会执行
+6.shell高级用法
+   1.if语句
+      1.1.回顾
+
+      在运行脚本前，我们一般先对脚本的语法进行检查，如果脚本有bug，我们再调试脚本；
+      （1）语法检查：bash -n 脚本路径
+      （2）脚本调试：bash -x 脚本路径
+
+      1.2.过程式编程语言的执行流程
+
+      顺序执行
+      选择执行
+      循环执行
+      选择执行
+
+      1.2.1.&&，||
+      command1 && command2：如果command1正确，也执行command2；如果command1不正确，不执行command2
+      command1 || command2：如果command1正确，不执行command2；如果command1不正确，执行command2
+
+      1.2.2.if语句
+
+      if单分支语句；
+      if多分支语句
+      if嵌套语句
+      （1）if 多分支语句格式（注意：多个分支只会执行一个，执行首先为真的分支）
+
+      if  [ 条件1 ];then
+              条件1为真执行这里的代码
+      elif [ 条件2 ];then
+              条件2为真执行这里的代码
+      elif [ 条件3 ];then
+              条件3为真执行这里的代码
+      ......
+      elif [ 条件n ];then
+              条件n为真执行这里的代码
+      else
+              如果所有的条件都不满足时，执行这里的代码
+      fi
+
+
+      （2）if嵌套语句格式
+
+      if [ 条件 ];then
+          if [ 条件 ];then
+              执行这里的代码
+          fi
+      fi
+      if [ 条件 ];then
+          if [ 条件 ];then
+              执行这里的代码
+          fi
+      else
+          if [ 条件 ];then
+              执行这里的代码
+          fi
+      fi
+
+      1.3.示例
+
+      1.通过脚本参数传递一个文件路径给脚本，判断此文件的类型；
+
+      #!/bin/bash
+      #
+      if [ $# -lt 1 ];then
+          echo "A argument is needed."
+          exit 1
+      fi
+
+      if ! [ -e $1 ];then
+          echo "No such file or directory."
+          exit 2
+      fi
+
+      if [ -f $1 ];then
+          echo "Common file"
+      elif [ -d $1 ];then
+          echo "Directory"
+      elif [ -L $1 ];then
+          echo "Symbolic link"
+      elif [ -b $1 ];then
+          echo "block special file"
+      elif [  -c $1 ];then
+          echo "character special file"
+      elif [  -S $1 ];then
+          echo "Socket file"
+      else
+          echo "Unknow"
+      fi
+
+
+      2.写一个脚本
+      （1）传递一个参数给脚本，此参数为用户名 ；
+      （2）根据其ID号来判断用户类型：0：管理员 ，1-499：系统用户，500+：为登入用户, 输出用户是那种类型的用户；
+
+      #!/bin/bash
+      #（1）传递一个参数给脚本，此参数为用户名
+      # (2）根据其ID号来判断用户类型：0：管理员 ，1-999：系统用户，1000+：为登入用户
+
+      if [ $# -lt 1 ]; then
+          echo "A argument is needed."
+          exit 1
+      fi
+      # 如何输入的用户名存在
+      # 注意通过命令来判断成功与否不能加[]
+      if id -u $1 &>/dev/null;then
+          userid=$(id -u $1)
+          if [ $userid -eq 0 ];then
+              echo "Administrator"
+          elif [ $userid -gt 1 -a $userid -lt 499 ];then
+              echo " System user"
+          elif [ $userid -ge 500 ];then
+              echo "Login user"
+          fi
+      else
+          echo "NO such user."    
+      fi
+
+
+      3.写一个脚本
+      （1）列出如下菜单给用户
+      disk) show disks info
+      mem)show memory info
+      cpu)show cpu info
+      *)quit
+      （2）提示用户给出自己的选择，而后显示对应其选择的相应系统信息
+
+      #!/bin/bash
+      cat << EOF
+      disk) show disks info
+      mem)show memory info
+      cpu)show cpu info
+      *)quit
+      EOF
+
+      read -p "Please input your option:" option
+
+      # 如果用户输入的是大写,直接将大写转变为小写
+      option=$(echo $option | tr [A-Z] [a-z])
+
+      if [ $option == "disk" ]; then
+          fdisk -l
+      elif [ $option == "mem" ]; then
+          free -m
+      elif [ $option == "cpu" ]; then
+          lscpu
+      elif [ $option == "*" ]; then
+          exit 1
+      else
+          echo "Wrong option"
+      fi
+
+      2.循环语句
+      2.1.bash的循环分类：
+
+      for循环
+      while循环
+      until循环
+
+      2.1.1.for 循环
+      1.两种格式
+
+      第一种格式：遍历列表
+      第二种格式：控制变量
+
+      （1）遍历列表
+      for 变量 in 列表; do
+          循环体
+      done
+
+
+      进入条件：只要列表中有元素，即可进入循环
+      退出循环：列表中的元素遍历完成
+      列表生成的方式
+
+      1）直接取出 
+          例如： user1 user2 user3
+      2）整数列表 
+          例如 {1..100}
+          例如  `seq 1 2 100`  注意：中间的2表示步长
+      3）返回列表的命令
+          `ls /var/log/`
+      4）glob
+          例如： /var/log/*
+      5）变量引用，如：@* ,
+
+      示例
+
+      示例1：
+
+      #!/bin/bash
+      for username in user1 user2 user3;do
+          if id $username &>/dev/null;then
+              echo "$username is already exists."
+          else    
+              useradd $username
+              echo "Add &username success"
+      done
+
+
+      示例:2：求100内所有正整数之和；
+
+      #!/bin/bash
+      #
+      declare -i sum=0
+
+      for i in {1..100}; do
+          sum=$[ $sum+$i ]
+      done
+
+      echo "$sum"  
+
+      示例3：列出/var/log/目录下所有文件的类型；
+      #!/bin/bash
+      # 
+      for option in /var/log/*; do
+
+          if [ -f $option ];then
+              echo "$option is Common file"
+          elif [ -d $option ];then
+              echo "$option is Directory"
+          elif [ -L $option ];then
+              echo "$option is Symbolic link"
+          elif [ -b $option ];then
+              echo "$option is block special file"
+          elif [  -c $option ];then
+              echo "$option is character special file"
+          elif [  -S $option ];then
+              echo "$option is Socket file"
+          else
+              echo "Unknow"
+          fi
+      done
+
+      练习
+
+      练习1：分别求100以内所有偶数之和，奇数之和；
+
+      #!/bin/bash
+      # 
+      declare -i oven=0
+      declare -i odd=0
+
+      for i in {1..100}; do
+          count=$[ $i % 2 ]
+
+          if [[ $count == 0 ]]; then
+              oven=$[ $oven + $i ]
+          else
+              odd=$[ $odd + $i ]
+          fi
+      done
+
+      echo "oven is $oven"
+      echo "odd is $odd"     
+
+
+      练习2：计算当前用户的id之和；
+
+      #!/bin/bash
+      # 
+      declare -i idcount=0
+      userRow=$(wc -l /etc/passwd|cut -d" " -f1)
+
+      # 这里不能使用{}，作为列表，用seq：for i in `seq 1 $userRow`; do
+      for i in $(seq 1 $userRow); do
+          userName=$(cut -d: -f1 /etc/passwd|sed -n "$i"p)
+          idcount=$[ $idcount + $(id -u $userName) ]
+      done
+
+      echo "$idcount"
+
+
+      练习3：通过脚本参数传递一个目录，计算所有的文本文件的行数之和，并说明文件的总数；
+
+      #/bin/bash
+      #
+      if [[ $# < 1 ]];then
+          echo "A argument is needed."
+          exit 1
+      fi
+
+      declare -i fileCounts=0
+      declare -i rowsCounts=0
+
+      # 文件数
+      fileCounts=$( find $1 -type f | wc -l )
+
+      for i in `seq 1 $fileCounts`; do
+          #这里的egrep其实可以不要，也可以取出行数
+          rowCount=$(find $1 -type f -exec wc -l {} \; | cut -d" " -f1 | sed -n "$i"p)
+          rowsCounts=$[ $rowsCounts + $rowCount ]
+      done
+      echo "fileCounts is $fileCounts , rowsCounts is $rowsCounts"
+
+      （2）控制变量
+      for((i=1;i<10;i++));do
+          进入循环代码
+      done
+
+      2.1.2.while 循环
+      格式
+      while CONDITION ; do 
+      循环体 
+      循环控制变量的修正表达式 
+      done 
+
+
+      进入条件：CONDITION测试为“真”
+      退出条件：CONDITION测试为“假”
+
+      示例
+
+      示例1：求100以内所有正整数之和；
+
+      #!/bin/bash
+      #
+      declare -i sum=0
+      declare -i i=1
+
+      while [ $i -le 100 ]; do
+          sum=$[ $sum+$i ]
+          let i++
+      done
+
+      echo "sum is $sum"
+
+      2.1.3.until循环
+      格式
+      until CONDITION ; do 
+      循环体 
+      循环控制变量 
+      done 
+
+
+      进入条件：CONDITION测试为“假”
+      退出条件：CONDITION测试为“真”
+
+      示例
+
+      示例1：求100以内所有正整数之和
+
+      #!/bin/bash
+      #
+      declare -i sum=0
+      declare -i i=1
+
+      until [ $i -gt 100 ];do
+          sum=$[ $sum+$i ]
+          let i++
+      done
+      echo "sum to $sum"
+
+      练习
+
+      练习1：分别使用while for until实现，求100以内所有的偶数之和，100以内奇数之和；
+
+      #!/bin/bash
+      # 
+      declare -i oven=0
+      declare -i odd=0
+
+      #for循环
+      for i in  {1..100}; do
+          count=$[ $i%2 ]
+          if [ $count -eq 0 ]; then
+              oven=$[ $oven+$i ]
+          else
+              odd=$[ $odd+$i ]
+          fi
+      done
+
+      echo "odd is $odd"
+      echo "oven is $oven"
+      oven=0
+      odd=0
+      i=1
+
+      #while循环
+       while [ $i -le 100 ]; do
+          count=$[ $i%2 ]
+          if [ $count -eq 0 ]; then
+              let oven+=$i
+          else
+              let odd+=$i
+          fi
+          let i++
+       done
+
+      echo "odd is $odd"
+      echo "oven is $oven"
+      oven=0
+      odd=0
+      i=1
+
+      #until循环
+      until [ $i -gt 100 ]; do
+          count=$[ $i%2 ]
+          if [ $count -eq 0 ]; then
+              let oven+=$i
+          else
+              let odd+=$i
+          fi
+          let i++
+      done
+
+      echo "odd is $odd"
+      echo "oven is $oven"
+
+
+      练习2：创建9个用户，user101-user109；密码同用户名, 如果这些用户存在就删除，不存在就创建；
+
+      #!/bin/bash
+
+      for i in `seq 1 10`;do
+              if id user10"$i" &> /dev/null;then
+                      userdel -r user10"$i"
+              else
+                      useradd user10"$i"
+                      echo "user10$i" | passwd --stdin user10"$i" &> /dev/null
+                      echo "create user user10$i"
+              fi
+      done
+
+
+      练习3：打印九九乘法表
+
+      #!/bin/bash
+      # 注意：这里的echo 的 -n选项表示不换行
+      for((i=1;i<9;i++));do
+          for((j=1;j<=$i;j++));do
+              echo -n "$j X $i = $[ $j*$i ]  "
+          done
+          echo
+      done
+
+
+      练习4：打印逆序的九九乘法表
+
+      #!/bin/bash
+      #
+
+      declare -i k=9
+      while [ $k -ge 1 ]; do
+              for i in `seq 1 $k| sort -n -r`;do
+                  echo -n "$i X $k = $[ $i*$k ]  "
+              done
+              echo ""
+              let k--
+      done
+
+      3.循环控制语句
+
+      continue：跳出本次循环，进入下一轮循环；
+      break：跳出整个循环；
+      sleep：程序睡眠一个时间段；
+
+      死循环：条件为true，永远为死循环
+      3.1.continue语句
+      格式
+      while  [ 条件1 ]; do
+          满足条件执行这里的代码
+          if [ 条件2 ]; then
+              # 跳出当前循环进入下一轮循环
+              continue
+          fi
+          满足条件执行这里的代码
+      done
+
+      示例：
+
+      求100以内所有的偶数之和;
+
+      #/bin/bash
+      # 
+      declare -i evensum=0
+      for i in {1..100}; do
+          if [ $[ $i%2 ] -eq 1 ];then
+              continue
+          fi
+          let evensum+=$i
+      done
+      echo "evensum is $evensum"
+
+      #/bin/bash
+      # 
+      declare -i evensum=0
+      declare -i i=0
+      while [ $i -lt 100 ]; do
+              let i++
+          if [ $[ $i%2 ] -eq 1 ];then
+              continue
+          fi
+          let evensum+=$i
+      done
+      echo "evensum is $evensum"
+
+      3.2.break ：直接跳出整个循环
+      格式
+      while [条件1]; do
+          执行这里的代码
+          if [条件2]; then
+              break
+          fi
+          执行这里的代码
+      done
+
+
+      死循环：如何创建死循环
+
+      while true;do
+          循环体
+      done
+
+
+      退出方式：某个测试条件满足的时候，让循环体执行break命令就是
+
+      示例：
+
+      计算100以内奇数之和
+
+      #/bin/bash
+      # description
+      # author
+      declare -i oddsum=0
+      declare -i i=1
+      while true; do
+          let oddsum=$oddsum+$i
+          let i=$i+2
+          if [ $i -gt 100 ];then
+              break
+          fi
+      done
+      echo "oddsum is $oddsum"
+
+      3.3.sleep命令
+      示例：
+
+      每隔3秒钟到系统上获取已经登入的用户的信息，其中，如果sb用户登入了系统，则给QQ发送邮件，主题为“sb user is login”，并退出;
+
+      #/bin/bash
+      #
+      while true; do
+            if who | grep "^logstash\>" &> /dev/null; then
+                   break;
+            fi
+            sleep 3
+      done
+
+      echo "$(date +"%F %T")logstash logged on" >> /tmp/users.log
+
+      #/bin/bash
+      #
+      until who | grep "^logstash\>" &> /dev/null; do
+            sleep 3
+      done
+       echo "$(date +"%F %T")logstash logged on" >> /tmp/users.log
+
+      4.while和for循环的特殊用法
+      4.1.while循环的特殊用法（遍历文件的行）
+      格式
+      while read VARIABLE;do
+          循环体
+      done < /PATH/TO/FILE
+
+      意思是：依次读取/PATH/TO/FILE文件中的每一行，且将其赋值给VARIABLE变量
+      示例：
+
+      找出ID号为偶数的用户，显示其用户名、ID、及默认的shell；
+
+      #/bin/bash
+      # 
+      while read line; do
+
+              ID=$(echo $line|cut -d: -f3)
+              if [ $[ $ID%2 ] -eq 0 ];then
+                      username=$(echo $line | cut -d: -f1)
+                      shell=$(echo $line | cut -d: -f7)
+              echo "username is $username, ID is $ID , shell is $shell"
+              fi
+      done < /etc/passwd
+
+      4.2.for循环的特殊用法
+      格式
+      for((控制变量初始化；条件判断表达式；控制变量修正语句))；do
+          循环体
+      done
+
+      示例：
+
+      示例1：1到100的和
+
+      #/bin/bash
+      # 
+
+      declare -i sum=0
+
+      for((i=1;i<=100;i++));do
+              let sum+=$i
+      done
+      echo "sum is $sum"
+
+
+      示例2：打印九九乘法表
+
+      #/bin/bash
+      # 
+      for((i=1;i<=9;i++));do
+              for((j=1;j<=i;j++));do
+                      echo -ne "${j}X${i}=$[ ${j}*${i} ]\t"
+              done
+              echo
+      done
+
+      5. case语句
+      语法格式：
+       case $VARAIBLE in
+             PAT1)
+                  分支1
+                   ;;
+             PAT2)
+                   分支2
+                   ;;
+                  ...
+               *)
+                   分支n
+                   ;;
+      esac              
+
+      case支持glob风格的通配符：
+      *：任意长度的任意字符；
+      ？：任意单个字符；
+      []：任意单个字符；
+      a|b：a或b；
+
+      注意：
+
+      （1）每一个分支的两个分号一定不能少，如果没有两个分号，那么每一个case 的分支都会执行
+      （2）虽然这里的PAT可以只用模式匹配，但是只是支持glob模式的匹配，有：* ? [ ] [^ ] a|b 这几种方式
+
+      示例：显示一个菜单给用户
+      cpu)display cpu information
+      mem）display memory information
+      disk）display disk information
+      quit)quit
+
+
+      （1）提示用户给出自己的选择
+      （2）正确的选择给出相应的信息，否则，提示用户，让用户重新选择正确的选项，直到用户选择正确为止
+
+      #!/bin/bash
+      #
+      cat << EOF
+      cpu)display cpu information
+      mem）display memory information
+      disk）display disk information
+      quit)quit
+      =============================
+      EOF
+
+      read -p "Enter your option:" option
+
+      # 这里的while，通过read命令循环输入option，使得循环可以继续进行
+      while [ "$option" != "cpu" -a "$option" != "mem" -a "$option" != "disk" -a "$option" != "quit" ]; do
+          echo "please input cpu , mem , disk , quit "
+          read -p "Enter your option:" option
+      done
+
+      if [ "$option" == "cpu" ];then
+          lscpu
+      elif [ "$option" == "mem" ];then
+              free -m
+      elif [ "$option" == "disk" ];then
+              fdisk -l /dev/sd[a-z]
+      elif [ "$option" == "quit" ];then
+              echo "quit"
+              exit 0
+      fi
+
+
+      将上述题目if else示例改写为case的判断，会使得代码的可读性增强
+
+      #/bin/bash
+      # 
+
+      cat << EOF
+      cpu)display cpu information
+      mem）display memory information
+      disk）display disk information
+      quit)quit
+      =============================
+      EOF
+
+      read -p "Enter your option:" option
+
+      # 这里的while，通过read命令循环输入option，使得循环可以继续进行
+      while [ "$option" != "cpu" -a "$option" != "mem" -a "$option" != "disk" -a "$option" != "quit" ]; do
+          echo "please input cpu , mem , disk , quit "
+          read -p "Enter your option:" option
+      done
+
+      case $option in
+      cpu)
+              lscpu ;;
+      mem)
+              free -m ;;
+      disk)
+              fdisk -l /dev/sd[a-z] ;;
+      *)
+              echo "quit"
+              exit 0 ;;
+      esac
+
+      示例：写一个服务框架脚本；
+      $lockfile，值/var/lock/subsys/SCRIPT_NAME
+
+      （1）此脚本可接受start，stop，restart，status四个参数之一；
+      （2）如果参数非此四者，则提示使用帮助后退出；
+      （3）start，则创建lockfile，并显示启动；stop则删除lockfile，并显示停止；restart，则先删除此文件再创建此文件，而后显示重启完成；status，如果lockfile存在，则显示running，否则，则显示为stopped.
+
+       #!/bin/bash
+      #
+      # chkconfig: - 50 50
+      # description: test service script
+      prog=$(basename $0)
+      lockfile=/var/lock/subsys/$prog
+      case $1 in
+      start)
+            if [ -f $lockfile ]; then
+                    echo "$prog is running yet."
+            else
+                    touch $lockfile
+                    [ $? -eq 0 ] && echo "start $prog finshed."
+            fi
+            ;;
+      stop)
+            if [ -f $lockfile ]; then
+                   rm -f $lockfile
+                   [ $? -eq 0 ] && echo "start $prog finshed."
+            else
+                 echo "$prog is running yet."
+            fi
+            ;;
+      restart)
+            if [ -f $lockfile ]; then
+                    rm -f $lockfile
+                    touch $lockfile
+                    echo "start $prog finshed."
+            else
+                    touch -f $lockfile
+                    echo "start $prog finshed."
+            fi
+            ;;
+      status)
+            if [ -f $lockfile ]; then
+                    echo "$prog is running yet."
+            else
+                    echo "$prog is stopped."
+            fi
+            ;;
+      *)
+            echo "Usage:$prog {start|stop|restart|status}"
+      esac
+
+      6.函数：代码重用
+
+      模块化编程
+      结构化编程
+      注意：定义函数的代码段不会自动执行，在调用时执行，所谓调用函数，在代码中给定函数名称即可，函数名出现的任何位置，在代码执行时候，都会自动替换为函数代码;
+
+      6.1.语法格式：
+      语法一：
+       function f_name{
+             函数体
+        }
+
+      语法二：
+      f_name(){
+           函数体
+      }
+
+
+      函数的生命周期：每次被调用时，被创建，返回时，终止
+      其状态返回结果为函数体中运行的最后一条命令的状态结果
+      自定义状态返回值，需要使用：return
+
+      return [0-255] 
+          0: 成功
+          1-255：失败
+
+      6.2.示例：
+
+      示例1：给定一个用户名，取得用户名的ID号，和默认的shell
+
+      #!/bin/bash
+      #
+
+      userinfo() {
+          if id "$username" &> /dev/null; then
+              grep "^$username\>" /etc/passwd | cut -d: -f3,7
+          else
+              echo "No such user."
+          fi 
+      }
+
+      username=$1
+      userinfo
+
+      username=$2
+      userinfo
+
+      练习：
+      写一个服务框架脚本名为create_file，接受start 、stop、 restart、 status 四个参数之一（这次用函数实现）
+
+      （1）：如果参数非此四者，则提示使用帮助后退出
+      （2）：如果传递start参数，则在/var/log目录下创建一个与脚本名相同的文件，并显示启动。
+      （3）：如果传递stop参数，就在/var/log目录下删除一个与脚本名相同的文件 ，并显示停止。
+      （4）：如果传递restart参数，就先删除再创建此文件，而后显示重启完成。
+      （5）：如果传递status参数， 如果文件存在，则显示running， 否则显示为stopped
+
+      #!/bin/bash
+      #
+      # chkconfig: - 50 50
+      # description: test service script
+      #
+      prog=$(basename $0)
+      FILE=/var/log/$prog
+
+      start() {
+          if [ -f $FILE ]; then
+              echo "$prog is running yet."
+          else
+              touch $FILE
+              [ $? -eq 0 ] && echo "start $prog OK."
+          fi
+      }
+
+      stop() {
+          if [ -f $FILE ]; then
+              rm -f $FILE
+              [ $? -eq 0 ] && echo "stop $prog finished."
+          else
+              echo "$prog is not running."
+          fi
+      }
+      status() {
+          if [ -f $FILE ]; then
+              echo "$prog is running"
+          else
+              echo "$prog is stopped."
+          fi
+      }
+
+      usage() {
+          echo "Usage: $prog {start|stop|restart|status}"
+      }
+
+      case $1 in
+      start)
+          start ;;
+      stop)
+          stop ;;
+      restart)
+          stop
+          start ;;
+      status)
+          status ;;
+      *)
+          usage
+          exit 1 ;;
+      esac
+
+      6.3.函数的返回值分为两类
+      1.函数的执行结果返回值
+
+      （1）：使用echo或printf命令进行输出
+      （2）：函数体中调用的命令的执行结果
+
+      2.函数的退出状态码
+
+      （1）：默认取决于函数体中执行的最后一条命令的退出状态码
+      （2）：自定义：return （相当于脚本中的exit）
+
+      6.4.函数可以接受参数
+
+      在调用函数的时候可以给函数传递参数；
+      在函数体中，可以使用$1, $2...引用传递给函数的参数，还可以使用$* 或$@调用所有的参数，$#表示传递的参数的个数；
+      在调用函数时候，在函数名后面以空白字符分割给定参数列表即可，例如：functionName arg1 arg2 arg3 arg4...
+
+      示例：
+
+      示例1：添加10个用户，添加用户的功能使用函数实现，用户名作为参数传递给函数。这里有一个注意点，就是如果直接return $? ，在函数外面是不能拿到值的。
+
+      #!/bin/bash
+      #
+      # 5: user exists
+
+      addusers() {
+          if id $1 &> /dev/null; then
+              return 5
+          else
+              useradd $1
+              retval=$?
+              return $retval
+          fi
+      }
+
+      for i in {1..10}; do
+          addusers ${1}${i}
+          # 在这里需要注意的是：每次函数的放回结果虽然可以使用$?来引用，但是在后面多次用到的时候，一定要将其使用一个变量保存起来，这里使用一个retval=$?保存了函数执行之后的状态码，以后为了规范起见，所有的函数返回的状态码都使用一个变量将其保存起来，如: variable=$? ，这样就不怕以后引用$?是出现错误。
+          retval=$?
+          if [ $retval -eq 0 ]; then
+              echo "Add user ${1}${i} finished."
+          elif [ $retval -eq 5 ]; then
+              echo "user ${1}${i} exists."
+          else
+              echo "Unkown Error."
+          fi
+      done
+
+      练习：
+
+      练习1：写一个脚本：要求
+      （1）使用函数实现ping一个主机来测试主机的在线状态，主机地址通过参数传递给函数
+      （2）主程序：测试192.168.7.130 - 192.168.7.139 范围内的各个主机的在线状态
+      （3）如果主机在线，那么打印黄色的Online字符串，如果主机不在线打印红色的Offline字符串
+
+      #!/bin/bash
+      #
+      if [ $# -lt 2 ];then
+          echo "请输入两个主机地址作为IP地址的检测范围"
+          exit 1
+      fi
+      START=$1
+      END=$2
+
+      # 检测IP的范围
+      Ping(){
+          ping -c1 -w1 192.168.7.13$1 &> /dev/null &&  echo -e "\E[1;33m 192.168.7.13$1 Online  \033[0m" || echo -e "\E[1;31m 192.168.7.13$1 Offline  \033[0m"
+      }
+
+      for i in `seq $1 $2`; do
+          Ping $i
+      done
+
+
+      练习2：写一个脚本 ：要求
+      打印NN乘法表,使用函数实现， 例如：给脚本传递了一个11，那么就是打印11 X 11 的乘法表
+
+      #!/bin/bash
+      # 注意：这里的echo 的 -n选项表示不换行
+      for((i=1;i<=$1;i++));do
+              for((j=1;j<=$i;j++));do
+                      echo -n "$j X $i = $[ $j*$i ]  "
+              done
+              echo
+      done
+
+      7.变量作用域
+
+      局部变量：作用域是函数的生命周期，在函数结束时被自动销毁。定义局部变量的方法：local 变量=值
+      本地变量：作用域是运行脚本的shell进程的生命周期，因此，其作用域范围是当前的shell脚本程序文件
+
+      示例
+      #!/bin/bash
+      #
+      name=tom
+
+      # 记得以后为了避免函数中的变量与本地变量同名，如果同名，会使得具备变量修改本地变量的值，使得本地变量的指针直接指向函数中变量的存储空间。为了避免同名产生的错误，以后在函数中定义的变量都使用局部变量，在变量名前面加上一个local关键字
+      setname() {
+          local name=jerry
+          echo "Function: $name"
+      }
+
+      setname
+      echo "Shell: $name"
+
+      8.递归
+
+      bash shell中和其他编程语言一样可以使用递归。那什么是递归：程序调用自身技巧称为递归（ recursion）
+
+      示例：
+
+      写一个脚本，给脚本传递一个数值，脚本输出这个数值的阶层。例如：5！= 120
+
+      #!/bin/bash
+
+      func() {
+          if [ $1 -eq 0 -o $1 -eq 1 ]; then
+              echo 1
+          else
+              echo $[$1*$(func $[$1-1])]
+          fi
+      }
+
+      func $1
+
    
    
-6.shell脚本的本质
+7.shell脚本的本质
    shell脚本是命令的堆积,命令自上而下执行,由于命令的非幂等性所有脚本中要进行判断比如命令useradd name如果name存在还会往下执行
    导致脚本停顿的原因会是exit或者命令的拼写错误.
    
