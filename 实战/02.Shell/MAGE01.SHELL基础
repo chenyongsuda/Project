@@ -324,6 +324,7 @@
    运算符的短路法则   COMMAND01 && COMMAND02 第一个命令失败第二个不会执行
                      COMMAND01 || COMMAND02 第一个命令失败第二个就会执行
 6.shell高级用法
+   参考: https://www.jianshu.com/p/7822b6382f15
    1.if语句
       1.1.回顾
 
