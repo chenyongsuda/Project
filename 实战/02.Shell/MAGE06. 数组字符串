@@ -1,0 +1,710 @@
+数组：
+
+程序=指令+数据
+
+bash脚本中指令：就是整个编程中的语法关键字，加上各种系统上的命令，加上定义的函数；
+
+数据：存在变量、文件中、或数据组织结构中；
+
+
+
+变量：存储单个元素的内存空间；
+
+数组：存储多个元素的连续的内存空间；
+
+数组名：整个数组只有一个名字；数组在第一个内存空间中存储的数字就是数组名指向的位置；
+
+数组索引：编号从0开始；引用数组种的数据方式：
+
+	数组名[索引]
+
+	${ARRAY_NAME[INDEX]}
+
+
+
+注意：bash-4及之后的版本，支持自定义索引格式，而不仅是0,1,2，...数字格式；
+
+	自定义索引格式的属组，称为关联数组；
+
+
+
+声明数组：
+
+	declare -a NAME：声明索引数组；
+
+	declare -A NAME：声明关联数组；
+
+
+
+查看声明帮助：
+
+]# help declare
+
+数组中的数据就是存在内存中的一段连续的内存空间，分别存储多个连续的数据，每个数据都是独立的被管理单元，只不过没有独立的名称，要通过数组名称来索引使用，数组名称加上一个下标可理解为数据在数组中的标识符；
+
+
+
+数组中元素的赋值方式：
+
+（1）一次只赋值一个元素：
+
+	ARRAY_NAME[INDEX]=value
+
+
+
+	例如：
+
+		]# animals[0]=pig
+
+		]# animals[1]=cat
+
+		]# echo $animals
+
+		]# echo ${animals[1]}
+
+
+
+（2）一次赋值全部元素：
+
+	ARRAY_NAME=("VAL1" "VAL2" "VAL3" ...)
+
+		会自动赋值为0,1,2,3，...
+
+
+
+	例如：
+
+		]# weekdays=("Monday" "Tuseday" "Wednesday")
+
+		]# echo ${weekdays[2]}
+
+
+
+（3）只赋值特定元素；
+
+	ARRAY_NAME=([0]="VAL1" [3]="VAL4" ...)
+
+		为稀疏格式的数组；
+
+
+
+	注意：bash支持稀疏格式的数组；
+
+
+
+	例如：
+
+		]# sword=([0]="Yitian" [3]="Tulong")
+
+		]# echo ${sword[1]}：显示为空；
+
+		]# echo ${sword[3]}：显示为Tulong；
+
+
+
+（4）read -a ARRAY_NAME
+
+
+
+	例如：
+
+		]# read -a Linux
+
+		sed awk find grep 
+
+		]# echo ${Linux[1]}：显示为awk；
+
+
+
+		关联数组：
+
+		]# declare -A world：声明关联数组；
+
+		]# world[us]"America"
+
+		]# echo "${world[us]}"：显示为America；
+
+		]# world[uk]"unite kingdom"
+
+		]# echo "${world[uk]}"：显示为unite kingdom；
+
+
+
+引用数组中的元素：${ARRAY_NAME[INDEX]}
+
+注意：引用时，只给数组名，表示引用下标为0的元素；
+
+
+
+${ARRAY_NAME[*]}：引用数组中的所有元素；
+
+${ARRAY_NAME[@]}：同上；
+
+
+
+数组的长度（数组中元素的个数）：
+
+${#ARRAY_NAME[*]}
+
+${#ARRAY_NAME[@]}
+
+
+
+例如：
+
+	]# echo "${#Linux[*]}：显示数组元素个数4个；
+
+	]# echo "${#animals[@]}：显示数组元素个数2个；
+
+	]# echo "${#animals}：显示数组第一个元素的字符个数为3个；
+
+	]# echo "${animals[*]}：显示数组中所有元素；可生成列表；
+
+
+
+示例：生成10随机数，并找出其中最大值和最小值；
+
+
+
+declare -a rand
+
+declare -i max=0
+
+
+
+for i in {0..9};do
+
+        rand[$i]=$RANDOM
+
+        echo ${rand[$i]}
+
+        [ ${rand[$i]} -gt $max ] && max=${rand[$i]}
+
+done
+
+
+
+echo "Max: $max"
+
+
+
+练习：
+
+1、生成10个随机数，由小到达排序；
+
+2、定义数组，数组中的元素是/var/log目录下所有以.log结尾的文件；统计其下标为偶数的文件中的行数之和；
+
+
+
+	declare -a files
+
+	files=(/var/log/*.log)
+
+
+
+	declare -i lines=0
+
+
+
+	for i in $(seq 0 $[${#files[*]}-1]);do
+
+	        if [ $[$i%2] -eq 0 ];then
+
+	            let lines+=$(wc -l ${files[$i]} |cut -d' ' -f1)
+
+	        fi  
+
+	done
+
+
+
+	echo "lines: $lines"
+
+
+
+引用数组中的所有元素：
+
+${ARRAY_NAME[*]}
+
+${ARRAY_NAME[@]}
+
+	也可只返回有限的几个元素；
+
+
+
+数组元素切片：${ARRAY_NAME[@]:offset:number}
+
+	offset：元素偏移量；
+
+	number：取元素的个数；省略number时，表示取偏移量之后的所有元素；
+
+
+
+例如：
+
+	]# files=(/etc/[Pp]*)
+
+	]# echo ${files[*]}
+
+	显示结果：
+
+		/etc/pam.d /etc/passwd /etc/passwd- /etc/pinforc /etc/pkcs11 /etc/pki /etc/plymouth /etc/pm /etc/polkit-1 /etc/popt.d /etc/postfix /etc/ppp /etc/prelink.conf.d /etc/printcap /etc/profile /etc/profile.d /etc/protocols /etc/pulse	
+
+
+
+	]# echo ${files[@]:2:3}：表示从上面的数组中跳过2个，取3个；
+
+	显示结果：
+
+		/etc/passwd- /etc/pinforc /etc/pkcs11
+
+
+
+	]# echo ${files[@]:5}
+
+	显示结果：
+
+		/etc/pki /etc/plymouth /etc/pm /etc/polkit-1 /etc/popt.d /etc/postfix /etc/ppp /etc/prelink.conf.d /etc/printcap /etc/profile /etc/profile.d /etc/protocols /etc/pulse
+
+
+
+向非稀疏格式的数组中追加元素：
+
+ARRAY_NAME[${#ARRAY_NAME[*]}]=
+
+	${#ARRAY_NAME[*]}]：表示取出数组中的元素个数；
+
+
+
+删除数组中的某元素：
+
+unset ARRAY[INDEX]
+
+
+
+关联数组：
+
+declare -A ARRAY_NAME
+
+	ARRAY_NAME=([index_name1]="value1" [index_name2]="value2" ...)
+
+
+
+bash脚本编程之bash的内置字符串处理工具：
+
+
+
+字符串切片：（基于位置取字串）
+
+${var:offset:number}：取字符串的子串；
+
+${var: -length}：取字符串的最右侧的几个字符；
+
+	注意：冒号后必须有一个空格；
+
+
+
+例如：
+
+	]# name=jerry
+
+	]# echo ${name:2}
+
+	显示结果：rry
+
+
+
+	]# echo ${name:2:2}
+
+	显示结果：rr
+
+
+
+	]# echo ${name: -4}
+
+	显示结果：erry
+
+
+
+基于模式取字串：
+
+${var#*word}：
+
+	其中word是只读的分隔符；功能：从左向右，查找var变量所存储的字符串中，第一次出现的word分隔符，删除字符串开头至此分隔符之间的所有字符；
+
+${var##*word}：（可用于取路径基名、端口号）
+
+	其中word是只读的分隔符；功能：从左向右，查找var变量所存储的字符串中，最后一次出现的word分隔符，删除字符串开头至此分隔符之间的所有字符；
+
+
+
+例如：
+
+	]# mypath="/etc/init.d/functions"
+
+	]# echo ${mypath#*/}：显示内容：etc/init.d/functions；
+
+	]# echo ${mypath##*/}：显示内容：functions；（即取路径基名）
+
+
+
+${var%word*}：（可用于取路径名）
+
+	其中word是只读的分隔符；功能：从右向左，查找var变量所存储的字符串中，第一次出现的word分隔符，删除此分隔符至字符串尾部之间的所有字符；
+
+${var%word*}：
+
+	其中word是只读的分隔符；功能：从右向左，查找var变量所存储的字符串中，最后一次出现的word分隔符，删除此分隔符至字符串尾部之间的所有字符；
+
+
+
+例如：
+
+	]# echo ${mypath%/*}：显示内容：/etc/init.d；（即取路径名）
+
+	]# echo ${mypath%%/*}：显示内容：为空；
+
+
+
+	]# mypath="etc/init.d/functions"
+
+	]# echo ${mypath%%/*}：显示内容：etc；
+
+
+
+	]# url="http://www.magedu.com:80"
+
+	]# echo ${url##*:}：显示内容：80;（取端口号）
+
+	]# echo ${url%%:*}：显示内容：http；
+
+
+
+查找替换：
+
+${var/PATTERN/SUBSTI}：
+
+	查找var所表示的字符串中，第一次被PATTERN所匹配到的字符串，并将其替换为SUBSTI所表示的字符串；
+
+${var//PATTERN/SUBSTI}：
+
+	查找var所表示的字符串中，所有被PATTERN所匹配到的字符串，并将其全部替换为SUBSTI所表示的字符串；
+
+行首/尾锚定：
+
+${var/#PATTERN/SUBSTI}：
+
+	查找var所表示的字符串中，行首被PATTERN所匹配到的字符串，并将其替换为SUBSTI所表示的字符串；
+
+${var/%PATTERN/SUBSTI}：
+
+	查找var所表示的字符串中，行尾被PATTERN所匹配到的字符串，并将其替换为SUBSTI所表示的字符串；
+
+	
+
+	注意：PATTERN中使用glob风格的通配符；
+
+
+
+例如：
+
+]# userinfo="root:x:0:0:root admin:/root:/binb/chroot"	
+
+]# echo ${userinfo/root/ROOT}：显示内容：ROOT:x:0:0:root admin:/root:/binb/chroot；替换第一次；
+
+]# echo ${userinfo//r??t/ROOT}：显示内容：ROOT:x:0:0:ROOT admin:/ROOT:/binb/chROOT；替换所有；
+
+]# echo ${userinfo/#r??t/ROOT}：显示内容：ROOT:x:0:0:root admin:/root:/binb/chroot；行首替换；
+
+]# echo ${userinfo/%r??t/ROOT}：显示内容：root:x:0:0:root admin:/root:/binb/chROOT；行尾替换；
+
+
+
+查找删除：
+
+${var/PATTERN}：查找var字符串中，只删除第一次被PATTERN匹配到的字符串；
+
+${var//PATTERN}：查找var字符串中，删除所有被PATTERN所匹配到的字符串；
+
+${var/#PATTERN}：查找var所表示的字符串中，只删除行首被PATTERN所匹配到的字符串；
+
+${var/%PATTERN}：查找var所表示的字符串中，只删除行尾被PATTERN所匹配到的字符串；
+
+
+
+字符大小写转换：
+
+${var^^}：把var中的所有小写字符转换成大写字符；
+
+${var,,}：把var中的所有大写字符转换成小写字符；
+
+
+
+例如：
+
+	]# url="http://www.magedu.com:80"
+
+	]# echo ${url^^}：显示内容：HTTP://WWW.MAGEDU.COM:80；转为大写：
+
+	]# myurl=${url^^}
+
+	]# echo ${myurl,,}：显示内容：http://www.magedu.com:80；转为小写；
+
+
+
+变量赋值：
+
+${var:-VALUE}：如果var变量为空，或未设置，则返回VALUE，否则，返回var变量值；
+
+${var:=VALUE}：如果var变量为空，或未设置，则返回VALUE并将VALUE赋值给var变量，否则，返回var变量值；
+
+
+
+	例如：
+
+		变量hi为空，没有定义值；
+
+		]# echo ${hi:-world}：显示内容：world；
+
+		]# hi="hello"
+
+		]# echo ${hi:-world}：显示内容：hello；
+
+		]# echo ${hi:=world}：显示内容：hello；
+
+
+
+		]# unset hi：撤销hi变量的值；
+
+		]# echo ${hi:=world}：显示内容：world；
+
+		]# echo $hi：此时hi变量被赋值了；
+
+
+
+${var:+VALUE}：如果var变量不空，则返回VALUE；否则，也没什么意义；
+
+${var:?ERRO_INFO}：如果var变量为空，或未设置，则返回ERRO_INFO为错误提示；否则，返回var的值；
+
+
+
+练习：脚本完成如下功能；（一定完成，后续课程实验要用到）
+
+（1）提示用户输入一个可执行的命令的名称；
+
+（2）获取此命令所依赖到的所有库文件列表；
+
+（3）复制命令至某目录（例如/mnt/sysroot，即把此目录当做根）下的对应的路径中；
+
+	bahs，/bin/bash ==> /mnt/sysroot/bin/bash
+
+	usradd,/usr/sbin/useradd ==> /mnt/sysroot/usr/sbin/usradd
+
+（4）复制此命令依赖到的所有库文件至目录目录下的对应路径下；
+
+	/lib64/ld-linux-x8664.so2 ==> /mnt/sysroot/lib64/ld-linux-x8664.so.2
+
+
+
+进一步：
+
+	每次复制完成一个命令后，不要退出，而是提示用户继续输入要复制的其它命令，并重复完成如上功能，直到用户输入“quit”退出脚本；
+
+
+
+写一个脚本：前面的练习解答
+
+使用ping命令探测，172.16.1.1-172.16.67.1范围内的所有主机是否在线，在线显示为up，不在线显示为down，分别统计主机数量；
+
+
+
+分别使用for，while和until循环实现；
+
+普通方式：
+
+declare -i uphosts=0
+
+declare -i downhosts=0
+
+for i in {1..67};do
+
+        if ping -W 1 -c 1 172.16.$i.1 &>/dev/null;then
+
+            echo "172.16.$i.i is up"
+
+            let uphosts+=1
+
+        else    
+
+            echo "172.16.$i.1 is down"
+
+            let downhosts+=1
+
+        fi
+
+done
+
+echo "Up hosts: $uphosts,Down hosts: $downhosts"
+
+
+
+改版2：函数+while循环方式：
+
+declare -i uphosts=0
+
+declare -i downhosts=0
+
+declare -i i=1
+
+
+
+hostping() {
+
+        if ping -W 1 -c 1 $1 &>/dev/null;then
+
+            echo "$i is up"
+
+            let uphosts+=1
+
+        else    
+
+            echo "$1 is down"
+
+            let downhosts+=1
+
+        fi  
+
+}
+
+
+
+while  [ $i -le 67 ];do
+
+    hostping 172.16.$i.1
+
+    let i++ 
+
+done
+
+
+
+echo "Up hosts: $uphosts,Down hosts: $downhosts"
+
+
+
+改版3：使用return，在主程序中统计ping的主机数量；
+
+declare -i uphosts=0
+
+declare -i downhosts=0
+
+declare -i i=1
+
+
+
+hostping() {
+
+        if ping -W 1 -c 1 $1 &>/dev/null;then
+
+            echo "$i is up"
+
+            return 0
+
+        else    
+
+            echo "$1 is down"
+
+             return 1
+
+        fi  
+
+}
+
+
+
+while  [ $i -le 67 ];do
+
+    hostping 172.16.$i.1
+
+    [ $? -eq 0 ] && let uphosts++ || let downhosts++
+
+    let i++ 
+
+done
+
+
+
+echo "Up hosts: $uphosts,Down hosts: $downhosts"
+
+
+
+练习：脚本实现，探测C类、B类、A类网络中的所有主机是否在线；
+
+
+
+cping() {
+
+local i=1 
+
+while [ $i -le 245 ];do
+
+    if ping -W 1 -c 1 $1.$i &>/dev/null;then
+
+            echo "$1.$i is up"
+
+    else 
+
+            echo "$1.$i is down"
+
+    fi  
+
+    let i++ 
+
+done
+
+}
+
+#cping 192.168.0
+
+
+
+bping() {
+
+local j=0 
+
+while [ $j -le 255 ];do
+
+    cping $1.$j
+
+    let j++ 
+
+done
+
+}
+
+#bping 172.16
+
+
+
+aping() {
+
+local x=0 
+
+while [ $x -le 255 ];do
+
+    bping $1.$x
+
+    let x++ 
+
+done
+
+}
+
+aping 10
+
+
+
+扩展：可改造以上脚本，提示用户输入任何网络地址或网络地址，获取其网络，并扫描其网段；
+
+都可ping这个地址，先判断ip地址类别，然后调用相应的函数，如输入的是10.0.0.1，把ip地址第一段切出来进行比较是否为A（1-127）、B（128-191）、C（192-223））类网，然后再各自范围内调用相应的函数实现；
+
