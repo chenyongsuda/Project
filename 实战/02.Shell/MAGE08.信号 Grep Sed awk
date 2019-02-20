@@ -1,0 +1,58 @@
+========================================================================
+信号捕捉：
+        列出信号：
+            trap  -l
+            kill  -l
+            man  7  signal
+         
+            trap  'COMMAND'  SIGNALS
+             
+            常可以进行捕捉的信号：
+                HUP， INT
+             
+            示例：
+                #!/bin/bash
+                #
+                declare -a hosttmpfiles
+                trap  'mytrap'  INT
+ 
+                mytrap()  {
+                    echo "Quit"
+                    rm -f ${hosttmpfiles[@]}
+                    exit 1
+                }
+ 
+ 
+                for i in {1..50}; do
+                    tmpfile=$(mktemp /tmp/ping.XXXXXX)
+                    if ping -W 1 -c 1 172.16.$i.1 &> /dev/null; then
+                        echo "172.16.$i.1 is up" | tee $tmpfile
+                    else
+                        echo "172.16.$i.1 is down" | tee $tmpfile
+                    fi
+                    hosttmpfiles[${#hosttmpfiles[*]}]=$tmpfile
+                done
+ 
+                rm -f ${hosttmpfiles[@]}
+                 
+    在bash中使用ACSII颜色
+        \033[31m hello \033[0m
+            ##m：
+                左侧#：
+                    3：前景色
+                    4：背景色
+                右侧#：颜色种类
+                    1, 2, 3, 4, 5, 6, 7
+             
+            #m：
+                加粗、闪烁等功能；
+                 
+            多种控制符，可组合使用，彼此间用分号隔开；
+             
+    dialog命令可实现窗口化编程；
+        各窗体控件使用方式；
+        如何获取用户选择或键入的内容？
+            默认，其输出信息被定向到了错误输出流；
+         
+    《高级bash编程指南》，《Linux命令行和shell脚本编程宝典》
+=================================================================================================
