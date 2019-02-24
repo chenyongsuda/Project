@@ -204,3 +204,8 @@ patch [OPTIONS] -i PatchFile OldFile
 patch [OPTIONS] OldFile < PatchFile
 
 练习：取出ifconfig eno16777736命令结果中的IP地址
+
+
+
+========================================================================================================
+sed awk
