@@ -209,3 +209,665 @@ patch [OPTIONS] OldFile < PatchFile
 
 ========================================================================================================
 sed awk
+sed：编辑器
+     sed: Stream EDitor, 行编辑器；
+     sed命令两个内在空间：
+     1. 模式空间（pattem space）：一段内存空间，可理解为行数据处理车间。sed一次处理一行数据，将要处理的数据拷贝至模式空间中进行处理，处理后默认将结果输出到屏幕；
+
+     2. 保持空间（hold space）：可理解为行半成品仓库。当模式空间中的数据还没有处理完需要处理其它行的时候，就将该行数据从模式空间移动至保持空间，当模式空间中的数据处理完毕后再将保持空间中的数据读取至模式空间再次处理；
+
+     基本工作机制：
+     从一个文本文件中依次（若未使用地址定界）只读取一行数据到Sed的模式空间中，基于给定的编辑脚本对模式空间中的内容进行编辑处理，之后将编辑后的结果（或未编辑的结果）默认输出到屏幕；sed在读取一行后不会做原地编辑。
+
+
+
+     语法：
+        sed [option]... 'script' inputfile...
+            script: '地址命令'
+
+        常用选项：
+            -n：不输出模式空间中的内容至屏幕；
+            -e: 多点编辑；
+            -f /PATH/TO/SCRIPT_FILE: 从指定文件中读取编辑脚本；
+            -r: 支持使用扩展正则表达式；
+            -i: 原处编辑；
+
+        地址定界（要处理的行）：
+            (1) 不给地址：对全文进行处理；
+            (2) 单地址：
+                #: 指定的行；
+                /pattern/：被此处模式所能够匹配到的每一行；
+            (3) 地址范围：
+                #,#：如：m,n表示m行开始至n行结束
+                #,+#：如：m,+n表示从m行开始，下走n行结束
+                /pat1/,/pat2/：从pat1匹配的行开始至pat2行结束
+                #,/pat1/：从#行开始至pat1匹配的行结束
+            (4) ~：步进
+                1~2：读所有奇数行，读第1行，步进2；
+                2~2：读所有偶数行，读第2行，步进2；
+
+        编辑命令：
+            d: 删除
+            p: 显示模式空间中的内容
+            a \text：在行后面追加文本；支持使用\n实现多行追加；
+            i \text：在行前面插入文本；支持使用\n实现多行插入；
+            c \text：替换行为单行或多行文本；
+            w /path/to/somefile: 保存模式空间匹配到的行至指定文件中；
+                如：将fstab中UUID开头的行另存为至/tmp/fstab: # sed '/^UUID/w /tmp/fstab' /etc/fstab
+            r /path/from/somefile：读取指定文件的文本流至模式空间中匹配到的行的行后；
+            =: 为模式空间中的行打印行号；
+            !: 取反条件（对地址定界）;
+            s///：支持使用其它分隔符，s@@@，s###；
+                替换标记：
+                    g: 行内全局替换；
+                    p: 显示替换成功的行；
+                    w /PATH/TO/SOMEFILE：将替换成功的结果保存至指定文件中；
+        练习：
+        删除/etc/fstab文件中以UUID开头的行：
+		$ sed '/^UUID/d' /etc/fstab
+
+        仅显示/etc/fstab中以UUID开头的行：
+		$ sed -n '/^UUID/p' /etc/fstab
+
+        在fstab文件中每个以UUID开头的行下方追加行“## Hello Sed”:
+		$ sed '/^UUID/a \## Hello Sed.' fstab
+
+        在fstab文件中每个以UUID开头的行上方追加一行“newline”:
+		$ sed '/^UUID/i newline' fstab
+
+        将fstab文件中以UUID开头的行替换为“## Hello Sed.”
+		$ sed '/^UUID/c ## Hello Sed.' fstab
+
+        将f1.txt文件中以E:开头的行另存至mmm.txt文件中：
+		$ sed '/^E:/w mmm.txt' f1.txt
+
+        读取/etc/issue文件插入至fstab文件的第6行下方：
+		sed '6r /etc/issue' fstab
+		
+        只保留fstab文件中以UUID开头的行：
+		$ sed '/^UUID/!d' fstab
+
+        查找fstab文件中以UUID开头的行，并将UUID替换为uuid：
+		$ sed '/^UUID/s/UUID/uuid/c' fstab
+
+        查找/etc/passwd文件中，以r开头间隔两个任意字符后以t结尾的字符串，全部引用并追加er后进行替换之，只之打印更改的内容：
+		$ sed -n 's/r..t/&er/gp' /etc/passwd
+		rooter:x:0:0:rooter:/rooter:/bin/bash
+		nm-open***:x:119:127:NetworkManager Open×××,,,:/var/lib/open***/chrooter:/bin/false
+
+        删除/boot/grub/grub.conf文件中所有以空白开头的行行首的空白字符；
+		~]# sed 's@^[[:space:]]\+@@' /etc/grub2.cfg
+
+        删除/etc/fstab文件中所有以#开头，后面至少跟一个空白字符的行的行首的#和空白字符；
+		~]# sed 's@^#[[:space:]]\+@@' /etc/fstab
+
+        echo一个绝对路径给sed命令，取出其基名；取出其目录名；
+            取目录名，搜索一个以上非路径分隔符，后跟一个可有可无的路径分隔符结尾，替换为无：
+
+		~]# echo "/etc/sysconfig/" | sed 's@[^/]\+/\?$@@'
+		/etc/
+        取基名：
+		$ echo "/etc/sysconfig/" | sed -nr 's@.*/(.+)/?@\1@p'sysconfig/
+		$ echo "/etc/sysconfig/abc" | sed -nr 's@.*/(.+)/?@\1@p'abc
+						or
+		$ echo "/etc/sysconfig/" | sed -nr 's@(.*/)(.+)/?@\2@p'
+		sysconfig/
+		$ echo "/etc/sysconfig/abc" | sed -nr 's@(.*/)(.+)/?@\2@p'
+		abc
+
+        高级编辑命令：
+
+            h: 把模式空间中的内容覆盖至保持空间中；
+
+            H：把模式空间中的内容追加至保持空间中；
+
+            g: 从保持空间取出数据覆盖至模式空间；
+
+            G：从保持空间取出内容追加至模式空间，保持空间中的内容会追加到模式空间中内容的下方；
+
+            x: 把模式空间中的内容与保持空间中的内容进行互换；
+
+            n: 读取匹配到的行的下一行至模式空间，原模式空间中的内容将会被覆盖；
+
+            N：追加匹配到的行的下一行至模式空间，原模式空间中的内容不变；
+
+            d: 删除模式空间中的行；
+
+            D：删除多行模式空间中的所有行；
+
+            多条编辑命令用“分号”隔开；
+
+        列举高级编辑命令用法：
+            逆向显示文件中的每一行；
+			sed -n '1!G;h;$p' FILE:
+                 解析：这是三个命令：
+                      1：读取第1行时：
+                        (1)不执行任何操作；
+
+                        (2)把第1行追加到保持空间中；
+
+                        (3)因为不是最后一行，所以不执行打印操作；
+                      2：读取第2行时：
+                        （1）从保持空间中读取第1行，覆盖至模式空间，此时模式空间中为第1行；
+
+                        （2）将模式空间中的第2、1行覆盖至保持空间，此时模式空间和保持空间都是2、1行；
+
+                        （3）因为不是最后行不执行打印操作；
+                      3：读取第3行（最后行）：
+                        （1）读取第3行覆盖至模式空间，并从保持空间读取第2、1行追加至模式空间，此时模式空间为3、2、1行；
+
+                        （2）把模式空间中的内容覆盖至保持空间，此时保持空间也为3、2、1行；
+
+                        （3）因为当前行是最后行，所以打印模式空间中的内容至屏幕，3、2、1行。
+            显示偶数行：
+			sed -n 'n;p' FILE
+							or
+
+			sed -n '2~2p' FILE
+            逆向显示文件内容  
+			sed '1!G;h;$!d' FILE
+                 解析：
+                （1）如果读取的不是第一行，则将保持空间中的内容追加至模式空间；
+                （2）把模式空间中的内容覆盖至保持空间中；
+                （3）如果读取的不是最后一行则删除模式空间中的内容
+            取出文件后两行：
+			sed '$!N;$!D' FILE
+            取出文件最后一行：
+			sed '$!d' FILE
+            每行后边增加一个空白行：
+			sed 'G' FILE
+            解析：读取每一行时都从保持空间中读取空白行追加至模式空间，并把模式空间中的内容打印出来
+            每行后面增加一个空白行，如果有连续多个空白行则合并为一个；  
+			sed '/^$/d;G' FILE
+            解析：读取某行时如果是空白行，则删除，再增加一个空白行，如果不是空白行则第一个命令不满足，直接执行第二个命令，当前行下追加一个空白行
+            显示奇数行：
+			sed 'n;d' FILE
+                or
+
+			sed -n '1~2p' FILE
+
+==========================================================================================================================
+awk: 报告生成器
+        awk：Unix/Linux下的报告生成器，用来实现格式化文本输出；
+
+        awk: 其名称得自于它的创始人 Alfred Aho 、Peter Weinberger 和 Brian Kernighan 姓氏的首个字母，Unix下的文本处理工具，经过改进生成的新的版本nawk（New AWK），后来在Linux下得以实现，名为gawk（GNU awk），但因为人们已经习惯用awk来命名，所以awk得以继续使用，在某些Linux发行版上可以发现awk为gawk的别名或链接。
+
+		gawk - pattern scanning and processing language，模式扫描及处理语言，一种编程语言的解释器，本质上是一种脚本编程语言
+
+        基本用法：
+         gawk [options] 'program' FILE ...
+            options：
+                -F：指明输入时用到的字段分隔符；
+                -v var=value: 自定义变量；
+            program: PATTERN{ACTION STATEMENTS}
+                PATTERN：地址定界模式，指定对哪些文本行进行处理。比如以“UUID”开头的行
+                ACTION STATEMENTS：处理语句，语句之间用分号分隔，指明对指定的文本行如何处理。 如常用语句print和printf
+        工作机制：
+            1. 从指定的文件中一次读取一行文本，之后以指定的输入分隔符（默认为空白字符）进行切片，把一行文本分成N个片断，每个片断都直接保存到awk内建的变量中，这些变量中第1个变量（保存了第一段文本）叫$1，第2个变量叫$2，第三个变量叫$3,以此类推，$0表示事行文本。一行文本被切割成多段后可以仅显示诸多片段中的某一段、某些段或全部段。
+            2. 一行文本被切割成多段后，可以对每一段文本进行判断或处理。比如判断每一行的第2段是否在某个数值范围内，如果在就把该行的第4段显示出来，也可以对一行文本的每一段进行循环（同一行各字段间）处理。
+       处理语句（ACTION STATEMENTS）：
+        1、print
+            语法：print item1, item2, ...
+            要点：
+                (1) 要输出的多字段间以逗号分隔符进行分隔，最终显示的结果默认为空格分隔符；
+                (2) 输出的各item可以字符串，也可以是数值（输出时隐式转换成字符串进行输出）；当前记录的字段、变量或awk的表达式；
+                (3) 如省略item，相当于print $0，即打印整行;
+            Example:
+                打印/etc/passwd文件中最后3行的第1段和第3段：        
+					$ tail -n3 /etc/passwd | awk -F: '{print $1,$3}'
+					usbmux 122
+					yinkai 1000
+					mysql 123
+				
+                打印/etc/passwd文件中最后3行的用户名和UID：        
+					$ tail -n5 /etc/passwd | awk -F: '{print "User:",$1," UID:",$3}'
+					User: usbmux  UID: 122
+					User: yinkai  UID: 1000
+					User: mysql  UID: 123
+
+                打印/etc/passwd文件中最后3行：
+					$ tail -n3 /etc/passwd | awk '{print}'
+					usbmux:x:122:46:usbmux daemon,,,:/var/lib/usbmux:/bin/false
+					yinkai:x:1000:1000:Yinkai,,,:/home/yinkai:/bin/bash
+					mysql:x:123:132:MySQL Server,,,:/nonexistent:/bin/false
+        2、变量
+            2.1 内建变量：在引用内建变量时无需加“$”
+                FS：input Field Seperator(输入分隔符)，默认为空白字符；
+                OFS：Output Field Seperator（输出分隔符），默认为空白字符；
+                    Example:
+					# awk -v FS=':' -v OFS='---->' '{print $1,$3,$7}' /etc/passwd
+					root---->0---->/bin/bash
+					bin---->1---->/sbin/nologin
+					daemon---->2---->/sbin/nologin
+					adm---->3---->/sbin/nologin
+					lp---->4---->/sbin/nologin
+					sync---->5---->/bin/sync
+
+                RS：input Record Seperator，输入时的换行符；
+                ORS：output record seperator，输出时的换行符，补充的输出换行符，原有的换行符依然有效；
+                    Example:
+                        使用空白符作为输入换行符，使用‘ && ’作为输出换行符，显示/etc/passwd文档内容
+						$ awk -v RS=' ' '{print}' /etc/passwd   
+						usbmux:x:122:46:usbmux && daemon,,,:/var/lib/usbmux:/bin/false
+						yinkai:x:1000:1000:Yinkai,,,:/home/yinkai:/bin/bash
+						mysql:x:123:132:MySQL && Server,,,:/nonexistent:/bin/false
+ 
+                NF：Number of Field，每行的字段数量
+                    {print NF}：打印每行的字段数
+                    {print $NF}：打印每行的最后一个字段
+                    Example:
+                        以‘:’为分隔符，显示/etc/passwd文件最后一行的字段数：
+						$ tail -n1 /etc/passwd | awk -v FS=':' '{print NF}'
+						7
+                        
+                        取/etc/passwd的基名: 
+						$ ll /etc/passwd | awk -v FS='/' '{print $NF}'
+						passwd
+                NR：Number of Record, 行数；对文件的行进行记数，如果指定多个文件则合并记数。
+
+                FNR：File Number of Record, 各文件分别计数；行数；
+                    Example:
+                        统计/etc/{fstab,issue}这两个文件的总行数: 
+						$ awk '{print NR}' /etc/{fstab,issue} | tail -n1     
+						21
+ 
+                FILENAME：当前文件名；
+                    Example: 
+                        分别统计/etc/{resolv.conf,issue}两个文件的行数: 
+						$ awk '{print FILENAME,"-->",FNR}' /etc/{resolv.conf,issue}     
+						/etc/resolv.conf --> 1
+						/etc/resolv.conf --> 2
+						/etc/resolv.conf --> 3
+						/etc/issue --> 1
+						/etc/issue --> 2
+ 
+
+                ARGC：命令行参数的个数；
+
+                ARGV：是一个数组，数组内保存的是命令行所给定的各个参数；
+                    Example:
+
+                        1. 显示该awk命令中各参数的总数（包含awk命令自身）:
+							$ awk 'BEGIN{print ARGC}' /etc/{resolv.conf,issue}  
+							3
+                        2.分别显示该awk命令中各个参数，ARGV[0]返回的是数组中第0个参数:
+							$ awk 'BEGIN{print ARGV[0]}' /etc/{resolv.conf,issue}   
+							awk
+							$ awk 'BEGIN{print ARGV[1]}' /etc/{resolv.conf,issue}
+							/etc/resolv.conf
+							$ awk 'BEGIN{print ARGV[2]}' /etc/{resolv.conf,issue}
+							/etc/issue
+ 
+
+            2.2 自定义变量
+                (1) -v var=value
+                    变量名区分字符大小写；
+                (2) 在program中直接定义
+					Example：
+
+					# awk -v test='Hello GAWK' 'BEGIN{print test}'
+					Hello GAWK
+										或
+					# awk 'BEGIN{test="Hello GAWK";print test}'
+					Hello GAWK
+                    这两行功能相同。                
+
+        3、printf命令
+            格式化输出：printf FORMAT, item1, item2, ...
+                (1) FORMAT是格式占位符，用于为后边的item指定输出格式，必须给出;  
+                (2) 不会自动换行，需要显式给出换行控制符，\n
+                (3) FORMAT中需要分别为后面的每个item指定一个格式化符号；
+                格式符：
+                    %c: 显示字符的ASCII码；
+
+                    %d, %i: 显示十进制整数；
+
+                    %e, %E: 科学计数法数值显示；
+
+                    %f：显示为浮点数；
+
+                    %g, %G：以科学计数法或浮点形式显示数值；
+
+                    %s：显示字符串；
+
+                    %u：无符号整数；
+
+                    %%: 显示%自身；                    
+
+                修饰符：
+                    \t: table制表符；
+
+                    \n：空格    
+
+                    #[.#]：第一个数字控制显示的宽度；第二个#表示小数点后的精度；
+
+                        %3.1f
+
+                    -: 左对齐
+
+                    +：显示数值的符号
+                Example:
+                    显示/etc/passwd最后三行的用户名和UID：
+					$ awk -F: '{printf "Username: %s, UID: %d\n",$1,$3}' /etc/passwd | tail -n3
+					Username: usbmux, UID: 122
+					Username: yinkai, UID: 1000
+					Username: mysql, UID: 123
+					# awk -F: '{printf "Username: %-15s \tUID:%i\n",$1,$3}' /etc/passwd | head
+					Username: root                UID:0
+					Username: bin                 UID:1
+					Username: daemon              UID:2
+					Username: adm                 UID:3
+					Username: lp                  UID:4
+					Username: sync                UID:5
+					Username: shutdown            UID:6
+					Username: halt                UID:7
+					Username: mail                UID:8
+					Username: operator            UID:11
+ 
+
+ 
+
+        4、操作符
+            算术运算操作符：
+                x+y, x-y, x*y, x/y, x^y, x%y
+                -x：将正数转换为负数的单目运算符；
+                +x: 转换为数值；
+            字符串操作符：没有符号的操作符，字符串连接
+
+            赋值操作符：
+                =, +=, -=, *=, /=, %=, ^=
+                ++：自加运算符
+                --：自减运算符
+            比较操作符：
+                >, >=, <, <=, !=, ==
+                Example: 打印默认shell为bash的用户名和shell：
+					# awk -F: '$NF=="/bin/bash"{print $1,$NF}' /etc/passwd
+					root /bin/bash
+					bash /bin/bash
+					testbash /bin/bash
+ 
+
+            模式匹配符：
+                ~：左侧的字符串是否能被右侧的模式所匹配
+                    Example: 打印默认shell为bash的用户：
+					# awk -F: '$NF~/bash$/{print $1,$NF}' /etc/passwd   #打印$NF的值匹配bash$这个模式的行，模式需用斜线括起来。
+					root /bin/bash
+					tom /bin/bash
+					jerry /bin/bash
+					nginx /bin/bash
+             
+
+                !~：左侧的字符串是否不能被右侧的模式所匹配
+                Example: 打印默认shell为bash的用户名和shell：
+					# awk -F: '$NF~/bash$/{print $1,$NF}' /etc/passwd
+					root /bin/bash
+					bash /bin/bash
+					testbash /bin/bash
+					basher /bin/bash
+					0000 /bin/bash
+ 
+
+            逻辑操作符：
+                &&：与
+                ||：或
+                !：非
+            函数调用：
+                function_name(argu1, argu2, ...)
+            条件表达式：
+                selector?if-true-expression:if-false-expression       
+                说明：如果selector为真，则执行if-true-expression，否则执行if-false-expression
+                Example:
+
+					# awk -F: '{$3>=1000?userType="Common User":userType="Sysadmin or SysUser"; printf "%15s: %-s\n",$1,userType}' /etc/passwd  //根据UID判断用户的类型
+					   root: Sysadmin or SysUser
+					   bin: Sysadmin or SysUser
+					  daemon: Sysadmin or SysUser
+					   adm: Sysadmin or SysUser
+						lp: Sysadmin or SysUser
+					   sync: Sysadmin or SysUser
+					shutdown: Sysadmin or SysUser
+					   halt: Sysadmin or SysUser
+					   mail: Sysadmin or SysUser
+					operator: Sysadmin or SysUser
+                 
+        5、PATTERN,
+            功能：对行进行选择，即地址定界
+            (1) empty：空模式，匹配每一行；
+            (2) /regular expression/：仅处理能够被此处的模式（正则表达式）匹配到的行；
+            Example: 打印/etc/fstab文件中，以UUID开头行的第一个字段：    
+				# awk '/^UUID/{print $1}' /etc/fstab
+				UUID=d6ac1399-a5b3-4c3c-8d36-6c720d57d398
+				UUID=82f438e5-4b76-4f0f-97df-74996cc8c97d
+				UUID=d6ac1399-a5b3-4c3c-8d36-6c720d57d398
+				UUID=f6cb4dd7-7b40-427a-8808-1a957566ce54
+ 
+            (3) relational expression: 关系表达式；结果有“真”有“假”；结果为“真”才会被处理；
+                真：结果为非0值，非空字符串；
+                Example: 打印UID大于等于1000的用户：
+					# awk -F: -v OFS='-->' '$3>=1000{print $1,$3}' /etc/passwd
+					nfsnobody-->65534
+					vuser-->1000
+					tom-->1001
+					jerry-->1002
+ 
+
+            (4) line ranges：行范围
+                startline,endline：/pat1/,/pat2/
+                注意： 不支持直接给出数字的格式                
+                Example: 打印/etc/passwd文件中第10行到第20行之间的用户名：
+					# nl /etc/passwd | awk -F: '(NR>=10 && NR<=20){print $1}'
+					 10    operator
+					 11    games
+					 12    ftp
+					 13    nobody
+					 14    dbus
+					 15    polkitd
+					 16    avahi
+					 17    avahi-autoipd
+					 18    postfix
+					 19    sshd
+					 20    systemd-bus-proxy
+ 
+
+            (5) BEGIN/END模式
+                BEGIN{}: 仅在开始处理文件中的文本之前执行一次；如打印表头
+                END{}：仅在文本处理完成之后执行一次；如打印表尾
+                Example:
+                以表格方式打印UID大于1000的用户名：
+					$ awk -v FS=':' 'BEGIN{print "    Username    UID    \n========================"} $3>=1000{printf "%10s\t%s\n",$1,$3} END{print "========================\nEND"}' /etc/passwd                   
+					Username    UID    
+					========================
+					 nobody    65534
+					 yinkai    1000
+					========================
+					END
+                
+        6、常用的action
+            (1) Expressions，表达式；如A>B, B=6等
+
+            (2) Control statements，控制语句；如if, while等；
+
+            (3) Compound statements：组合语句；一个以上的语句需使用{}括起来
+
+            (4) input statements: 输入语句；
+
+            (5) output statements: 输出语句，如: print。
+
+        7、控制语句
+
+            if(condition) {statments}   //statments语句中如果只有一条语句花括号可以省略
+
+            if(condition) {statments} else {statements}
+
+            while(conditon) {statments}
+
+            do {statements} while(condition)
+
+            for(expr1;expr2;expr3) {statements}
+
+            break
+
+            continue
+
+            delete array[index]
+
+            delete array
+
+            exit  
+
+            { statements }
+
+ 
+
+            Example:
+
+            7.1 if-else
+
+                语法：if(condition) statement [else statement]
+                使用场景：对awk取得的整行或某个字段做条件判断；
+                Example:                   
+                    打印UID大于1000的用户名和UID：
+						$ awk -F: '{if($3>=1000) print $1,$3}' /etc/passwd  
+						nobody 65534
+						yinkai 1000
+
+                    当用户的UID大于1000时打印用户为Common User，否则打印用户为Sysadmin or Sysuser：
+						~]# awk -F: '{if($3>=1000) {printf "Common User:%s\n",$1} else{printf "Sysadmin or Sysuser: %s\n",$1}}' /etc/passwd     
+						root or Sysuser: usbmux
+						Common User: yinkai
+						root or Sysuser: mysql
+ 
+                    打印默认shell为bash的用户名：
+						~]# awk -F: '{if($NF=="/bin/bash") print $1}' /etc/passwd
+											or
+
+						$ awk -F: '{if($NF~/bash$/) print $1}' /etc/passwd
+						root
+						yinkai
+ 
+                    打印行字段大于5的行：
+						~]# awk '{if(NF>5) print $0}' /etc/fstab
+						# /etc/fstab: static file system information.
+						# Use 'blkid' to print the universally unique identifier for a
+ 
+
+                    打印空间占用超过%20的磁盘：
+						~]# df -h | awk -F[%] '/^\/dev/{print $1}' | awk '{if($NF>=20) print $1}'
+											or
+
+						~]# df -Th | awk -F% '/^\/dev/{print $1}'| awk '{if($NF>=20) print $1,"------------->",$NF"%"}'
+						/dev/sdb3 -------------> 54%
+						/dev/sdb3 -------------> 54%
+						/dev/sda2 -------------> 37%
+						/dev/sda1 -------------> 76%
+						/dev/sda3 -------------> 84%
+ 
+
+            7.2 while循环
+                语法：while(condition) statement
+                    条件“真”，进入循环；条件“假”，退出循环；
+
+                使用场景：对一行内的多个字段逐一类似处理时使用；对数组中的各元素逐一处理时使用；
+					Example:
+					打印/etc/grub2.cfg文件中以linux16的行（前可以有空格）中各字段的内容及字段字箱的个数（使用length()函数统计字符个数）：
+					~]# awk '/^[[:space:]]*linux16/{i=1; while(i<=NF) {printf "%50s: %i\n", $i,length($i); i++}}' /etc/grub2.cfg
+ 
+                打印/etc/grub2.cfg文件中以linux16的行（前可以有空格）中字段字符大于等于7的内容及字段字符个数（使用length()函数统计字符个数）：
+				~]# awk '/^[[:space:]]*linux16/{i=1; while(i<=NF) {if(length($i)>=7) {printf "%50s: %i\n", $i,length($i)}; i++}}' /etc/grub2.cfg
+ 
+            7.3 do-while循环
+                语法：do statement while(condition)
+                    意义：至少执行一次循环体
+
+            7.4 for循环
+                语法：for(expr1;expr2;expr3) statement 
+                    for(variable assignment;condition;iteration process) {for-body}
+
+                特殊用法：
+                    能够遍历数组中的元素；
+                        语法：for(var in array) {for-body}
+                Example:
+                打印/etc/grub2.cfg文件中以linux16的行（前可以有空格）中字段字符大于等于7的内容及字段字符个数（使用length()函数统计字符个数）：
+				~]# awk '/^[[:space:]]*linux16/{for(i=1;i<=NF;i++) {if(length($i)>=7) {printf "%50s: %i\n", $i,length($i)}}}' /etc/grub2.cfg
+
+            7.5 switch语句
+                语法：switch(expression) {case VALUE1 or /REGEXP1/: statement; case VALUE2 or /REGEXP2/: statement; ...; default: statement}
+                说明：expression是一个表达式，如果该表达式的值符合第一个值（VALUE1）或能被第一个正则表达式(REGEXP1)匹配到就执行第一个case的statement，其他分支就不再判断。否则，再逐一去匹配第二个case，此处的case是关键字。
+
+            7.6 break和continue
+                break [n] : 退出n层循环；
+                continue：退出本次循环；
+
+            7.7 next 
+
+                功能：控制awk的内生行循环，提前结束对本行的处理而直接进入下一行；
+                Example:
+
+                打印UID为偶数的用户的用户名：
+				~]# awk -F: '{if($3%2!=0) next; print $1,$3}' /etc/passwd
+								or
+				# awk -F: '{if($3%2==0) print $1,$3}' /etc/passwd
+ 
+        8、array
+            索引数组：awk索引数组的下标从1开始标号；
+            关联数组：array[index-expression] 
+                index-expression:
+                    (1) 可使用任意字符串；字符串要使用双引号；
+                    (2) 如果某数组元素事先不存在，在引用时，awk会自动创建此元素，并将其值初始化为“空串”；
+
+                    若要判断数组中是否存在某元素，要使用"index in array"格式进行；
+                    weekdays["mon"]="Monday"
+                    Example:
+						# awk 'BEGIN{weekday["mon"]="Monday"; weekday["tue"]="Tuesday"; print weekday["mon"]}'
+						Monday
+						# awk 'BEGIN{weekday["mon"]="Monday"; weekday["tue"]="Tuesday"; print weekday["tue"]}'
+						Tuesday
+ 
+                若要遍历数组中的每个元素，要使用for循环；
+                    for(var in array) {for-body}
+                    注意：var会遍历array的每个索引；
+                    如用awk打印tcp连接状态的时候，在第一次引用一个状态的时候会创建一个以该状态为索引的数组，初始值为0,自增后为1,每需到一个相同的索引其值再自增1,如：                    
+                    state["LISTEN"]++
+                    state["ESTABLISHED"]++
+                    Example:
+                    逐一遍历数组中每个元素并打印：
+						~]# awk 'BEGIN{weekdays["mon"]="Monday";weekdays["tue"]="Tuesday";for(i in weekdays) {print weekdays[i]}}'
+						Tuesday
+						Monday
+                     
+                    统计tcp各状态的会话数：
+						~]# netstat -tan | awk '/^tcp\>/{state[$NF]++} END{for(i in state) {print i": "state[i]}}'
+						LISTEN: 2
+						ESTABLISHED: 5
+                
+                    统计/var/log/httpd/access_log中每个IP请求的次数：
+						~]# awk '{ip[$1]++}END{for(i in ip) {print i,ip[i]}}' /var/log/httpd/access_log
+ 
+
+                    练习1：统计/etc/fstab文件中每个文件系统类型出现的次数；
+						~]# awk '/^[^#]/{fs[$3]++}END{for(i in fs) {print i,fs[i]}}' /etc/fstab
+ 
+
+                    练习2：统计指定文件中每个单词出现的次数；
+						~]# awk '{for(i=1;i<=NF;i++){count[$i]++}}END{for(i in count) {print i,count[i]}}' /etc/fstab
+ 
+
+        9、函数
+            9.1 内置函数
+                数值处理：
+                    rand()：返回0和1之间一个随机数；
+                    Example:
+						# awk 'BEGIN{print rand()}'
+						0.237788
+ 
+                字符串处理：
+                    length([s])：返回指定字符串的长度；
+                    sub(r,s,[t])：以r表示的模式来查找t所表示的字符中的匹配的内容，并将其第一次出现替换为s所表示的内容；如：sub(a,A,abc)表示在abc中查找a，并替换成A，结果为Abc
+                    gsub(r,s,[t])：以r表示的模式来查找t所表示的字符中的匹配的内容，并将其所有出现均替换为s所表示的内容；
+                    split(s,a[,r])：以r为分隔符切割字符s，并将切割后的结果保存至a所表示的数组中；
+
+                    Example: 统计TCP会话中各IP的连接数：
+					~]# netstat -tan | awk '/^tcp\>/{split($5,ip,":");count[ip[1]]++}END{for (i in count) {print i,count[i]}}'
+ 
+            9.2 自定义函数
+=
