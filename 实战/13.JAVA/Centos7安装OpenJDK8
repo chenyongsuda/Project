@@ -1,0 +1,15 @@
+获取java home
+
+dirname $(readlink $(readlink $(which java))) 
+
+设置环境变量
+vim /etc/profile.d/env_export.sh
+
+在新建的文件中填写
+
+export JAVA_HOME=上面dirname命令获取到的路径，不要bre/bin最后这段
+export PATH=$PATH:$JAVA_HOME/bin
+export CLASSPATH=.:$JAVA_HOME/jre/lib:$JAVA_HOME/lib:$JAVA_HOME/lib/tools.jar
+
+保存退出文件，然后执行一下使设置立即生效
+source /etc/profile.d/env_export.sh
