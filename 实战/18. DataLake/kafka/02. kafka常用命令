@@ -1,0 +1,17 @@
+1、启动kafka
+./bin/kafka-server-start.sh -daemon config/server.properties &
+
+2、创建topic–test
+./bin/kafka-topics.sh --create --zookeeper 10.10.67.102:2181, 10.10.67.104:2181, 10.10.67.106:2181 --replication-factor 3 --partitions 3 --topic test
+
+3、列出已创建的topic列表
+./bin/kafka-topics.sh --list --zookeeper localhost:2181
+
+4、模拟客户端去发送消息
+./bin/kafka-console-producer.sh --broker-list 10.10.67.102:9092, 10.10.67.104:9092, 10.10.67.106:9092 --topic test
+
+5、模拟客户端去接受消息
+./bin/kafka-console-consumer.sh --zookeeper 10.10.67.102:2181, 10.10.67.104:2181, 10.10.67.106:2181 --from-beginning --topic test
+
+6、查看指定的主题
+./bin/kafka-topics.sh --describe --zookeeper localhost:2181 --topic test
