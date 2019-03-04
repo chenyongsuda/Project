@@ -1,0 +1,45 @@
+一键启动和关闭zookeeper和kafka集群脚本
+
+start_kafka.sh
+#!/bin/sh
+for host in node-1 node-2 node-3
+do
+        ssh $host"source/etc/profile;nohup /export/servers/kafka/binkafka-server-start.sh
+        /export/servers/kafka/config/server.properties >/dev/null 2>&1" 
+
+        echo "$host kafka is running"
+done
+
+start_zk.sh
+#!/bin/sh
+for host in node-1 node-2 node-3
+do
+ssh $host "source /etc/profile;/export/servers/zookeeper/bin/zkServer.sh start"
+echo "$host zk is running"
+done
+
+stop_kafka.sh
+#!/bin/sh
+for host in node-1 node-2 node-3
+do
+ssh $host "source /etc/profile;bash /export/servers/kafka/bin/kafka-server-stop.sh" 
+echo "$host kafka is stopping"
+done
+
+目前来说官方提供的stop命令不好使,需要先修改一下官方提供的stop脚本,集群中的每一台机器都要改
+修改 bin 下的 kafka-server-stop.sh 文件
+PIDS=$(ps ax | grep -i 'kafka\.Kafka' | grep java | grep -v grep | awk '{print $1}')
+
+修改后:
+PIDS=$(ps ax | grep -i 'Kafka' | grep java | grep -v grep | awk '{print $1}')
+
+stop_zk.sh
+#!/bin/sh
+for host in node-1 node-2 node-3
+do
+echo "$host zk is stopping"
+ssh $host "source /etc/profile;/export/servers/zookeeper/bin/zkServer.sh stop"
+done
+
+最后运行的时候要给脚本赋个权限:
+chmod +x  XXX.sh
