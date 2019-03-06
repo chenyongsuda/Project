@@ -1,0 +1,79 @@
+1. kafka的zk的znode
+      1./controller                 //data = {"version":1,"brokerid":0,"timestamp":"1533396512695"}
+              #这里的brokerid为0意思是kafka集群的leader为0
+              #如果集群中有多个broker，将leader杀死后会发现这里的brokerid变化。
+              
+      2./controller_epoch           //data=27
+              此值为一个数字,kafka集群中第一个broker第一次启动时为1，以后只要集群中center controller中央控制器所在broker变更或挂掉，
+              就会重新选举新的center controller，每次center controller变更controller_epoch值就会 + 1;
+              
+      3./brokers/ids                //实时维护active的broker
+          /brokers/ids/0            //data = {"listener_security_protocol_map":{"PLAINTEXT":"PLAINTEXT"},"endpoints": ["PLAINTEXT://hadoop:9092"],                                              //"jmx_port":-1,"host":"hadoop","timestamp":"1533399158574","port":9092,"version":4}
+          /brokers/ids/1
+          /brokers/ids/2
+          /brokers/topics
+          /brokers/topics/mytest/partitions/0/state     
+                      //data = {"controller_epoch":28,"leader":0,"version":1,"leader_epoch":0,"isr":[0,2,1]}
+          /brokers/topics/mytest/partitions/1/state     
+                      //data = {"controller_epoch":28,"leader":1,"version":1,"leader_epoch":0,"isr":[1,0,2]}
+          /brokers/seqid
+          
+          保存broker上面建立的topic队列的相关信息，以及对应的分区的数量，以及每个分区的元数据。
+          {
+          “controller_epoch”:9,   //中央控制器的总的选举次数
+          “leader”:2,             //此partition的broker leader的id
+          “version”:1,            //默认版本号
+          “leader_epoch”:7,       //此partition的leader选举的次数
+          “isr”:[2,0,1]           //同步副本组brokerId顺序列表
+          }
+          
+      4./admin/delete_topics
+          删除的topic
+      5./isr_change_notification
+          isr变化通知节点
+      6./consumers
+          /consumers/[groupId]/ids/[consumerIdString]
+          Schema:
+          {
+          “version”:1,
+          “subscription”:{“test_kafka”:3},//订阅topic列表
+          “topic名称”: consumer中topic消费者线程数[与队列的分区数量有关]
+          “pattern”:”static”,
+          “timestamp”:”1416810012297″
+          }
+          
+          Consumer owner:
+          /consumers/[groupId]/owners/[topic]/[partitionId]/consumer_thread
+          用来保存每个topic的的partition的是由那个消费者线程进行消费的信息。
+          
+          Consumer offset:
+          /consumers/[groupId]/offsets/[topic]/[partitionId] /offset number
+          此节点是持久化节点，保存当前需要处理的消息的偏移量，用来继任消费者继续此节点开始处理消息。
+
+      7./config
+          /config/changes
+          /config/clients
+          /config/brokers
+          /config/topics
+          /config/users
+      生产者不需要在kafka注册,消费者要在kafka注册.
+          
+ 2.kafka本地目录结构
+      .
+      ./.lock
+      ./recovery-point-offset-checkpoint
+      ./log-start-offset-checkpoint
+      ./cleaner-offset-checkpoint
+      ./replication-offset-checkpoint
+      ./meta.properties
+      ./mytest-1
+      ./mytest-1/leader-epoch-checkpoint
+      ./mytest-1/00000000000000000000.log
+      ./mytest-1/00000000000000000000.index
+      ./mytest-1/00000000000000000000.timeindex
+      ./mytest-0
+      ./mytest-0/leader-epoch-checkpoint
+      ./mytest-0/00000000000000000000.log
+      ./mytest-0/00000000000000000000.index
+      ./mytest-0/00000000000000000000.timeindex
+
