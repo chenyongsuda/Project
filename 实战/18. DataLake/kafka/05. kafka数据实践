@@ -1,7 +1,11 @@
+
+连接zookeeper
+
 1. kafka的zk的znode
       1./controller                 //data = {"version":1,"brokerid":0,"timestamp":"1533396512695"}
               #这里的brokerid为0意思是kafka集群的leader为0
               #如果集群中有多个broker，将leader杀死后会发现这里的brokerid变化。
+              选举机制为了降低kafka的负担,只使用一个主节点去注册kafka中节点的变化
               
       2./controller_epoch           //data=27
               此值为一个数字,kafka集群中第一个broker第一次启动时为1，以后只要集群中center controller中央控制器所在broker变更或挂掉，
@@ -17,6 +21,7 @@
           /brokers/topics/mytest/partitions/1/state     
                       //data = {"controller_epoch":28,"leader":1,"version":1,"leader_epoch":0,"isr":[1,0,2]}
           /brokers/seqid
+          /brokers/topics/__consumer_offsets 消费者的消费进度
           
           保存broker上面建立的topic队列的相关信息，以及对应的分区的数量，以及每个分区的元数据。
           {
@@ -32,23 +37,8 @@
       5./isr_change_notification
           isr变化通知节点
       6./consumers
-          /consumers/[groupId]/ids/[consumerIdString]
-          Schema:
-          {
-          “version”:1,
-          “subscription”:{“test_kafka”:3},//订阅topic列表
-          “topic名称”: consumer中topic消费者线程数[与队列的分区数量有关]
-          “pattern”:”static”,
-          “timestamp”:”1416810012297″
-          }
-          
-          Consumer owner:
-          /consumers/[groupId]/owners/[topic]/[partitionId]/consumer_thread
-          用来保存每个topic的的partition的是由那个消费者线程进行消费的信息。
-          
-          Consumer offset:
-          /consumers/[groupId]/offsets/[topic]/[partitionId] /offset number
-          此节点是持久化节点，保存当前需要处理的消息的偏移量，用来继任消费者继续此节点开始处理消息。
+         现在好像该版本都是空的转移到了/brokers/topics/__consumer_offsets 以一个特别主题的方式分布式存储在多个broker上面.
+         把消费进度按照实际数据资产保存.
 
       7./config
           /config/changes
@@ -57,6 +47,7 @@
           /config/topics
           /config/users
       生产者不需要在kafka注册,消费者要在kafka注册.
+      
           
  2.kafka本地目录结构
       .
