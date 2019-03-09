@@ -146,6 +146,9 @@ for message in consumer:
     print("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
                                           message.offset, message.key,
                                           message.value))
+                                          
+********************注意生产者使用退的模式 消费者使用拉的模式,拉的间隔可以通过自己客户端的消费能力去自定义拉取间隔.                                          
+                                          
 启动之后，进程会一直阻塞在哪里，等broker中有消息的时候就会去消费，启动多个进程，只要保证group_id一致，就可以保证消息只被组内的一个consumer消费，上面的程序会输出：
 
 user-event:8:2: key=None value=b'{"name": "\\u71d5\\u777f\\u6d9b", "age": 26, "friends": ["ritoyan", "luluyrt"]}'
