@@ -554,3 +554,536 @@ Kafka中偏移量的自动提交是由参数enable_auto_commit和auto_commit_int
 72         consumer.close()
 复制代码
 通过finally在最后不管是否异常都会触发consumer.commit()来同步补救一次，确保偏移量不会丢失
+
+
+
+==============================================================================================
+Kafka新版消费者API示例（二）
+
+Kafka提供两种手动提交方式：
+1.异步提交(commitAsync)：
+
+   异步模式下，提交失败也不会尝试提交。消费者线程不会被阻塞，因为异步操作，可能在提交偏移量操作结果未返回时就开始下一次拉取操作。
+
+2.同步提交(CommitSync)：
+
+    同步模式下，提交失败时一直尝试提交，直到遇到无法重试才结束。同步方式下，消费者线程在拉取消息时会被阻塞，直到偏移量提交操作成功或者在提交过程中发生错误。
+
+实现手动提交前需要在创建消费者时关闭自动提交，设置enable.auto.commit=false。
+
+由于异步提交不会等消费偏移量提交成功后再拉取下一次消息，因此异步提交提供了一个偏移量提交回调方法commitAsync(OffsetCommitCallback callback)。提交偏移量完成之后会回调OffsetCommitCallback接口的onComplete()方法
+
+示例代码：
+
+package com.simon.kafka.consumer.newconsumer;
+ 
+import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.common.TopicPartition;
+ 
+import java.util.*;
+ 
+/**
+ * Created by Simon on 2018/11/5.
+ */
+public class KafkaConsumerAsync {
+ 
+    public static void main(String[] args) throws InterruptedException {
+ 
+        // 1、准备配置文件
+        String kafkas = "192.168.1.100:9092,192.168.1.100:9093,192.168.1.100:9094";
+        Properties props = new Properties();
+        //kafka连接信息
+        props.put("bootstrap.servers",kafkas);
+        //消费者组id
+        props.put("group.id", "test_group");
+        //是否自动提交offset
+        props.put("enable.auto.commit", "false");
+        //在没有offset的情况下采取的拉取策略
+        props.put("auto.offset.reset", "none");
+        //自动提交时间间隔
+        props.put("auto.commit.interval.ms", "1000");
+        //设置一次fetch请求取得的数据最大为1k
+        props.put("fetch.max.bytes", "1024");
+        //key反序列化
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        //value反序列化
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+ 
+        String topic = "test";
+        // 2、创建KafkaConsumer
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+        // 3、订阅数据，不给定监听器
+        consumer.subscribe(Collections.singleton(topic));
+ 
+        try{
+            //最少处理100条
+            int minCommitSize = 100;
+            //定义计数器
+            int icount = 0;
+            // 4、获取数据
+            while (true) {
+                ConsumerRecords<String, String> records = consumer.poll(100);
+                for (ConsumerRecord<String, String> record : records) {
+                    System.out.printf("topic = %s,partition = %d,offset = %d, key = %s, value = %s%n", record.topic(), record.partition(),record.offset(), record.key(), record.value());
+                    icount++;
+                }
+                Thread.sleep(5000);
+            
+                //在业务逻辑处理成功后提交offset
+                if(icount >= minCommitSize){
+                    //满足最少消费100条,再进行异步提交
+                    consumer.commitAsync(new OffsetCommitCallback() {
+                        @Override public void onComplete(Map<TopicPartition, OffsetAndMetadata> offsets, Exception exception) {
+                            if(exception == null){
+                                System.out.println("commit success");
+                            }else {
+                                //提交失败，对应处理
+                                System.out.println("commit failed");
+                            }
+                        }
+                    });
+                    
+                    //计数器归零
+                    icount = 0 ;
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            //关闭连接
+            consumer.close();
+        }
+    }
+}
+以时间戳查询消息：
+    Kafka在0.10.1.1版本上增加了时间戳索引文件。Kafka消费者API提供了一个offsetsForTimes(Map<TopicPartition, Long> timestampsToSearch)方法，参数为一个map对象，key为待查询的分区，value为待查询的时间戳。会返回一个大于等于该事件戳的第一条消息对应的偏移量和时间戳。若待查询分区不存在，会一直阻塞。
+
+ 示例：
+
+   将kafka-client的maven依赖改为1.0.0 。在0.10.0.1中无法引入OffsetAndTimestamp类
+
+ <!--引入kafka-clients-->
+    <!--<dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>0.10.0.1</version>
+    </dependency>-->
+ 
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+代码：
+
+package com.simon.kafka.consumer.newconsumer;
+ 
+import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.common.TopicPartition;
+ 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+ 
+/**
+ * Created by Simon on 2018/11/5.
+ */
+public class KafkaConsumerTimestamps {
+ 
+    public static void main(String[] args) throws InterruptedException {
+ 
+        // 1、准备配置文件
+        String kafkas = "192.168.1.100:9092,192.168.1.100:9093,192.168.1.100:9094";
+        Properties props = new Properties();
+        //kafka连接信息
+        props.put("bootstrap.servers",kafkas);
+        //消费者组id
+        props.put("group.id", "test_group");
+        //客户端id
+        props.put("client.id", "test_group");
+        //是否自动提交offset
+        props.put("enable.auto.commit", "true");
+        //在没有offset的情况下采取的拉取策略
+        props.put("auto.offset.reset", "none");
+        //自动提交时间间隔
+        props.put("auto.commit.interval.ms", "1000");
+        //设置一次fetch请求取得的数据最大为1k
+        props.put("fetch.max.bytes", "1024");
+        //key反序列化
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        //value反序列化
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+ 
+        String topic = "test";
+        // 2、创建KafkaConsumer
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+        // 3、订阅主题
+        TopicPartition topicPartition = new TopicPartition(topic,0);
+        consumer.assign(Collections.singleton(topicPartition));
+        try{
+            Map<TopicPartition, Long> timestampsToSearch = new HashMap<>();
+ 
+            // 设置查询12 小时之前消息的偏移量
+            timestampsToSearch.put(topicPartition, (System.currentTimeMillis() - 12 * 3600 * 1000));
+ 
+            // 会返回时间大于等于查找时间的第一个偏移量
+            Map<TopicPartition, OffsetAndTimestamp> offsetMap = consumer.offsetsForTimes(timestampsToSearch);
+            OffsetAndTimestamp offsetTimestamp = null;
+            // 用for 轮询，当然由于本例是查询的一个分区，因此也可以用if 处理
+            for (Map.Entry<TopicPartition, OffsetAndTimestamp> entry : offsetMap.entrySet()) {
+                // 若查询时间大于时间戳索引文件中最大记录索引时间，
+                // 此时value 为空,即待查询时间点之后没有新消息生成
+                offsetTimestamp = entry.getValue();
+                if (null != offsetTimestamp) {
+                    // 重置消费起始偏移量
+                    consumer.seek(topicPartition, entry.getValue().offset());
+                }
+            }
+            while (true) {
+                //4.轮询拉取消息
+                ConsumerRecords<String, String> records = consumer.poll(100);
+                for (ConsumerRecord<String, String> record : records) {
+                    System.out.printf("topic = %s,partition = %d,offset = %d, key = %s, value = %s%n", record.topic(), record.partition(),record.offset(), record.key(), record.value());
+ 
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            //关闭连接
+            consumer.close();
+        }
+    }
+}
+由于集群环境已选型为kafka0.10.0.1，本次无法按指定时间戳拉取，报错信息为不支持当前broker版本。
+
+速度控制：
+   应用场景中我们可能需要暂停某些分区消费，先消费其他分区，当达到某个条件再恢复该分区消费。
+
+Kafka提供两种方法用于速度控制的方法：
+
+     1.pause(Collection<TopicPartition> partitions)：暂停某些分区在拉取操作时返回数据给客户端
+
+//无返回值
+consumer.pause(Collections.singleton(topicPartition));
+     2.resume(Collection<TopicPartition> partitions)：恢复某些分区向客户端返回数据
+
+//无返回值
+consumer.resume(Collections.singleton(topicPartition));
+
+
+==========================================================================================================
+Kafka 新版消费者 API（三）：以时间戳查询消息和消费速度控制
+1. 以时间戳查询消息
+(1) Kafka 新版消费者基于时间戳索引消费消息
+kafka 在 0.10.1.1 版本增加了时间索引文件，因此我们可以根据时间戳来访问消息。
+ 如以下需求：从半个小时之前的offset处开始消费消息，代码示例如下:
+
+package com.bonc.rdpe.kafka110.consumer;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndTimestamp;
+import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.TopicPartition;
+
+public class TimestampConsumer {
+        
+    public static void main(String[] args) {
+        
+        Properties props = new Properties();
+        props.put("bootstrap.servers", "rdpecore4:9092,rdpecore5:9092,rdpecore6:9092");
+        props.put("group.id", "dev3-yangyunhe-topic001-group001");
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+        String topic = "dev3-yangyunhe-topic001";
+        
+        try {
+            // 获取topic的partition信息
+            List<PartitionInfo> partitionInfos = consumer.partitionsFor(topic);
+            List<TopicPartition> topicPartitions = new ArrayList<>();
+            
+            Map<TopicPartition, Long> timestampsToSearch = new HashMap<>();
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date now = new Date();
+            long nowTime = now.getTime();
+            System.out.println("当前时间: " + df.format(now));
+            long fetchDataTime = nowTime - 1000 * 60 * 30;  // 计算30分钟之前的时间戳
+            
+            for(PartitionInfo partitionInfo : partitionInfos) {
+                topicPartitions.add(new TopicPartition(partitionInfo.topic(), partitionInfo.partition()));
+                timestampsToSearch.put(new TopicPartition(partitionInfo.topic(), partitionInfo.partition()), fetchDataTime);
+            }
+            
+            consumer.assign(topicPartitions);
+            
+            // 获取每个partition一个小时之前的偏移量
+            Map<TopicPartition, OffsetAndTimestamp> map = consumer.offsetsForTimes(timestampsToSearch);
+            
+            OffsetAndTimestamp offsetTimestamp = null;
+            System.out.println("开始设置各分区初始偏移量...");
+            for(Map.Entry<TopicPartition, OffsetAndTimestamp> entry : map.entrySet()) {
+                // 如果设置的查询偏移量的时间点大于最大的索引记录时间，那么value就为空
+                offsetTimestamp = entry.getValue();
+                if(offsetTimestamp != null) {
+                    int partition = entry.getKey().partition();
+                    long timestamp = offsetTimestamp.timestamp();
+                    long offset = offsetTimestamp.offset();
+                    System.out.println("partition = " + partition + 
+                            ", time = " + df.format(new Date(timestamp))+ 
+                            ", offset = " + offset);
+                    // 设置读取消息的偏移量
+                    consumer.seek(entry.getKey(), offset);
+                }
+            }
+            System.out.println("设置各分区初始偏移量结束...");
+            
+            while(true) {
+                ConsumerRecords<String, String> records = consumer.poll(1000);
+                for (ConsumerRecord<String, String> record : records) {
+                    System.out.println("partition = " + record.partition() + ", offset = " + record.offset());
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            consumer.close();
+        }
+    }
+}
+
+运行结果：
+当前时间: 2018-07-16 10:15:09
+开始设置各分区初始偏移量...
+partition = 2, time = 2018-07-16 09:45:10, offset = 727
+partition = 0, time = 2018-07-16 09:45:09, offset = 727
+partition = 1, time = 2018-07-16 09:45:10, offset = 727
+设置各分区初始偏移量结束...
+partition = 1, offset = 727
+partition = 1, offset = 728
+partition = 1, offset = 729
+......
+partition = 2, offset = 727
+partition = 2, offset = 728
+partition = 2, offset = 729
+......
+partition = 0, offset = 727
+partition = 0, offset = 728
+partition = 0, offset = 729
+......
+说明：基于时间戳查询消息，consumer 订阅 topic 的方式必须是 Assign 
+(2) Spark基于kafka时间戳索引读取数据并加载到RDD中
+以下为一个通用的，spark读取kafka中某段时间之前到执行程序此刻的时间范围内的数据并加载到RDD中的方法：
+
+package com.bonc.utils
+
+import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.common.TopicPartition
+import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
+import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
+import org.apache.spark.streaming.kafka010.{KafkaUtils, OffsetRange}
+
+import scala.collection.JavaConversions._
+
+/**
+  * Author: YangYunhe
+  * Description: 
+  * Create: 2018-06-29 11:35
+  */
+object SparkKafkaUtils {
+
+  /**
+    * 从 Kafka 中取数据加载到 RDD 中
+    * @param sc SparkContext
+    * @param topic Kafka 的 Topic
+    * @param numDays 取距离此刻多少天之前的数据，例如，这个参数为 3，那么取此刻和3天之前相同时刻范围内的数据
+    * @param kafkaParams Kafka的配置参数，用于创建生产者和作为参数传给 KafkaUtils.createRDD
+    * @return
+    */
+  def createKafkaRDDByTimeRange(sc: SparkContext, topic: String, numDays: Int, kafkaParams: java.util.HashMap[String, Object]): RDD[String] = {
+
+    val startFetchTime = DateUtils.daysAgo(numDays)
+    val startFetchTimeStr = DateUtils.parseLong2String(startFetchTime, DateUtils.DATE_TIME_FORMAT_STR)
+    println(s"starting fetch data in kafka with time range [${startFetchTimeStr}——${DateUtils.nowStr()}]")
+
+    val consumer = new KafkaConsumer[String, String](kafkaParams)
+
+    val partitionInfos = consumer.partitionsFor(topic)
+    val topicPartitions = scala.collection.mutable.ArrayBuffer[TopicPartition]()
+    val timestampsToSearch = scala.collection.mutable.Map[TopicPartition, java.lang.Long]()
+    val offsetRanges = scala.collection.mutable.ArrayBuffer[OffsetRange]()
+
+    for(partitionInfo <- partitionInfos) {
+      topicPartitions += new TopicPartition(partitionInfo.topic, partitionInfo.partition)
+    }
+
+    val topicPartitionLongMap = consumer.endOffsets(topicPartitions)
+
+    for(topicPartition <- topicPartitions) {
+      timestampsToSearch(topicPartition) = startFetchTime
+    }
+
+    val topicPartitionOffsetAndTimestampMap = consumer.offsetsForTimes(timestampsToSearch)
+
+    for((k, v) <- topicPartitionOffsetAndTimestampMap) {
+      offsetRanges += OffsetRange.create(topic, k.partition(), v.offset(), topicPartitionLongMap.get(k))
+    }
+
+    KafkaUtils.createRDD[String, String](sc, kafkaParams, offsetRanges.toArray, PreferConsistent).map(_.value)
+
+  }
+}
+
+使用方法：
+
+def main(args: Array[String]): Unit = {
+    val kafkaParams = new JHashMap[String, Object]()
+    kafkaParams.put("bootstrap.servers", bootstrapServers)
+    kafkaParams.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
+    kafkaParams.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
+    
+    // 这里就取到了kafka中3天的数据到RDD中
+    val rdd = SparkKafkaUtils.createKafkaRDDByTimeRange(sc, "topic", 3, kafkaParams)
+    
+    rdd.map(x => {
+        // 其他操作
+        ......
+    })
+
+}
+2. 消费速度控制
+在有些场景可以需要暂停某些分区消费，达到一定条件再恢复对这些分区的消费，可以使用pause()方法暂停消费，resume()方法恢复消费，示例代码如下：
+
+package com.bonc.rdpe.kafka110.consumer;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Properties;
+
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
+
+/**
+ * @author YangYunhe
+ * @date 2018-07-16 15:13:11
+ * @description: 消费速度控制
+ */
+public class PauseAndResumeConsumer {
+    
+    private static final DateFormat df = new SimpleDateFormat("HH");
+    
+    public static String getTimeRange() {
+        long now = System.currentTimeMillis();
+        String hourStr = df.format(now);
+        int hour;
+        if(hourStr.charAt(0) == '0') {
+            hour = Integer.parseInt(hourStr.substring(1, 1));
+        }else {
+            hour = Integer.parseInt(hourStr);
+        }
+        if(hour >= 0 && hour < 8) {
+            return "00:00-08:00";
+        }else if(hour >= 8 && hour < 16) {
+            return "08:00-16:00";
+        }else {
+            return "16:00-00:00";
+        }
+    }
+    
+    public static void main(String[] args) throws Exception {
+
+        Properties props = new Properties();
+        props.put("bootstrap.servers", "rdpecore4:9092,rdpecore5:9092,rdpecore6:9092");
+        props.put("group.id", "dev3-yangyunhe-topic001-group003");
+        props.put("auto.offset.reset", "earliest");
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+        
+        TopicPartition partition0 = new TopicPartition("dev3-yangyunhe-topic001", 0);
+        TopicPartition partition1 = new TopicPartition("dev3-yangyunhe-topic001", 1);
+        TopicPartition partition2 = new TopicPartition("dev3-yangyunhe-topic001", 2);
+        
+        consumer.assign(Arrays.asList(new TopicPartition[]{partition0, partition1, partition2}));
+        
+        try {
+            while (true) {
+                // 00:00-08:00从partition0读取数据
+                if(getTimeRange() == "00:00-08:00") {
+                    consumer.pause(Arrays.asList(new TopicPartition[]{partition1, partition2}));
+                    consumer.resume(Collections.singletonList(partition0));
+                // 08:00-16:00从partition1读取数据
+                }else if(getTimeRange() == "08:00-16:00") {
+                    consumer.pause(Arrays.asList(new TopicPartition[]{partition0, partition2}));
+                    consumer.resume(Collections.singletonList(partition1));
+                // 16:00-00:00从partition2读取数据
+                }else {
+                    consumer.pause(Arrays.asList(new TopicPartition[]{partition0, partition1}));
+                    consumer.resume(Collections.singletonList(partition2));
+                }
+                
+                ConsumerRecords<String, String> records = consumer.poll(1000);
+            
+                for (ConsumerRecord<String, String> record : records) {
+                    System.out.println("topic = " + record.topic() + ", partition = " + record.partition());
+                    System.out.println("offset = " + record.offset());
+                }
+            }
+        } finally {
+            consumer.close();
+        }
+    }
+
+}
+
+结果：(我运行程序的时间是18:27,所以只会消费partition2中的消息)
+topic = dev3-yangyunhe-topic001, partition = 2
+offset = 0
+topic = dev3-yangyunhe-topic001, partition = 2
+offset = 1
+topic = dev3-yangyunhe-topic001, partition = 2
+offset = 2
+......
+
+
+=================================================================================================
+Apache Kafka消费者组subscribe和assign的正确使用
+使用Apache Kafka 消费者组时，有一个为消费者分配对应分区partition的过程，我们可以使用“自动”subscribe和“手动”assign的方式。
+
+同时进行“自动”和“手动”的分区分配是会互相影响的，有时会把事情搞糟。正确的使用，首先要了解这两种方式的场景。
+消费者组的使用场景
+Kafka里的消费者组有两个使用的场景：
+
+“队列模式”：在同一组的消费者共同消费一个主题的所有消息，而且确保一条消息只被一个消费者处理。一个主题的所有的分区会和一个消费组的所有消费者做关联：每个消费者和一到多个分区做关联，接收它们的消息。反向说，一个分区只会与一个消费者关联，它的消息不会被其它的消费者接收。
+最开始只有一个消费者时，所有的分区都分配给了它。当消息的规模增加时，我们就需要扩展消费者的数量，水平扩展处理能力，一直可以达到每个消费者只关联一个分区。大于分区数的消费者是会处在空闲状态，因为没有分配任何的分区。
+“发布/订阅模式” 创建不同的消费者组意味一个主题的消息会发送给所有订阅它的消费者组，然后消费者组依照前面共同协作的场景进行分配。这往往是因为我们有不同的应用需求，比如一批交易数据，资金系统、ERP系统会消费它而风险监控也需要同时消费它。这就实现了数据的透明异步共用。
+在两个场景中，消费者组有个重要的功能：rebalancing。当一个新的消费者加入一个组，如果还有有效的分区（消费者数<=主题分区数），会开始一个重新均衡分配的操作，会将一个已关联的分区（它的原消费者仍保有至少一个分区）重新分配给新加入的消费者。同样的，当一个消费者因为各种原因离开这个组，它的所有分区会被分配给剩下的消费者。
+
+“自动” OR “手动”
+前面所说的自动分配是指在 KafkaConsumer API中的subscribe()方法。这个方法强制要求你为消费者设置一个消费者组，group.id参数不能为空。而你不需要处理分区的分配问题。
+而对应subscribe()方法，你可以采用手动的方式，指定消费者读取哪个主题分区，则：assign() 方法。当你需要精确地控制消息处理的负载，也能确定哪个分区有哪些消息时，这种手动的方式会很有用。但这时Kafka也无法提供rebalancing的功能了。而且在使用手动的方式时，你可以不指定消费者组，group.id为空。
+两种方式都各有适用场景，但同时不建议同时使用两种方式，这会带来风险。假设一个消费者组G1，组内只有一个消费者C1，订阅subscribe了一个具有两个分区P1、P2的主题T1。这时在G1新增一个消费者C2，用assign的方式关联P1和P2。视乎一切都可行，但其实是糟糕的情况。本质上，使用场景被混淆了，你无法确定G1是在共同协助还是在进行发布/订阅。实际使用中，offset的提交格式是这样的：
+    key = [group, topic, partition]
+    value = offset
+
+注意Key中并未区分消费者，C1和C2会对同一个key会脏写。代表着C1或C2奔溃重启时可能会拿到对方重写覆盖的offset，消息也会有丢失。
+总结
+最好是使用subscribe()方法，让分区自动分配。毕竟Kafka的消费者组机制已经很优秀，为我们节省了很多功夫。哪怕你需要采用assign()指定的方式，也应该设置好对应的消费者组。尽量别混合使用。
+
