@@ -1,0 +1,19 @@
+1. Cloudera推荐版本5.x 源码开源
+2. 继承了Hadoop大量的组件
+3. 实施不支持Window,需要Linux64位操作系统
+4. HBASE擅长海量数据做检索,对比大批量IO的话还是HDFS擅长,KUDU的话目的结合HDFS(偏向IO)和HBASE(偏向检索)开源不久使用上问题较多
+5. 数据处理形式大体分为两种,第一种批处理作业(历史数据集)pig hive mr 第二种是流式数据处理(对于要求比较高的spark)如spark stream,fink等
+
+Cloudera体系中
+1. 开源组件
+    HIVE Hadoop等
+2. 闭源组件,商业组件
+   安全加密相关的
+
+
+节点问题
+在5.x没有节点问题.
+在6.1以后 free版本有节点限制
+
+
+
