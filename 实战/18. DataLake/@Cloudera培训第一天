@@ -103,7 +103,8 @@ Sqoop
     
     排序(注意bag是无序的)
     sortedsales = ORDER allsales BY country DESC;
-    
+  15.pig查代码格式
+    pig -c
     
     
     
