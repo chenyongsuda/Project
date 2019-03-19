@@ -51,6 +51,7 @@ Mapreduce(延迟大)和spark(延迟小,主流处理引擎)
 PIG
 1. 架构比较灵活,一个工具装哪个机器哪里就可以做处理
 2. 基于MR
+3. PIG侧重做ETL,SQL适用于分析
 
 HIVE -------- Facebook
 1. 基于SQL的MR解释框架
@@ -75,7 +76,50 @@ Sqoop
     -lastmodified模式  前提要求是要求原表有时间戳.底层还是对于这个时间做过滤
 9. 导入时候必须要有主键,sqoop任务切分的话是根据主键的最小和最大.如果没有要有个当主键--split-by
    逻辑层面当主键的话注意数据的分布.可能会导致某个被切分的压力过大.这是要注意的.建议数值型,并且数据分布均匀
+10. 函数名称大小写敏感,PIG默认内置函数全部大写
+11. 无结构加载
+    sample = load 'path'  如果没名称的话默认$0 $1 $2
+    含结构加载
+    sample = load 'path' as (xx,xx)
+    字段是有类型的
+    上面两张是自己推测的
+    sample = load 'path' as (xx:chararray,xx:int)
+12. PIG加载时候按照隐含分隔符切割默认\t
+    load加载可以加载文件或者目录,还可以使用通配符或者正则表达式
+    sample = load 'path' using pigstorage('|')  as (xx:chararray,xx:int)
+13. Store存储
+    store mydata into 'xxxxxxxxxxxxxxx' using pigstorage('|')
+14. 过滤语法
+    hasprices = FILTER Records BY price IS NOT NULL;
+    FILTER allsales BY name MATCHES 'A.*'; FILTER 做模糊匹配
+    twofields = FOREACH allsales GENERATE amount, trans_id; 三个字段得到两个,遍历这个bag的每一行 后面加函数amount, trans_id就是函数
+    同理
+    t = FOREACH allsales GENERATE price * 0.07;
+    t = FOREACH allsales GENERATE price * 0.07 AS tax;
+    t = FOREACH allsales GENERATE price * 0.07 AS tax:float;
     
+    去重只有行数据去重没有字段去重
+    unique_records = DISTINCT all_alices;
+    
+    排序(注意bag是无序的)
+    sortedsales = ORDER allsales BY country DESC;
+    
+    
+    
+    
+15. 数据概念
+    一行对应tuple,一个表对应一个bag,tuple中是field
+    可互相嵌套
+    bag的定义名称叫relations
+16. DUMP用于测试
+    如果要存回去用store
+    DESCRIBE xxx 看schmal
+    
+    
+    
+    
+
+
 #>sqoop help
 #>sqoop help xxx
 
@@ -115,4 +159,31 @@ flumn
 模拟Dualcore公司,线下线上销售和订单有关.
 
 --------------------------------------------------------------------------------------------------------------------------
+PIG 
+无架构,即装即用
+sample = load 'path' as (xx,xx)
+out = filter sample by xx > 80
+dump out
+
+本地模式
+pig -x local
+pig -x local  xxx.pig
+pig -x local -e 
+
+可以再pig中
+fs -ls中看hdfs中
+sh ls /产本地路径内容
+
+
+
+
+
+
+
+
+
+
+
+
+
 
