@@ -73,6 +73,29 @@ Sqoop
 8. 增量数据支持
     -append模式 只支持新增不支持修改(要有主键建议数值型,要求新数据尽量需要数值递增,该模式要指定上次的最大值)
     -lastmodified模式  前提要求是要求原表有时间戳.底层还是对于这个时间做过滤
+    
+#>sqoop help
+#>sqoop help xxx
+
+参数区别：
+--target-dir        \abc\            \abc\part--001,part--002...
+--warehose-dir      \abc\            \abc\tb表名\part--001,part--002...
+
+--hive-import    自动化导数据的同时create表结构
+
+Sqoop查库查表
+--list-databases
+--list-table 
+
+--split-by=order_id
+
+导出类型
+--save-as 
+如果文本的话要写files--terminaled-by
+
+导单表就只有一个mapreduce
+查看文本
+#>hdfs dfs -tail xxxxxxxxxxxxxx
 
 hbase
 1. 建立在Hadoop
@@ -88,4 +111,6 @@ flumn
 3. 数据分析
 
 模拟Dualcore公司,线下线上销售和订单有关.
+
+--------------------------------------------------------------------------------------------------------------------------
 
