@@ -1,0 +1,25 @@
+====================================================================
+PIG处理复杂数据
+
+TextLoader Text files (enGre line as one field)
+JsonLoader Text files containing JSON-formaDed data
+BinStorage Files containing binary data
+HBaseLoader HBase, a scalable NoSQL database built on Hadoop
+
+PIG嵌套类型定义
+107550 2498 {('40120', 1999), ('37001', 499)}
+details = LOAD 'sales' AS (
+trans_id:chararray,
+amount:int,
+items_sold:bag
+{item:tuple (SKU:chararray, price:int)}
+);
+
+map类型数据类型要一致
+
+分组支持：分组的目的在于聚合计算
+byname = GROUP sales BY name;
+
+=======================================================================
+HIVE & Implala
+
