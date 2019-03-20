@@ -1,0 +1,176 @@
+原文地址，转载请注明出处： https://blog.csdn.net/qq_34021712/article/details/82926958     ©王赛超 
+
+之前我们了解了基于Corator的分布式锁之后,我们就很容易基于其实现一个分布式计数器，顾名思义，计数器是用来计数的, 利用ZooKeeper可以实现一个集群共享的计数器。 只要使用相同的path就可以得到最新的计数器值， 这是由ZooKeeper的一致性保证的。Curator有两种计数器。
+
+SharedCount
+这个类使用int类型来计数。 主要涉及三个类。
+
+SharedCount
+SharedCountReader
+SharedCountListener
+SharedCount代表计数器， 可以为它增加一个SharedCountListener，当计数器改变时此Listener可以监听到改变的事件，而SharedCountReader可以读取到最新的值， 包括字面值和带版本信息的值VersionedValue。SharedCount必须调用start()方法开启，使用完之后必须调用close关闭它。
+
+SharedCount有以下几个主要方法
+/** 强制设置值 */
+public void setCount(int newCount) throws Exception;
+ /** 第一个参数提供当前的VersionedValue,如果期间其它client更新了此计数值， 
+ * 你的更新可能不成功 更新不成功返回false 但可以通过getCount()读取最新值*/
+public boolean  trySetCount(VersionedValue<Integer> previous, int newCount) throws Exception;
+/** 获取当前最新值 */
+public int getCount();
+例子
+public class SharedCounterExample implements SharedCountListener{
+    private static final int CLIENT_COUNT = 5;
+    private static final String PATH = "/examples/counter";
+    public static void main(String[] args) throws Exception {
+        final Random rand = new Random();
+        SharedCounterExample example = new SharedCounterExample();
+        try{
+            CuratorFramework client = CuratorFrameworkFactory.newClient("172.20.10.9:2181",3000,3000, new ExponentialBackoffRetry(1000, 3,Integer.MAX_VALUE));
+            client.start();
+
+            SharedCount baseCount = new SharedCount(client, PATH, 0);
+            baseCount.addListener(example);
+            baseCount.start();
+
+            List<SharedCount> examples = Lists.newArrayList();
+            ExecutorService service = Executors.newFixedThreadPool(CLIENT_COUNT);
+            for (int i = 0; i < CLIENT_COUNT; i++) {
+
+
+                final SharedCount count = new SharedCount(client, PATH, 0);
+                examples.add(count);
+                Callable<Void> task = new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
+                        count.start();
+                        Thread.sleep(rand.nextInt(10000));
+                        int add = count.getCount() + rand.nextInt(10);
+                        System.out.println("要更改的值为: "+add);
+                        boolean b = count.trySetCount(count.getVersionedValue(), add);
+                        System.out.println("更改结果为: " + b);
+                        return null;
+                    }
+                };
+                service.submit(task);
+            }
+
+            service.shutdown();
+            service.awaitTermination(50, TimeUnit.MINUTES);
+
+
+            for (int i = 0; i < CLIENT_COUNT; i++) {
+                examples.get(i).close();
+            }
+            baseCount.close();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    @Override
+    public void stateChanged(CuratorFramework arg0, ConnectionState arg1) {
+        System.out.println("State changed: " + arg1.toString());
+    }
+    @Override
+    public void countHasChanged(SharedCountReader sharedCount, int newCount) throws Exception {
+        System.out.println("Counter's value is changed to " + newCount);
+    }
+}
+
+程序运行,输出以下结果：
+
+State changed: CONNECTED
+要更改的值为: 1
+更改结果为: true
+Counter's value is changed to 1
+要更改的值为: 1
+更改结果为: true
+Counter's value is changed to 1
+要更改的值为: 7
+更改结果为: true
+Counter's value is changed to 7
+要更改的值为: 12
+更改结果为: true
+Counter's value is changed to 12
+要更改的值为: 18
+更改结果为: true
+Counter's value is changed to 18
+在这个例子中，我们使用baseCount来监听计数值(addListener方法)。 任意的SharedCount， 只要使用相同的path，都可以得到这个计数值。
+然后我们使用5个线程为计数值增加一个10以内的随机数。
+
+注意：可能测试的时候，有时候莫名其妙第一条打印了State changed: CONNECTED之后 立马打印了一条 Counter’s value is changed to XX 不要大惊小怪 这是因为 你上一次运行之后 zk上的节点没有清除,所以会先把上次的结果打印出来,如果是为了测试,建议每次运行完main()程序之后,删除zk上的节点信息。
+
+DistributedAtomicInteger 和 DistributedAtomicLong
+DistributedAtomicInteger和SharedCount计数范围是一样的,都是int类型，但是DistributedAtomicInteger和DistributedAtomicLong和上面的计数器的实现有显著的不同，它首先尝试使用乐观锁的方式设置计数器， 如果不成功(比如期间计数器已经被其它client更新了)， 它使用InterProcessMutex方式来更新计数值。 还记得InterProcessMutex是什么吗？ 它是我们前面讲的分布式可重入锁。下面只讲解DistributedAtomicLong。
+可以从它的内部实现DistributedAtomicValue.trySet中看出端倪。
+
+
+此计数器有一系列的操作：
+get(): 获取当前值
+increment()： 加一
+decrement(): 减一
+add()： 增加特定的值
+subtract(): 减去特定的值
+trySet(): 尝试设置计数值
+forceSet(): 强制设置计数值
+你必须检查返回结果的succeeded()， 它代表此操作是否成功。 如果操作成功， preValue()代表操作前的值， postValue()代表操作后的值。
+
+例子
+我们下面的例子中使用5个线程对计数器进行加一操作，如果成功，将操作前后的值打印出来。
+
+public class DistributedAtomicLongExample {
+
+    private static final int CLIENT_COUNT = 5;
+    private static final String PATH = "/examples/counter";
+    public static void main(String[] args) throws Exception {
+        try{
+            CuratorFramework client = CuratorFrameworkFactory.newClient("172.20.10.9:2181",3000,3000, new ExponentialBackoffRetry(1000, 3,Integer.MAX_VALUE));
+            client.start();
+            List<DistributedAtomicLong> examples = new ArrayList<>();
+            ExecutorService service = Executors.newFixedThreadPool(CLIENT_COUNT);
+            for (int i = 0; i < CLIENT_COUNT; ++i) {
+                final DistributedAtomicLong count = new DistributedAtomicLong(client, PATH, new RetryNTimes(10, 10));
+
+                examples.add(count);
+                Callable<Void> task = new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
+                        try {
+                            AtomicValue<Long> value = count.increment();
+                            System.out.println("操作是否成功: " + value.succeeded());
+                            if (value.succeeded()){
+                                System.out.println("操作成功: 操作前的值为： " + value.preValue() + " 操作后的值为： " + value.postValue());
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }
+                };
+                service.submit(task);
+            }
+            service.shutdown();
+            service.awaitTermination(10, TimeUnit.MINUTES);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+}
+程序运行结果如下：
+
+操作是否成功: true
+操作成功: 操作前的值为： 0 操作后的值为： 1
+操作是否成功: true
+操作成功: 操作前的值为： 1 操作后的值为： 2
+操作是否成功: true
+操作成功: 操作前的值为： 2 操作后的值为： 3
+操作是否成功: true
+操作成功: 操作前的值为： 3 操作后的值为： 4
+操作是否成功: true
+操作成功: 操作前的值为： 4 操作后的值为： 5
+--------------------- 
+作者：这个名字想了很久 
+来源：CSDN 
+原文：https://blog.csdn.net/qq_34021712/article/details/82926958 
+版权声明：本文为博主原创文章，转载请附上博文链接！
