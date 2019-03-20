@@ -1,0 +1,317 @@
+原文地址，转载请注明出处： https://blog.csdn.net/qq_34021712/article/details/82887942     ©王赛超 
+
+随着业务增加,以前简单的系统已经变得越来越复杂，单纯的提升服务器性能也不是办法,而且代码也是越来越庞大，维护也变得越来越困难，这一切都催生了新的架构设计风格 – 微服务架构的出现。
+
+微服务给我们带来了很多好处，例如：独立可扩展、易维护。但是随着应用的分解，微服务的引入，服务越来越多，业务系统与服务系统之间的调用，该架构的问题暴露出来：最明显的问题是所有的请求都需要nginx来转发，随着内部服务的越来越多，服务上线都需要修改nginx的配置。一旦内部网络调整，nginx upstream也需要做对应的配置调整，并且每个服务都还需要维护nginx的地址。所以,服务注册中心诞生了。
+
+什么是服务注册中心
+注册中心可以对服务上下线做统一管理。每个工作服务器都可以作为数据的发布方向集群注册自己的基本信息，而让某些监控服务器作为订阅方，订阅工作服务器的基本信息，当工作服务器的基本信息发生改变如上下线、服务器角色或服务范围变更，监控服务器可以得到通知并响应这些变化。服务自动注册与发现后,不再需要写死服务提供方地址,注册中心基于接口名查询服务提供者的IP地址,并且能够平滑添加或删除服务提供者。
+
+当下火的注册中心有Eureka与ZooKeeper，本篇就讲一下使用zookeeper的开源客户端Curator实现服务的注册与发现：
+
+Service Discovery
+我们通常在调用服务的时候，需要知道服务的地址，端口，或者其他一些信息，通常情况下，我们是把他们写到程序里面，但是随着服务越来越多，维护起来也越来越费劲，更重要的是，由于地址都是在程序中配置的，我们根本不知道远程的服务是否可用，当我们增加或者删除服务，我们又需要到配置文件中配置么？ 这时候，Zookeeper帮大忙了，我们可以把我们的服务注册到Zookeeper中，创建一个临时节点（当连接断开之后，节点将被删除），存放我们的服务信息（url，ip，port等信息），把这些临时节点都存放在以serviceName命名的节点下面，这样我们要获取某个服务的地址，只需要到Zookeeper中找到这个path，然后就可以读取到里面存放的服务信息，这时候我们就可以根据这些信息调用我们的服务。这样，通过Zookeeper我们就做到了动态的添加和删除服务，做到了一旦一个服务时效，就会自动从Zookeeper中移除。
+
+Curator Service Discovery就是为了解决这个问题而生的，它对此抽象出了ServiceInstance、ServiceProvider、ServiceDiscovery三个接口，通过它我们可以很轻易的实现Service Discovery。
+
+ServiceInstance
+Curator中使用ServiceInstance作为一个服务实例，ServiceInstances具有名称，ID，地址，端口和/或ssl端口以及可选的payload(用户定义）。ServiceInstances以下列方式序列化并存储在ZooKeeper中：
+
+
+ServiceProvider
+ServiceProvider是主要的抽象类。它封装了发现服务为特定的命名服务和提供者策略。提供者策略方案是从一组给定的服务实例选择一个实例。有三个捆绑策略:轮询调度、随机和粘性(总是选择相同的一个)。
+ServiceProviders是使用ServiceProviderBuilder分配的。消费者可以从从ServiceDiscovery获取ServiceProviderBuilder（参见下文）。ServiceProviderBuilder允许您设置服务名称和其他几个可选值。
+必须通过调用start()来启动ServiceProvider 。完成后，您应该调用close()。ServiceProvider中有以下两个重要方法：
+
+/** 获取一个服务实例 */
+public ServiceInstance<T> getInstance() throws Exception;
+/** 获取所有的服务实例 */
+public Collection<ServiceInstance<T>> getAllInstances() throws Exception;
+注意：在使用curator 2.x(ZooKeep3.4.x)时，服务提供者对象必须由应用程序缓存并重用。因为服务提供者添加的内部NamespaceWatcher对象无法在ZooKeep3.4.x中删除，所以为每个对相同服务的调用创建一个新的服务提供者最终将耗尽JVM的内存。
+
+ServiceDiscovery
+为了创建ServiceProvider,你必须有一个ServiceDiscovery。它是由一个ServiceDiscoveryBuilder创建。开始必须调用start()方法。当使用完成应该调用close()方法。
+如果特定实例有I/O错误，等等。您应该调用ServiceProvider.NoteError()，并传入实例。ServiceProvider将临时将有错误的实例视为“关闭”。实例的阈值和超时是通过DownInstancePolicy设置的，该策略可以传递给ServiceProviderBuilder(注意：如果没有指定默认DownInstancePolicy，则使用默认DownInstancePolicy)。
+
+更细节API介绍
+ServiceProvider API是大多数用途所需要的。但是，对于更精细的控制，您可以使用以下方法：
+
+注册/注销服务
+通常，将应用程序的服务描述符传递给ServiceDiscovery构造函数，它将自动注册/注销服务。但是，如果需要手动执行此操作，请使用以下方法：
+
+/** 注册服务 */
+public void registerService(ServiceInstance<T> service) throws Exception;
+/** 注销服务 */
+public void unregisterService(ServiceInstance<T> service) throws Exception;
+查询服务
+您可以查询所有服务名称、特定服务的所有实例或单个服务实例。
+
+/** 查询所有服务名称 */
+public Collection<String> queryForNames() throws Exception;
+/** 查询特定服务的所有实例 */
+public Collection<ServiceInstance<T>>  queryForInstances(String name) throws Exception;
+/** 查询单个服务实例 */
+public ServiceInstance<T> queryForInstance(String name, String id) throws Exception;
+服务缓存
+上述每个查询方法都直接调用ZooKeeper。如果经常查询服务，还可以使用ServiceCache。它在内存中缓存特定服务的实例列表。它使用Watcher监听使列表保持最新。
+可以通过ServiceDiscovery.serviceCacheBuilder()返回的构建器分配ServiceCache 。通过调用start()启动ServiceCache对象，完成后，应调用close()。然后可以通过调用以下内容获取服务的当前已知实例列表：
+
+/** 获取缓存服务列表 */
+public List<ServiceInstance<T>> getInstances();
+ServiceCache支持在Watcher更新实例列表时收到通知的侦听器：
+/**
+ * Listener for changes to a service cache
+ */
+public interface ServiceCacheListener extends ConnectionStateListener {
+    /**
+     * Called when the cache has changed (instances added/deleted, etc.)
+     */
+    public void cacheChanged();
+}
+实践
+下面我们自己来实践一下,来测试是否可以灵活部署（随意 增加/删除 机器）？
+
+pom添加依赖
+<dependency>
+    <groupId>org.apache.curator</groupId>
+    <artifactId>curator-x-discovery</artifactId>
+    <version>4.0.1</version>
+</dependency>
+
+服务扩展信息类
+该类中可以自定义一些自己想要的属性,例如方法需要的参数,方法的描述等等。
+
+/**
+ * @author: wangsaichao
+ * @date: 2018/9/29
+ * @description: 服务附加信息
+ */
+public class InstanceDetails {
+
+    public static final String ROOT_PATH = "/service";
+
+    /** 该服务拥有哪些方法 */
+    public Map<String,Service> services = new HashMap<>();
+
+    /** 服务描述 */
+    private String serviceDesc;
+
+    public InstanceDetails(){
+        this.serviceDesc = "";
+    }
+
+    public InstanceDetails(String serviceDesc){
+        this.serviceDesc = serviceDesc;
+    }
+
+    public String getServiceDesc() {
+        return serviceDesc;
+    }
+
+    public void setServiceDesc(String serviceDesc) {
+        this.serviceDesc = serviceDesc;
+    }
+
+    public Map<String, Service> getServices() {
+        return services;
+    }
+
+    public void setServices(Map<String, Service> services) {
+        this.services = services;
+    }
+
+    public static class Service {
+        /** 方法名称 */
+        private String methodName;
+
+        /** 方法描述 */
+        private String desc;
+
+        /** 方法所需要的参数列表 */
+        private List<String> params;
+
+        public String getMethodName() {
+            return methodName;
+        }
+
+        public void setMethodName(String methodName) {
+            this.methodName = methodName;
+        }
+
+        public String getDesc() {
+            return desc;
+        }
+
+        public void setDesc(String desc) {
+            this.desc = desc;
+        }
+
+        public List<String> getParams() {
+            return params;
+        }
+
+        public void setParams(List<String> params) {
+            this.params = params;
+        }
+    }
+}
+
+服务生产者1
+/**
+ * @author: wangsaichao
+ * @date: 2018/9/30
+ * @description: 服务1
+ */
+public class ProviderService1 {
+
+    public static void main(String[] args) throws Exception {
+        CuratorFramework client = CuratorFrameworkFactory.newClient("192.168.58.42:2181",
+                2000,2000, new ExponentialBackoffRetry(1000, 3));
+        client.start();
+        client.blockUntilConnected();
+
+        //服务构造器
+        ServiceInstanceBuilder<InstanceDetails> sib = ServiceInstance.builder();
+        //该服务中所有的接口
+        Map<String,InstanceDetails.Service> services = new HashMap<>();
+
+        // 添加订单服务接口
+        //服务所需要的参数
+        ArrayList<String> addOrderParams = new ArrayList<>();
+        addOrderParams.add("createTime");
+        addOrderParams.add("state");
+        InstanceDetails.Service addOrderService = new InstanceDetails.Service();
+        addOrderService.setDesc("添加订单");
+        addOrderService.setMethodName("addOrder");
+        addOrderService.setParams(addOrderParams);
+        services.put("addOrder",addOrderService);
+
+
+        //添加删除订单服务接口
+        ArrayList<String> delOrderParams = new ArrayList<>();
+        delOrderParams.add("orderId");
+        InstanceDetails.Service delOrderService = new InstanceDetails.Service();
+        delOrderService.setDesc("删除订单");
+        delOrderService.setMethodName("delOrder");
+        delOrderService.setParams(delOrderParams);
+        services.put("delOrder",delOrderService);
+
+        //服务的其他信息
+        InstanceDetails payload = new InstanceDetails();
+        payload.setServiceDesc("订单服务");
+        payload.setServices(services);
+
+        //将服务添加到 ServiceInstance
+        ServiceInstance<InstanceDetails> orderService = sib.address("127.0.0.1")
+                .port(8080)
+                .name("OrderService")
+                .payload(payload)
+                .uriSpec(new UriSpec("{scheme}://{address}:{port}"))
+                .build();
+
+        //构建 ServiceDiscovery 用来注册服务
+        ServiceDiscovery<InstanceDetails> serviceDiscovery = ServiceDiscoveryBuilder.builder(InstanceDetails.class)
+                .client(client)
+                .serializer(new JsonInstanceSerializer<InstanceDetails>(InstanceDetails.class))
+                .basePath(InstanceDetails.ROOT_PATH)
+                .build();
+        //服务注册
+        serviceDiscovery.registerService(orderService);
+        serviceDiscovery.start();
+
+        System.out.println("第一台服务注册成功......");
+
+        TimeUnit.SECONDS.sleep(Integer.MAX_VALUE);
+
+        serviceDiscovery.close();
+        client.close();
+    }
+
+}
+
+
+服务生产者2
+服务生产者2和服务生产者1唯一不同的地方只是端口号改了一下,用来模拟两台不同的机器。
+
+服务消费者
+/**
+ * @author: wangsaichao
+ * @date: 2018/9/30
+ * @description:
+ */
+public class ConsumerClient {
+
+    public static void main(String[] args) throws Exception{
+        CuratorFramework client = CuratorFrameworkFactory.newClient("192.168.58.42:2181", new ExponentialBackoffRetry(1000, 3));
+        client.start();
+        client.blockUntilConnected();
+
+        ServiceDiscovery<InstanceDetails> serviceDiscovery = ServiceDiscoveryBuilder.builder(InstanceDetails.class)
+                .client(client)
+                .basePath(InstanceDetails.ROOT_PATH)
+                .serializer(new JsonInstanceSerializer<InstanceDetails>(InstanceDetails.class))
+                .build();
+        serviceDiscovery.start();
+
+        boolean flag = true;
+
+        //死循环来不停的获取服务列表,查看是否有新服务发布
+        while(flag){
+
+            //根据名称获取服务
+            Collection<ServiceInstance<InstanceDetails>> services = serviceDiscovery.queryForInstances("OrderService");
+            if(services.size() == 0){
+                System.out.println("当前没有发现服务");
+                Thread.sleep(10 * 1000);
+                continue;
+            }
+
+            for(ServiceInstance<InstanceDetails> service : services) {
+
+                //获取请求的scheme 例如：http://127.0.0.1:8080
+                String uriSpec = service.buildUriSpec();
+                //获取服务的其他信息
+                InstanceDetails payload = service.getPayload();
+
+                //服务描述
+                String serviceDesc = payload.getServiceDesc();
+                //获取该服务下的所有接口
+                Map<String, InstanceDetails.Service> allService = payload.getServices();
+                Set<Map.Entry<String, InstanceDetails.Service>> entries = allService.entrySet();
+
+                for (Map.Entry<String, InstanceDetails.Service> entry: entries) {
+                    System.out.println(serviceDesc +uriSpec
+                            + "/" + service.getName()
+                            + "/" + entry.getKey()
+                            + " 该方法需要的参数为："
+                            + entry.getValue().getParams().toString());
+                }
+            }
+            System.out.println("---------------------");
+            Thread.sleep(10*1000);
+
+        }
+
+    }
+
+}
+先启动服务消费者,当前没有发现服务,启动服务生产者1 日志打印生产者1的服务列表, 再启动服务生产者2 日志打印生产者1 和 生产者2的服务列表,然后停止生产者1 服务,日志只打印生产者2的服务列表,最后全停掉,打印当前没有服务。运行日志如下：
+
+当前没有发现服务
+订单服务http://127.0.0.1:8080/OrderService/delOrder 该方法需要的参数为：[orderId]
+订单服务http://127.0.0.1:8080/OrderService/addOrder 该方法需要的参数为：[createTime, state]
+---------------------
+订单服务http://127.0.0.1:8081/OrderService/delOrder 该方法需要的参数为：[orderId]
+订单服务http://127.0.0.1:8081/OrderService/addOrder 该方法需要的参数为：[createTime, state]
+订单服务http://127.0.0.1:8080/OrderService/delOrder 该方法需要的参数为：[orderId]
+订单服务http://127.0.0.1:8080/OrderService/addOrder 该方法需要的参数为：[createTime, state]
+---------------------
+订单服务http://127.0.0.1:8081/OrderService/delOrder 该方法需要的参数为：[orderId]
+订单服务http://127.0.0.1:8081/OrderService/addOrder 该方法需要的参数为：[createTime, state]
+---------------------
+当前没有发现服务
+--------------------- 
+作者：这个名字想了很久 
+来源：CSDN 
+原文：https://blog.csdn.net/qq_34021712/article/details/82887942 
+版权声明：本文为博主原创文章，转载请附上博文链接！
