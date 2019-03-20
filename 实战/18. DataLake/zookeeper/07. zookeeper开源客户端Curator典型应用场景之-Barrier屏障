@@ -1,0 +1,156 @@
+原文地址，转载请注明出处： https://blog.csdn.net/qq_34021712/article/details/82925827     ©王赛超 
+
+什么是Barrier
+Barrier是这样的：Barrier是一个同步点，每一个进程到达此点都要等待，直到某一个条件满足，然后所有的节点继续进行。
+比如：赛跑大家都知道,所有比赛人员都会在起跑线外等待,直到教练员的枪响之后,所有参赛者立刻开始赛跑。
+JDK的并发包下有CyclicBarrier，它看起来和CountDownLatch有很大的相似之处：
+
+CountDownLatch：是一个同步的辅助类，允许一个或多个线程，等待其他一组线程完成操作，再继续执行。CountDownLatch是通过一个计数器来实现的，计数器的初始值为线程的数量。每当一个线程完成了自己的任务后，计数器的值就会减1。当计数器值到达0时，它表示所有的线程已经完成了任务，然后在闭锁上等待的线程就可以恢复执行任务。
+CyclicBarrier:是一个同步的辅助类，允许一组线程相互之间等待，达到一个共同点，再继续执行。
+就拿上面的赛跑举例子,比如 我们需要 10名参赛者,每当有一名人报名,需要的人数就减一,直到报满10个人为止。这个时候就用CountDownLatch，假如说下午2点开始比赛,有的参赛者来的早,那么它需要等待其他参赛者到来之后才开始进行比赛,这个时候就用 CyclicBarrier。
+下面是使用jdk的CyclicBarrier模拟赛跑：
+
+public class TestCyclicBarrier {
+
+    /** 参赛人数 */
+    public static Integer RUNNER_COUNT = 3;
+
+    public static CyclicBarrier barrier = new CyclicBarrier(RUNNER_COUNT);
+    public static void main(String[] args) throws IOException, InterruptedException {
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+
+        for(int i=1; i<=RUNNER_COUNT; i++){
+
+            final int index = i;
+            executor.submit(new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    System.out.println("参赛者"  + index+ "准备好了.");
+                    try {
+                        TestCyclicBarrier.barrier.await();
+                    } catch (Exception e) {}
+                    System.out.println("参赛者"  + index+" 开跑！");
+                }
+            }));
+        }
+        executor.shutdown();
+    }
+
+}
+上面是使用JDK自带的CyclicBarrier实现的赛跑例子，可以看到多线程在并发情况下，都会准确的等待所有线程都处于就绪状态后才开始同时执行其他业务逻辑。如果是在同一个JVM中的话，使用CyclicBarrier完全可以解决诸如此类的多线程同步问题。但是，如果在分布式环境中又该如何解决呢？Curator中提供DistributedBarrier就是用来实现分布式Barrier的。
+
+DistributedBarrier
+DistributedBarrier类实现了屏障的功能。 它的构造函数如下：
+
+public DistributedBarrier(CuratorFramework client, String barrierPath);
+首先你需要设置屏障，它将阻塞运行到此的当前线程:
+
+// 设置屏障，每个线程设置一次
+barrier.setBarrier();
+然后需要阻塞的线程调用，‘方法等待放行条件’，如果连接丢失,此方法将抛出异常:
+
+barrier.waitOnBarrier();
+当条件满足时，移除屏障，所有等待的线程将继续执行：
+
+removeBarrier();
+例子：
+public class DistributedBarrierExample {
+
+    private static final String PATH = "/examples/barrier";
+
+    /** 客户端数量 */
+    private static final int CLIENT_COUNT = 5;
+
+    private static DistributedBarrier  barrier;
+
+    public static void main(String[] args) throws Exception {
+
+        for(int i=0;i<CLIENT_COUNT;i++){
+            final int index = i;
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        CuratorFramework client = CuratorFrameworkFactory.newClient("172.20.10.9:2181",3000,3000, new ExponentialBackoffRetry(1000, 3,Integer.MAX_VALUE));
+                        client.start();
+
+                        //获取DistributedBarrier
+                        barrier = new DistributedBarrier(client, PATH);
+                        System.out.println("线程" +index+" 等待");
+                        barrier.setBarrier();
+                        barrier.waitOnBarrier();
+                        System.out.println("线程" +index+" 已执行");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
+        }
+
+        Thread.sleep(20*1000);
+
+        if(barrier != null){
+            System.out.println("所有线程都已到达,准备启动");
+            barrier.removeBarrier();
+        }
+    }
+
+}
+
+我们创建了5个线程，在此Barrier上等待。最后移除栅栏后所有的线程才继续执行。但是我们并不知道要什么时候移除屏障,Curator还提供了另一种线程自发触发Barrier释放的模式。
+
+DistributedDoubleBarrier
+双重屏障，在协作开始之前同步，当足够数量的进程加入到屏障后，开始协作，当所有进程完毕后离开屏障。
+双栅栏类是DistributedDoubleBarrier。
+构造函数为:
+
+public DistributedDoubleBarrier(CuratorFramework client, String barrierPath, int memberQty);
+1
+memberQty是成员数量，当enter()方法被调用时，成员被阻塞，直到所有的成员都调用了enter()。 当leave()方法被调用时，它也阻塞调用线程， 直到所有的成员都调用了leave()。
+就像赛跑比赛， 发令枪响， 所有的参赛者开始跑，等所有的参赛者跑过终点线，比赛才结束。
+DistributedDoubleBarrier 会监控连接状态，当连接断掉时enter()和leave方法会抛出异常。
+
+例子：
+public class DistributedDoubleBarrierExample {
+
+    private static final String PATH = "/examples/barrier";
+
+    /** 客户端数量 */
+    private static final int CLIENT_COUNT = 5;
+
+    public static void main(String[] args) throws Exception {
+
+        for(int i=0;i<CLIENT_COUNT;i++){
+            final int index = i;
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        CuratorFramework client = CuratorFrameworkFactory.newClient("172.20.10.9:2181",3000,3000, new ExponentialBackoffRetry(1000, 3,Integer.MAX_VALUE));
+                        client.start();
+
+                        //获取DistributedDoubleBarrier
+                        DistributedDoubleBarrier barrier = new DistributedDoubleBarrier(client, PATH,CLIENT_COUNT);
+                        System.out.println("线程" +index+" 等待");
+                        barrier.enter();
+                        //调用enter阻塞,直到所有线程都到达之后执行,执行完毕之后，调用leave阻塞,直到所有线程都调用leave
+                        System.out.println("线程" +index+" 已执行");
+                        barrier.leave();
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
+        }
+
+        Thread.sleep(Integer.MAX_VALUE);
+    }
+
+}
+上面这个示例程序和JDK自带的CyclicBarrier非常类似，他们都指定了进入Barrier的成员数阈值memberQty，每个Barrier的参与者都会在调用DistributedDoubleBarrier.enter()方法之后进行等待，此时处于准备进入状态。一旦准备进入Barrier的成员数达到指定数量之后，所有的成员会被同时触发进入。之后调用DistributedDoubleBarrier.leave()方法则会再次等待，此时处于退出状态。一旦准备退出Barrier的成员数达到5个后，所有的成员同样会被同时触发退出。因此，使用Curator的DistributedDoubleBarrier能够很好的实现一个分布式Barrier，并控制其同时进入和退出。
+--------------------- 
+作者：这个名字想了很久 
+来源：CSDN 
+原文：https://blog.csdn.net/qq_34021712/article/details/82925827 
+版权声明：本文为博主原创文章，转载请附上博文链接！
