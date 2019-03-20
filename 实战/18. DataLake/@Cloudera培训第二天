@@ -24,6 +24,7 @@ byname = GROUP sales BY name;
 UNION
 res = UNION A, B
 
+注意foreach的时候一定要重命名一般foreash后group by 不好写
 =======================================================================
 HIVE & Implala
 
