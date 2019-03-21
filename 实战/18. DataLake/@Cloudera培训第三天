@@ -1,0 +1,42 @@
+1. Impala is a high-performance SQL engine for vast amounts of data
+– Massively-parallel processing (MPP)
+– Inspired by Google’s Dremel project
+– Query latency measured in milliseconds
+– Developed by C++
+
+三大组件
+Impala Statestore
+Impala Catalog Service
+Impala Daemon ---数据处理的
+
+一般大数据组件都支持ODBS和JDBC抽取数据
+
+逻辑层面上一个表对应HDFS的一个目录并且目录没有嵌套
+
+命令行上推荐使用beeline -u 不建议用hive
+beeline -u jdbc:hive2://localhost:10000 -n training
+
+impala使用impala-shell
+#>impala-shell
+
+清元数据
+invalidate metadata
+
+HIVE 和 Impala区别
+---hive
+hive 支持数据的隐式转化
+> SELECT zipcode FROM customers LIMIT 1;
+60601
+> SELECT zipcode + 1.5 FROM customers LIMIT 1;
+60602.5
+
+---impala
+> SELECT zipcode + 1.5 FROM customers LIMIT 1;
+ERROR: AnalysisException: Arithmetic operation...
+
+---------------------
+Impala and Hive handle out-of-range values differently
+– Hive returns NULL
+– Impala returns the maximum value for that type
+
+
