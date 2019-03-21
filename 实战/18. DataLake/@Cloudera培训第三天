@@ -102,3 +102,4 @@ hive.error.on.empty.partition
 一般不需要设置。
 
 parquel-tools 可以看该文件的内容信息
+parquel-tools head 
