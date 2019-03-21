@@ -1,0 +1,185 @@
+大数据技术之Hive实战——Youtube项目
+一、需求描述
+	统计 Youtube 视频网站的常规指标，各种 TopN 指标：
+	–统计视频观看数 Top10
+	–统计视频类别热度 Top10
+	–统计视频观看数 Top20 所属类别包含这 Top20 视频的个数
+	–统计视频观看数 Top50 所关联视频的所属类别 Rank
+	–统计每个类别中的视频热度 Top10
+	–统计每个类别中视频流量 Top10
+	–统计上传视频最多的用户 Top10 以及他们上传的视频
+	–统计每个类别视频观看数 Top10
+
+
+二、知识储备梳理
+2.1、order by，sort by，distribute by，cluster by
+	背景表结构
+	在讲解中我们需要贯串一个 例子，所以需要设计一个情景，对应 还要有一个表结构和填充
+	数据。如下：有 3 个字段，分别为 personId 标识某一个人，company 标识一家公司名称，
+	money 标识该公司每年盈利收入（单位：万元人民币）
+
+	建表导入数据：
+
+	create table company_info(
+	personId string,
+	company string,
+	money float
+	)
+	row format delimited 
+	fields terminated by "\t"
+
+	load data local inpath “company_info.txt” into table company_info;
+
+2.1.1、order by
+	hive 中的 order by 语句会对查询结果做一次全局排序，即，所有的 mapper 产生的结果都会
+	交给一个 reducer 去处理，无论数据量大小，job 任务只会启动一个 reducer，如果数据量巨
+	大，则会耗费大量的时间。
+
+	Hive中的order by跟传统的sql语言中的order by作用是一样的，会对查询的结果做一次全局排序，
+	所以说，只有hive的sql中制定了order by所有的数据都会到同一个reducer进行处理（不管有多少map，
+	也不管文件有多少的block只会启动一个reducer）。但是对于大量数据这将会消耗很长的时间去执行。
+	这里跟传统的sql还有一点区别：如果指定了hive.mapred.mode=strict（默认值是nonstrict）,
+	这时就必须指定limit来限制输出条数，原因是：所有的数据都会在同一个reducer端进行，
+	数据量大的情况下可能不能出结果，那么在这样的严格模式下，必须指定输出的条数。
+
+	尖叫提示：如果在严格模式下，order by 需要指定 limit 数据条数，不然数据量巨大的情况下
+	会造成崩溃无输出结果。涉及属性：set hive.mapred.mode=nonstrict/strict
+	例如：按照 money 排序的例子
+	select * from company_info order by money desc;
+
+2.1.2、sort by
+	hive 中的 sort by 语句会对每一块局部数据进行局部排序，即，每一个 reducer 处理的数据都
+	是有序的，但是不能保证全局有序。
+
+2.1.3、distribute by
+	hive 中的 distribute by 一般要和 sort by 一起使用，即将某一块数据归给(distribute by)某一个
+	reducer 处理，然后在指定的 reducer 中进行 sort by 排序。
+
+	ditribute by是控制map的输出在reducer是如何划分的，举个例子，我们有一张表，mid是指这个store所属的商户，money是这个商户的盈利，name是这个store的名字
+
+	store: 
+
+	mid	money	name
+	AA	15.0	商店1
+	AA	20.0	商店2
+	BB	22.0	商店3
+	CC	44.0	商店4
+	 
+	执行hive语句：
+	select mid, money, name from store distribute by mid sort by mid asc, money asc  
+	我们所有的mid相同的数据会被送到同一个reducer去处理，这就是因为指定了distribute by mid，
+	这样的话就可以统计出每个商户中各个商店盈利的排序了（这个肯定是全局有序的，因为相同的商户会放到同一个reducer去处理）。
+	这里需要注意的是distribute by必须要写在sort by之前。
+
+	尖叫提示：distribute by 必须写在 sort by 之前
+	尖叫提示：涉及属性 mapreduce.job.reduces，hive.exec.reducers.bytes.per.reducer例如：不同的人（personId）分为不同的组，每组按照 money 排序。
+	select * from company_info distribute by personId sort by personId, money desc;
+
+2.1.4、cluster by
+	cluster by的功能就是distribute by和sort by相结合，如下2个语句是等价的： 
+	select mid, money, name from store cluster by mid  
+	select mid, money, name from store distribute by mid sort by mid  
+	如果需要获得与3中语句一样的效果
+	select mid, money, name from store cluster by mid sort by money  
+	注意被cluster by指定的列只能是降序，不能指定asc和desc。
+
+2.2、行转列、列转行（UDAF 与 UDTF）
+	2.2.1、行转列
+	表结构： 
+	创建表及数据导入：
+
+	create table person_info(
+	name string,
+	constellation string,
+	blood_type string)
+	row format delimited fields terminated by "\t";
+
+	load data local inpath “person_info.tsv” into table person_info;
+
+	例如：把星座和血型一样的人归类到一起
+	select
+	t1.base,
+	concat_ws('|', collect_set(t1.name)) name
+	from
+	(select
+	name,
+	concat(constellation, ",", blood_type) base
+	from
+	person_info) t1
+	group by
+	t1.base;
+	
+	知识普及
+	对于非group by字段，可以用Hive的collect_set函数收集这些字段，返回一个数组；
+	使用数字下标，可以直接访问数组中的元素； 
+	  select a,collect_set(b) as bb from t where b<='xxxxxx' group by a
+
+	会按照a分组 通过collect_set会把每个a所对应的b构建成一个以逗号分隔的数组返回。上述SQL返回：
+	a1,["b1","b2"]
+
+	a2,["b1","b2","b3","b4"] 
+
+	 可以按照这个返回的数组做文章，即为
+
+	select * from (select a,collect_set(b) as bb from t where b<='xxxxxx' group by a)  where size(tmp.bb)=1 and tmp.bb[0]='xxxxxxxx';
+
+	表示某bb所对应的数组长度为1 并且第一个bb为xxxxxxxx的a
+	
+	样例
+	需求：对用户的订单进行分析，将不同订单类型分别多少单展示出来，每个用户一行
+
+	原数据：
+
+	user    order_type    order_number
+	user1    delivered    10
+	user2    returned    1
+	user1    returned    3
+	user2    delivered    20
+	目标：
+	user    order
+	user1    delivered(10),returned(3)
+	user2    delivered(20),returned(1)
+
+	1.使用concat（）函数将order_type和order_number连接起来
+
+	concat（order_type,'(',order_number,')'）
+
+	user    order
+	user1    delivered(10)
+	user2    returned(1)
+	user1    returned(3)
+	user2    delivered(20)
+	
+	2.使用concat_ws（）和collect_set（）进行合并行
+	将上面列表中一个user可能会占用多行转换为每个user占一行的目标表格式，实际是“列转行”
+
+	select user,concat_ws(',',collect_set(concat（order_type,'(',order_number,')'）))  order from table group by user
+
+	order是别名
+
+	collect_set的作用：
+	（1）去重，对group by后面的user进行去重
+	（2）对group by以后属于同一user的形成一个集合，结合concat_ws对集合中元素使用，进行分隔形成字符串
+
+
+	2.2.2、列转行
+	表结构： 
+
+	创建表及导入数据：
+	create table movie_info(
+	movie string,
+	category array<string>)
+	row format delimited fields terminated by "\t"
+	collection items terminated by ",";
+
+	load data local inpath "movie_info.tsv" into table movie_info;
+
+	例如：将电影分类中的数组数据展开
+	select
+	movie,
+	category_name
+	from
+	movie_info lateral view explode(category) table_tmp as category_name;
+	
+	
+	
