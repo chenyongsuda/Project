@@ -44,7 +44,28 @@ HIVE默认创建表路径
 
 定义表的存储路径 定义locationg
 CREATE TABLE tablename (colname DATATYPE, ...)
-LOCATION xxxxxxxxxxx
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY char
 STORED AS {TEXTFILE|SEQUENCEFILE|…}
+LOCATION xxxxxxxxxxx
+
+CREATE TABLE jobs_archived LIKE jobs;拷贝表结构
+拷贝数据
+
+管理表和外部表
+区别,管理表,drop后元数据和数据都没了
+
+Sqoop 直接导入到hive表中
+sqoop import \
+--connect jdbc:mysql://localhost/dualcore \
+--username training \
+--password training \
+--fields-terminated-by '\t' \
+--table employees \
+--hive-import
+
+insert into 表 select xxx from 表
+LOAD DATA [LOCAL] INPATH 'filepath' [OVERWRITE] INTO TABLE tablename [PARTITION (partcol1=val1, partcol2=val2 ...)]
+
+
+
