@@ -67,5 +67,5 @@ sqoop import \
 insert into 表 select xxx from 表
 LOAD DATA [LOCAL] INPATH 'filepath' [OVERWRITE] INTO TABLE tablename [PARTITION (partcol1=val1, partcol2=val2 ...)]
 
-
+CREATE TABLE tablename as select * from
 
