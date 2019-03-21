@@ -39,4 +39,12 @@ Impala and Hive handle out-of-range values differently
 – Hive returns NULL
 – Impala returns the maximum value for that type
 
+HIVE默认创建表路径
+/user/hive/warehouse
 
+定义表的存储路径 定义locationg
+CREATE TABLE tablename (colname DATATYPE, ...)
+LOCATION xxxxxxxxxxx
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY char
+STORED AS {TEXTFILE|SEQUENCEFILE|…}
