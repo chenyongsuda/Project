@@ -103,3 +103,10 @@ hive.error.on.empty.partition
 
 parquel-tools 可以看该文件的内容信息
 parquel-tools head 
+
+==================================================================================================
+*****impala移动数据最好都通过load data命令导入
+如果直接通过HDFS移动到外部表文件的话就会有缓存问题
+如果无法避免这种问题或者外部调度任务直接写入该文件夹的话,需要在每次的批处理任务后面直接加刷新缓存操作
+如refresh tablename
+  invalidate metadata tablename 这种操作 invalidate metadata不加表名表示刷全部的元数据.
