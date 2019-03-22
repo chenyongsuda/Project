@@ -44,6 +44,37 @@ show column stats table_name 查看字段级别执行计划
 @@@@@@@@@@@@@@执行计划中一个stage就是一个mapreduce
 
 
+=======================================================================
+HIVE的本地模式
+对于比较小的任务将该任务只在本机执行会快很多
+$ hive
+hive> SET mapred.job.tracker=local;
+hive> SET mapred.local.dir=/home/training/tmpdata;          #路径表示这次任务的log存储路径
+hive> SELECT zipcode, COUNT(cust_id) AS num
+FROM customers GROUP BY zipcode;
+
+分区和分桶
+分区是按照目录结构
+
+分桶是一张表对于一个目录,目录不允许嵌套
+比如原先有5个数据文件一共20G
+现在变成分桶表的话设置为20个桶
+就会产生20个文件.
+带来的效果：
+如果要带来优化的话使用join的话 提升效率对join左边和右边的两个表都做相同的桶数.
+
+
+============================================================================
+HIVE的索引是存储在HDFS上.
+记录的是标记位置.没什么用.还没懂课下查查吧.
+
+
+HIVE有两种平台,一个HIVE基于MR2或者基于Spark平台.
+
+PIG体现出灵活性.PIG优势在于ETL.HIVE IMPALA优势在于分析.
+
+可靠性上HIVE ON MR2. 
+HIVE ON Spark 速度没impala快. SQL再转SPARK 再提交到spark.
 
 
 
