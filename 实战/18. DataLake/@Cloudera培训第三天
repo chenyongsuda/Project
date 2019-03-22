@@ -130,3 +130,8 @@ SELECT rank() OVER (ORDER BY sum(b))
 FROM T
 GROUP BY a;
 
+
+HIVE支持where语句中用where column regexp ''
+select regexp(request,'patten',1)
+where column regexp ''
+
