@@ -1,0 +1,59 @@
+impala
+impala组件安装的两种方式
+1. 建立在yarn上和spark和MR资源都由yarn管理.
+2. 直接建立在HDFS上.impala由自己管理资源.建议独立部署.由自己管理.由于不能和yarn很好集成,开源比较晚.
+
+
+Catalog server 维护元数据
+State Store    维护impala Daemon节点的状态
+Name Node
+很多Impala Daemon 需要和HDFS的DATANNODE 一一对应
+
+SQL执行的时候会选一个leader deamon由他来协调其他daemon的交流.
+
+impala中有cache
+Metadata is cached from the
+Metastore at startup
+
+数据文件新增impala也会有元数据,也需要刷新缓存
+只要元数据操作在外部就会引发缓存问题.
+
+IMPALA对于HDFS的目录数据文件和block属性也是元数据
+
+Refresh只刷新HDFS的blocks信息不刷新表结构
+INVALIDATE METADATA TABLE 刷新表结构和block信息
+
+IMPALA好处速度快,不足不稳定
+
+IMPALA无冗余处理,在某个小SQL错误导致整个sql错误.可靠性差不稳定.
+
+使用场景面向结构化做机器分析.
+
+优化方面：收集统计计划只有impala有
+expain 查看执行计划  看下warning
+compute stats 收集统计计划
+show table stats table_name 查看统计计划
+show column stats table_name 查看字段级别执行计划
+
+实际执行计划：
+在执行一次实际的查询后执行summary
+在执行一次实际的查询后执行profile(细粒度的统计)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
