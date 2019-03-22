@@ -135,3 +135,20 @@ HIVE支持where语句中用where column regexp ''
 select regexp(request,'patten',1)
 where column regexp ''
 
+二、HAVING
+HAVING语句通常与GROUP BY语句联合使用，用来过滤由GROUP BY语句返回的记录集。
+HAVING语句的存在弥补了WHERE关键字不能与聚合函数联合使用的不足。
+
+语法：
+SELECT column1, column2, ... column_n, aggregate_function (expression)
+FROM tables
+WHERE predicates
+GROUP BY column1, column2, ... column_n
+HAVING condition1 ... condition_n;
+
+同样使用本文中的学生表格，如果想查询平均分高于80分的学生记录可以这样写：
+SELECT id, COUNT(course) as numcourse, AVG(score) as avgscore
+FROM student
+GROUP BY id
+HAVING AVG(score)>=80;
+在这里，如果用WHERE代替HAVING就会出错
