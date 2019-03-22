@@ -115,3 +115,18 @@ parquel-tools head
 
 开窗函数
 select prod_id,sum(price) over(partition by brand) as n1 from table 
+
+Hive2.1.0及以后支持Distinct
+在聚合函数（SUM, COUNT and AVG）中，支持distinct，但是在ORDER BY 或者 窗口限制不支持。
+
+COUNT(DISTINCT a) OVER (PARTITION BY c)
+1
+Hive 2.2.0中在使用ORDER BY和窗口限制时支持distinct
+
+COUNT(DISTINCT a) OVER (PARTITION BY c ORDER BY d ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING)
+1
+Hive2.1.0及以后支持在OVER从句中支持聚合函数
+SELECT rank() OVER (ORDER BY sum(b))
+FROM T
+GROUP BY a;
+
