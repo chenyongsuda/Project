@@ -1,0 +1,6 @@
+1. 导入表和hive表一致
+sqoop import --connect jdbc:mysql://localhost/dualcore --username training --password training --fields-terminated-by '\t' --warehouse-dir /dualcore --table employees_tmp
+2. 导入表和hive表不一致
+sqoop import --connect jdbc:mysql://localhost/dualcore --username training --password training --fields-terminated-by '\t'  --table employees --hive-import --hive-table employees_tmp
+
+两种都不需要HIVE表结构存在
