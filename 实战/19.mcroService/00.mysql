@@ -1,0 +1,229 @@
+centos7 安装mysql5.7及配置
+一、Mysql 各个版本区别：
+1、MySQL Community Server 社区版本，开源免费，但不提供官方技术支持。
+2、MySQL Enterprise Edition 企业版本，需付费，可以试用30天。
+3、MySQL Cluster 集群版，开源免费。可将几个MySQL Server封装成一个Server。
+4、MySQL Cluster CGE 高级集群版，需付费。
+5、MySQL Workbench（GUI TOOL）一款专为MySQL设计的ER/数据库建模工具。它是著名的数据库设计工具DBDesigner4的继任者。
+MySQL Workbench又分为两个版本，分别是社区版（MySQL Workbench OSS）、商用版（MySQL Workbench SE）。
+
+MySQL Community Server 是开源免费的，这也是我们通常用的MySQL的版本。根据不同的操作系统平台细分为多个版本，
+
+Linux下安装MYSQL有三种方式：
+1 通过yum命令在线下载安装
+2 下载离线rpm安装包安装
+3 下载源码编译安装
+
+MySQL Yum Repository
+MySQL官方新提供了一种安装MySQL的方法--使用YUM源安装MySQL.
+1、MySQL官方网站下载MySQL的YUM源，在MySQL的下载页有一个“NEW！MySQL YUM Repository”，点进去找相对应的系统rpm包进行下载.
+如果你的Linux系统能联网，就把下载链接拷贝下：# wget http://dev.mysql.com/get/mysql57-community-release-el7-7.noarch.rpm（这里是el7的MySQL YUM源下载地址，该版本为5.7版本）
+2、下载完后就是一个mysql57-community-release-el7-7.noarch.rpm的文件，可以用以下命令查看该文件都包含哪些包：
+# rpm -qpl mysql57-community-release-el7-7.noarch.rpm
+/etc/pki/rpm-gpg/RPM-GPG-KEY-mysql
+/etc/yum.repos.d/mysql-community-source.repo
+/etc/yum.repos.d/mysql-community.repo
+安装rpm包，# rpm -ivh mysql57-community-release-el7-7.noarch.rpm
+安装完上述包后，查看yum库，# yum list Mysql* 就会在yum库里生成以下几个包：
+
+(1/6): mysql-community-common-5.7.11-1.el7.x86_64.rpm | 270 kB 
+(2/6): mysql-community-devel-5.7.11-1.el7.x86_64.rpm      | 3.7 MB 
+(3/6): mysql-community-libs-5.7.11-1.el7.x86_64.rpm         | 2.2 MB 
+(4/6): mysql-community-libs-compat-5.7.11-1.el7.x86_64.rpm | 2.0 MB 
+(5/6): mysql-community-client-5.7.11-1.el7.x86_64.rpm          | 25 MB 
+(6/6): mysql-community-server-5.7.11-1.el7.x86_64.rpm        | 143 MB
+
+之后就可以用yum安装MySQL了：
+# yum install mysql-community-server
+这样做的好处在于，可以用yum管理MySQL的包，尤其是可以把MySQL的安装包生成到YUM库里，更多MYSQL的安装方式。
+
+rpm包方式安装
+# wget http://dev.mysql.com/get/Downloads/MySQL-5.7/mysql-community-server-5.7.11-1.el7.i686.rpm
+# yum localinstall mysql-community-server-5.7.11-1.el7.i686.rpm
+用yum localinstall 方式安装会自动安装依赖包，比使用 # rpm -ivh mysql-community-server-5.7.11-1.el7.i686.rpm 方式省心
+
+如果想安装5.6参考此链接：
+
+http://dev.mysql.com/doc/mysql-yum-repo-quick-guide/en/
+
+查看已安装版本
+[root@webtest ~]# mysql -V
+mysql Ver 14.14 Distrib 5.6.31, for Linux (x86_64) using EditLine wrapper
+
+ 
+
+
+设置mysql密码
+方法一：
+1、停止mysql服务
+# service mysqld stop
+2、mysql配置文件修改为免密码登录。
+# vi /etc/my.cfg
+# Disabling symbolic-links is recommended to prevent assorted security risks
+skip-grant-tables #添加这句话，这时候登入mysql就不需要密码
+symbolic-links=0
+3、启动 mysql 服务
+# service mysqld start
+4、以root身份登录mysql, 输入密码的时候直接回车 
+# mysql -uroot -p #输入命令回车进入，出现输入密码提示直接回车。
+mysql> set password for root@localhost = password('123456');
+ERROR 1290 (HY000): The MySQL server is running with the --skip-grant-tables option so it cannot execute this statement
+mysql> flush privileges;
+Query OK, 0 rows affected (0.00 sec)
+mysql> set password for root@localhost = password('123456'); or update user set authentication_string=PASSWORD("123456") where user="root";
+Query OK, 0 rows affected, 1 warning (0.00 sec)
+mysql>flush privileges; #更新权限
+mysql>quit; #退出
+# service mysqld stop # 停止mysql服务, 恢复mysql配置
+# vi /etc/my.cfg
+# Disabling symbolic-links is recommended to prevent assorted security risks
+# skip-grant-tables # 注释掉这句话
+symbolic-links=0
+# service mysqld start # 启动mysql服务
+# mysql -uroot -p # 输入新密码登录
+
+方法二：
+为了加强安全性，安装MySQL5.7后会为root用户随机生成了一个密码，在error log中，关于error log的位置，如果安装的是RPM包，则默认是/var/log/mysqld.log。
+可通过# grep "password" /var/log/mysqld.log 命令获取MySQL的临时密码
+[root@iZ2 ~]# grep "password" /var/log/mysqld.log
+2016-04-10T04:53:07.003736Z 1 [Note] A temporary password is generated for root@localhost: dd9FfN/s/&4n
+用该密码登录到服务端后，必须马上修改密码，不然会报如下错误：
+mysql> select user();
+ERROR 1820 (HY000): You must reset your password using ALTER USER statement before executing this statement.
+如果只是修改为一个简单的密码，会报以下错误：
+mysql> ALTER USER USER() IDENTIFIED BY '12345678';
+ERROR 1819 (HY000): Your password does not satisfy the current policy requirements
+这个其实与validate_password_policy的值有关。刚开始设置的密码必须符合长度，且必须含有数字，小写或大写字母，特殊字符。
+
+方法三：
+# /path/mysqladmin -u UserName -h Host password 'new_password' -p
+其它方式：
+MySQL管理者密码设置或修改：
+依据官方说明5.6以后版本，第一次启动时会在root目录下生产一个随机密码，文件名.mysql_secret。
+[root@bright ~]# cat /root/.mysql_secret
+# Password set for user 'root@localhost' at 2015-03-27 23:12:10
+:Jj+FTiqvyrF
+[root@bright ~]# cd /usr/local/mysql/bin/
+[root@bright bin]# ./mysqladmin -u root -h localhost password '123456' -p
+Enter password: #此行输入.mysql_secret里第二行内容
+mysqladmin: [Warning] Using a password on the command line interface can be insecure.
+Warning: Since password will be sent to server in plain text, use ssl connection to ensure password safety.
+官方的方式，笔者无论是否使用--skip-grant-tables启动mysql都测试失败，亲们可以测试：
+shell>mysql -uroot -p'password' #password即.mysql_secret里的密码
+mysql>SET PASSWORD = PASSWORD('newpasswd');
+还有一种方式：
+在安装的时候不生成随机密码，用sudo mysqld --initialize-insecure
+然后在自己设置密码 sudo /usr/bin/mysqladmin -uroot password 密码
+
+设置密码查考链接：http://www.myhack58.com/Article/sort099/sort0102/2015/60511.htm
+
+ 
+
+
+修改密码
+mysql >ALTER USER USER() IDENTIFIED BY '12345678';
+mysql>update mysql.user set authentication_string=password('newpassword') where User="root" and Host="localhost";
+mysql>flush privileges; //刷新系统权限表
+mysql>set password=password("newpassword"); // 修改自己的密码
+Query OK, 0 rows affected, 1 warning (0.00 sec)
+
+ 
+
+
+设置权限
+创建一个只允许从本地登录的超级用户xu，并允许将权限赋予别的用户，密码为xu@123456
+# GRANT ALL PRIVILEGES ON *.* TO xu@'localhost' IDENTIFIED BY 'xw@123456' WITH GRANT OPTION;
+创建一个一般的程序用户，这个用户可能只需要SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES等权限如果有存储过程还需要加上EXECUTE权限，一般是指定内网网段192.168.100网段。
+# GRANT USAGE,SELECT, INSERT, UPDATE, DELETE, SHOW VIEW ,CREATE TEMPORARY TABLES,EXECUTE ON `test`.* TO xu@'192.168.100.%' IDENTIFIED BY 'xu@123456';
+创建一个普通用户(仅有查询权限)
+# GRANT USAGE,SELECT ON `test`.* TO xu@'192.168.100.%' IDENTIFIED BY 'xu@123456';
+刷新全新，使用这个命令使权限生效，尤其是你对那些权限表user、db、host等做了update或者delete更新的时候。以前遇到过使用grant后权限没有更新的情况，大家可以养成习惯，只要对权限做了更改就使用FLUSH PRIVILEGES命令来刷新权限。
+# FLUSH PRIVILEGES;
+
+mysql>grant all on yh_pm.* to 'dba_user'@'%';
+
+mysql>flush privileges; #更新权限
+
+查看权限
+SHOW GRANTS FOR 'xu'@'192.168.100.%';
+
+show grants for 'xu'@'%';   # 查看用户的所有权限
+回收权限, 将前面创建的webuser用户的DELETE权限回收，使用如下命令
+# REVOKE DELETE ON test.* FROM 'xu'@'192.168.100.%';
+删除用户, 注意删除用户不要使用DELETE直接删除，因为使用DELETE删除后用户的权限并未删除，新建同名用户后又会继承以前的权限。正确的做法是使用DROP USER命令删除用户，比如要删除'xu'@'192.168.100.%'用户采用如下命令：
+# DROP USER 'xu'@'192.168.100.%';
+
+GRANT命令说明：
+ALL PRIVILEGES 是表示所有权限，你也可以使用select、update等权限提到的权限。
+ON 用来指定权限针对哪些库和表。
+*.* 中前面的*号用来指定数据库名，后面的*号用来指定表名。
+TO 表示将权限赋予某个用户。
+xu@'localhost' 表示xu用户，@后面接限制的主机，可以是IP、IP段、域名以及%，%表示任何地方。注意：这里%有的版本不包括本地，以前碰到过给某个用户设置了%允许任何地方登录，但是在本地登录不了，这个和版本有关系，遇到这个问题再加一个localhost的用户就可以了。
+IDENTIFIED BY 指定用户的登录密码。
+WITH GRANT OPTION 这个选项表示该用户可以将自己拥有的权限授权给别人。注意：经常有人在创建操作用户的时候不指定WITH GRANT OPTION选项导致后来该用户不能使用GRANT命令创建用户或者给其他用户授权。
+备注：可以使用GRANT重复给用户添加权限，权限叠加，比如你先给用户添加了一个select权限，然后又给用户添加了一个insert权限，那么该用户就同时拥有了select和insert权限。
+
+权限管理参考：
+http://blog.chinaunix.net/uid-20639775-id-3249105.html
+http://blog.chinaunix.net/uid-10697776-id-2935586.html
+
+ 
+
+
+二、MySQL Fabric是什么？
+MySQL Fabric能“组织”多个MySQL数据库，是应用系统将大于几TB的表分散到多个数据库，即数据分片(Data Shard)。在同一个分片内又可以含有多个数据库，并且由Fabric自动挑选一个适合的作为主数据库，其他的数据库配置成从数据库，来做主从复制。在主数据库挂掉时，从各个从数据库中挑选一个提升为主数据库。之后，其他的从数据库转向新的主数据库复制新的数据。注意：这里说的“自动”是指由MySQL Fabric在后台完成，而不需要用户手动更改配置。最重要的是，MySQL Fabric是GPL的开源软件，也就是在符合GPL的规范下，你可以自由的使用和修改这个软件。
+http://www.2cto.com/database/201408/327941.html
+
+
+三、MySQL Router
+MySQL Router 是轻量级 MySQL 中间件，提供应用与任意 MySQL 服务器后端的透明路由，可用来实现读写分离。
+MySQL Router 最好和 MySQL Fabric 一起用，不过也不硬性要求。Router 最好和应用运行在同一台机器上。
+MySQL Router就是一个轻量级的中间件用来实现高可用和扩展性的功能。MySQL Fabric不是也有这样的作用吗？的确，但是MySQL Fabric最大的一个缺点是应用需要改造，用Fabric独有的Java或python驱动，并且目前只支持Java，Python和php语言，即MySQL Fabric是在驱动层面实现的高可用和扩展功能。而MySQL Router是一个中间件，该中间的访问协议与MySQL一致，应用不需要做任何的修改。
+http://www.codesec.net/view/408108.html
+
+
+四、MySQL Utilities
+MySQL Utilities 是官方提供的MySQL管理工具，功能面面俱到，主要有五个层面的工具：数据库层面(复制、比较、差异、导出、导入)、审核日志层面、服务器层面(实例克隆、实例信息)、系统层面(磁盘使用情况、冗余索引、搜索元数据、进程)、高可用性层面(主从复制、故障转移、主从同步)。此工具让你在mysql的管理上如虎添翼。
+https://www.ttlsa.com/mysql/mysql-manager-tools-mysql-utilities-tutorial/
+
+
+五、mysql-server与mysql-client有什么区别？
+mysql-server 是使用mysqld命令管理的。
+mysql-client 是用mysql命令连接mysqld服务使用的。
+简而言之，一个是服务，正直的数据库运行管理，另一个是你访问这个数据库所用的工具。
+打个比方就象，网站的WEB服务和你的浏览网页用的浏览器。
+
+ 
+
+删除yum方式安装的mysql
+yum remove mysql mysql-server
+rm -rf /var/lib/mysql
+rm /etc/my.cnf
+查看是否还有mysql软件：
+rpm -qa|grep mysql
+如果存在的话，继续删除即可。
+
+ 
+
+ 
+
+源码方式安装
+yum -y install gcc gcc-c++ gcc-g77 autoconf automake zlib* fiex* libxml* ncurses-devel libmcrypt* libtool-ltdl-devel* make cmake
+yum install bison
+mkdir -p /usr/local/mysql5.6.10
+mkdir -p /data/mysql
+cd /data
+groupadd mysql
+useradd -r -g mysql mysql
+ln -s /usr/local/mysql5.6.10 /usr/local/mysql
+cd mysql-5.6.10
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mysql5.6.10 -DMYSQL_UNIX_ADDR=/tmp/mysql.sock-DDEFAULT_CHARSET=utf8 -DDEFAULT_COLLATION=utf8_general_ci -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_ARCHIVE_STORAGE_ENGINE=1 -DWITH_BLACKHOLE_STORAGE_ENGINE=1 -DWITH_MEMORY_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_READLINE=1 -DENABLED_LOCAL_INFILE=1 -DMYSQL_DATADIR=/data/mysql -DMYSQL_USER=mysql -DMYSQL_TCP_PORT=3306
+make install
+chown -R mysql:mysql /usr/local/mysql5.6.10
+chown -R mysql:mysql /data/mysql
+cd /usr/local/mysql5.6.10/support-files
+cp mysql.server /etc/init.d/mysqld
+cd /usr/local/mysql5.6.10/scripts/
+./mysql_install_db --user=mysql --basedir=/usr/local/mysql5.6.10 --datadir=/data/mysql
+
+ 
