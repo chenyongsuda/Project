@@ -36,3 +36,34 @@ cluster模式一般都是开发完成后,直接用来执行用的,不适用于�
 
 关于SparkContext
 其实SparkContext这个类,每个位置可以传的参数,是和shell命令行对应的,注意到了这一点,看看文档就知道每个参数可以接受什么样的值了.具体内容可以看spark官方文档.
+
+==============================================================
+jupyter book 第一个例子
+import findspark
+findspark.init()
+
+from contextlib import contextmanager
+from pyspark import SparkContext
+from pyspark import SparkConf
+
+SPARK_MASTER='local'
+SPARK_APP_NAME='Word Count'
+SPARK_EXECUTOR_MEMORY='200m'
+
+@contextmanager
+def spark_manager():
+    conf = SparkConf().setMaster(SPARK_MASTER) \
+                      .setAppName(SPARK_APP_NAME) 
+    spark_context = SparkContext(conf=conf)
+
+    try:
+        yield spark_context
+    finally:
+        spark_context.stop()
+
+with spark_manager() as context:
+    File = "file:///C:/666.csv"  # Should be some file on your system
+    textFileRDD = context.textFile(File)
+    wordCounts = textFileRDD.flatMap(lambda line: line.split()).map(lambda word: (word, 1)).reduceByKey(lambda a, b: a+b)
+    wordCounts.saveAsTextFile("output")
+print("WordCount - Done")
