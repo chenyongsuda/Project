@@ -67,3 +67,15 @@ with spark_manager() as context:
     wordCounts = textFileRDD.flatMap(lambda line: line.split()).map(lambda word: (word, 1)).reduceByKey(lambda a, b: a+b)
     wordCounts.saveAsTextFile("output")
 print("WordCount - Done")
+
+================================================================================================
+VSCode编写 Python 支持 Jupyter notebook 了！
+过去，想要在 VSCode 中运行 Jupyter notebook 需要安装一个 Neuron 扩展，我也装过，感觉很强大、很方便。
+
+就在不久前，VSCode 中 Python 扩展 的最新版本加入了对 Jupyter notebook 的支持，可以直接在 VSCode 的交互界面进行和 Jupyter notebook 中一样的操作。
+在代码前加上 #%%，软件一旦检测到，就会在其上显示 Run cell，点击后就可以像 Jupyter notebook 一样运行一段代码。使用 #%% [markdown] 就可以编写 Markdown 文本了。
+直接打开一个 Jupyter notebook 文件时，还可以将它导入为 Python 代码格式。
+
+导入之后，就会显示 Jupyter notebook 中对应的 Python 代码或者 Markdown 文本。
+在右侧的交互界面中，还可以进行“撤销”、“重启 iPython Kernel”、“导出为 Jupyter notebook” 等操作。
+直接运行 Jupyter notebook 这个更新可以说是很优秀了，为机器学习、数据分析等领域创造了很大的方便，赶紧更新 VSCode 和 Python 扩展来感受一下吧！
