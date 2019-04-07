@@ -159,3 +159,8 @@ source activate py3 # 激活py3环境
 conda install ipykernel # 安装ipykernel模块
 python -m ipykernel install --user --name py3 --display-name "py3" # 进行配置
 jupyter notebook # 启动jupyter notebook，然后在"新建"中就会有py3这个kernel了 
+========================================================================================================
+如果VSCode不认识 from pyspark
+增加环境变量export PYTHONPATH=$SPARK_HOME/python/:$PYTHONPATH
+window类似加入就好了
+
