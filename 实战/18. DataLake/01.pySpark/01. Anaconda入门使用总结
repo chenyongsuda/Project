@@ -146,3 +146,16 @@ Anaconda具有跨平台、包管理、环境管理的特点，因此很适合快
 
 配置文件位置 
 C:\Users\用户名.jupyter\jupyter_notebook_config.py
+
+================================================================================================
+jupyter notebook添加Anaconda虚拟环境的python kernel
+之前在自己博客上写了一个如何通过自建配置文件，让jupyter notebook可以调用conda虚拟环境的python解释器。
+今天介绍一种更加简单的方式，无需手动配置文件，利用ipykernel可以自动生成对应的配置文件，然后直接启动jupyter notebook即可，而且只需要在第一次使用的时候进行生成，之后可以直接使用。
+
+例如，现在想创建一个虚拟环境名为py3，希望在jupyter notebook中可以直接选择py3这个kernel。命令如下
+
+conda create -n py3 python=3 # 创建一个python3的环境，名为py3
+source activate py3 # 激活py3环境
+conda install ipykernel # 安装ipykernel模块
+python -m ipykernel install --user --name py3 --display-name "py3" # 进行配置
+jupyter notebook # 启动jupyter notebook，然后在"新建"中就会有py3这个kernel了 
