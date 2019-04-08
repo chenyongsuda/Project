@@ -15,6 +15,12 @@ dataDataFrame = spark.createDataFrame(datardd)
 # 比如数据[['cat','cat','cat']] 转换为DF后将变成
 #  _1      _2      _3
   'cat'   'cat'   'cat'
+  
+带schemal的操作
+from pyspark.sql.functions import lit
+df = sqlContext.createDataFrame(
+    [(1, "a", 23.0), (3, "B", -23.0)], ("x1", "x2", "x3"))
+
 ======================================== 
 
 Pair RDD已经被一定程度的格式化了，它的每个元素会具有key，但是value仍然具有很大的灵活性。DataFrame是一种完全格式化的数据集合，和数据库中的表的概念比较接近，它每列数据必须具有相同的数据类型。也正是由于DataFrame知道数据集合所有的类型信息，DataFrame可以进行列处理优化而获得比RDD更优的性能。 
