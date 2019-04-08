@@ -164,3 +164,39 @@ jupyter notebook # 启动jupyter notebook，然后在"新建"中就会有py3这�
 增加环境变量export PYTHONPATH=$SPARK_HOME/python/:$PYTHONPATH
 window类似加入就好了
 
+=========================================================================================================
+jupyter notebook 代码例子
+#%%
+import findspark
+findspark.init()
+from contextlib import contextmanager
+from pyspark import SparkContext
+from pyspark import SparkConf
+
+SPARK_MASTER='local'
+SPARK_APP_NAME='Word Count'
+SPARK_EXECUTOR_MEMORY='200m'
+
+@contextmanager
+def spark_manager():
+    conf = SparkConf().setMaster(SPARK_MASTER) \
+                      .setAppName(SPARK_APP_NAME) 
+    spark_context = SparkContext(conf=conf)
+
+    try:
+        yield spark_context
+    finally:
+        spark_context.stop()
+
+with spark_manager() as context:
+    File = "file:///C:/666.csv"  # Should be some file on your system
+    textFileRDD = context.textFile(File)
+    wordCounts = textFileRDD.flatMap(lambda line: line.split()).map(lambda word: (word, 1)).reduceByKey(lambda a, b: a+b)
+    wordCounts.saveAsTextFile("output")
+print("WordCount - Done")
+
+#%%
+print("222")
+
+
+
