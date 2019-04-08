@@ -1,0 +1,60 @@
+1. with as
+with as 也叫做子查询部分，首先定义一个sql片段，该sql片段会被整个sql语句所用到，为了让sql语句的可读性更高些，作为提供数据的部分，也常常用在union等集合操作中。
+with as就类似于一个视图或临时表，可以用来存储一部分的sql语句作为别名，不同的是with as 属于一次性的，而且必须要和其他sql一起使用才可以！
+其最大的好处就是适当的提高代码可读性，而且如果with子句在后面要多次使用到，这可以大大的简化SQL；更重要的是：一次分析，多次使用，这也是为什么会提供性能的地方，达到了“少读”的目标。
+
+          1.使用
+            WITH t1 AS (
+                    SELECT *
+                    FROM carinfo
+                ), 
+                t2 AS (
+                    SELECT *
+                    FROM car_blacklist
+                )
+            SELECT *
+            FROM t1, t2
+
+          2.如果定义了with子句，但其后没有跟select查询，则会报错！
+          以下写法会报错：
+
+          with t1 as (select * from carinfo)
+          正确写法（没有使用 t1没关系，其后有select就行）：
+
+          with t1 as (select * from carinfo)
+          select * from carinfo
+          1
+          2
+          3.前面的with子句定义的查询在后面的with子句中可以使用。但是一个with子句内部不能嵌套with子句！
+
+          正确写法：
+
+          with t1 as (select * from carinfo),
+          t2 as (select t1.id from t1)
+          select * from t2
+
+
+2.with as 使用
+公用表表达式（CTE）是从WITH子句中指定的简单查询派生的临时结果集（会把查询的表数据放到内存中，供其他查询随时使用），
+该子句紧跟在SELECT或INSERT关键字之前。CTE仅在单个语句的执行范围内定义。
+可以在Hive SELECT，INSERT，  CREATE TABLE AS SELECT或CREATE VIEW AS SELECT语句中使用一个或多个CTE 。
+在SELECT或INSERT关键字之前使用：
+     在select之前使用
+      with q1 as ( select key from q2 where key = '5'),
+          q2 as ( select key from src where key = '5')
+          select * from (select key from q1) a;
+     在Insert之后使用
+          with q1 as ( select key, value from src where key = '5')
+          insert overwrite table s1
+          select * from q1;
+     
+REATE TABLE AS SELECT或CREATE VIEW AS SELECT语句之后
+     在CREATE TABLE AS 之后使用
+      create table s2 as
+      with q1 as ( select key from src where key = '4')
+      select * from q1;
+      
+      在CREATE VIEW AS之后使用
+      create view v1 as
+      with q1 as ( select key from src where key = '5')
+      select * from q1;
