@@ -15,7 +15,33 @@ dataDataFrame = spark.createDataFrame(datardd)
 # 比如数据[['cat','cat','cat']] 转换为DF后将变成
 #  _1      _2      _3
   'cat'   'cat'   'cat'
-========================================  
+======================================== 
+
+Pair RDD已经被一定程度的格式化了，它的每个元素会具有key，但是value仍然具有很大的灵活性。DataFrame是一种完全格式化的数据集合，和数据库中的表的概念比较接近，它每列数据必须具有相同的数据类型。也正是由于DataFrame知道数据集合所有的类型信息，DataFrame可以进行列处理优化而获得比RDD更优的性能。 
+在内部实现上，DataFrame是由Row对象为元素组成的集合，每个Row对象存储DataFrame的一行，Row对象中记录每个域=>值的映射，因而Row可以被看做是一个结构体类型。可以通过创建多个tuple/list、dict、Row然后构建DataFrame。 
+注：用dict构建DataFrame已经废弃了，推荐用Row。
+
+# 创建list的list
+lists = [['a', 1], ['b', 2]]
+# 构建具有默认生成的列_1、_2的DataFrame
+dataframe = spark.createDataFrame(lists)
+
+# 创建dict的list
+dicts = [{'col1':'a', 'col2':1}, {'col1':'b', 'col2':2}]
+# 构建具有列col1、col2的DataFrame
+dataframe = spark.createDataFrame(dicts)
+
+# 创建Row的list
+rows = [Row(col1='a', col2=1), Row(col1='b', col2=2)]
+# 构建具有列col1、col2的DataFrame
+dataframe = spark.createDataFrame(rows)
+
+虽然DataFrame被完全格式化了，但是其中每列可以存储的类型仍然是非常丰富的，包括基本的数据类型、list、tuple、dict和Row，这也就意味着所有的复杂数据类型都可以相互嵌套，从而解除了完全格式化的限制。例如，你可以在一列中存储list类型，而每行list按需存储不定长的数据。 
+那么，RDD和DataFrame还有哪些使用上的区别呢？
+
+RDD：没有列名称，只能使用数字来索引；具有map()、reduce()等方法并可指定任意函数进行计算;
+DataFrame：一定有列名称（即使是默认生成的），可以通过.col_name或者['col_name']来索引列；具有表的相关操作（例如select()、filter()、where()、join），但是没有map()、reduce()等方法。
+
 什么样的RDD可以转换为DataFrame？ 
 RDD灵活性很大，并不是所有RDD都能转换为DataFrame，而那些每个元素具有一定相似格式的时候才可以。
 
@@ -69,7 +95,7 @@ from pyspark import SparkConf
 
 conf = SparkConf().setMaster("local").setAppName("Test App") 
 ss = SparkSession.builder.config(conf=conf).getOrCreate()
-#RDD 读取
+==============#RDD 读取
 sc = ss.sparkContext
 rdd = sc.textFile("file:///C:/Users/CHNHO02796/Downloads/prince.txt")
 res_rdd = rdd.flatMap(lambda x : x.split())\
@@ -79,7 +105,7 @@ res_rdd = rdd.flatMap(lambda x : x.split())\
 for item in res_rdd.collect():
     print(item)
     
-# DataFrame 读取     
+===============# DataFrame 读取     
 # # df_raw = ss.read.text("file:///C:/666.csv")
 # df_raw = ss.read.text("file:///C:/Users/CHNHO02796/Downloads/prince.txt")
 # input_rdd = df_raw.rdd
@@ -90,5 +116,15 @@ for item in res_rdd.collect():
 # for item in res_rdd.collect():
 #     print(item)
 
+================# 排序
+res_rdd = rdd.flatMap(lambda x : x.split())\
+    .map(lambda x: (x,1))\
+    .filter(lambda x : x)\
+    .reduceByKey(lambda x,y:x+y)\
+    .map(lambda x : (x[1], x[0]))\
+    .sortByKey(ascending=False)
+for item in res_rdd.collect():
+    print(item)
+    
 
 
