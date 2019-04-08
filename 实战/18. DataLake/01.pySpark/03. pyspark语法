@@ -1,0 +1,94 @@
+1. 创建RDD的方式有两种
+1 读取一个数据集(SparkContext.textFile()) : lines = sc.textFile("README.md")
+2 读取一个集合(SparkContext.parallelize()) : lines = sc.paralelize(List("pandas","i like pandas"))
+
+2. 读取DF
+conf = SparkConf().setMaster("local").setAppName("Test App") 
+ss = SparkSession.builder.config(conf=conf).getOrCreate()
+df_raw = ss.read.text("file:///C:/666.csv")
+
+3. DF和RDD转化
+datardd = dataDataframe.rdd
+
+rdd转换成dataframe：
+dataDataFrame = spark.createDataFrame(datardd)
+# 比如数据[['cat','cat','cat']] 转换为DF后将变成
+#  _1      _2      _3
+  'cat'   'cat'   'cat'
+========================================  
+什么样的RDD可以转换为DataFrame？ 
+RDD灵活性很大，并不是所有RDD都能转换为DataFrame，而那些每个元素具有一定相似格式的时候才可以。
+
+为什么RDD需要转换为DataFrame？ 
+当RDD进行类似表的相应操作时，都需要指定相应的函数，转换为DataFrame书写更简单，并且执行效率高。
+
+怎么样将RDD转换为DataFrame？ 
+就像之前的例子一样，可以利用
+
+dataframe = spark.createDataFrame(rdd, schema=None, samplingRatio=None)
+来将RDD转换为DataFrame，其中的参数设置需要注意： 
+schema：DataFrame各列类型信息，在提前知道RDD所有类型信息时设定。例如
+
+schema = StructType([StructField('col1', StringType()),
+         StructField('col2', IntegerType())])
+samplingRatio：推测各列类型信息的采样比例，在未知RDD所有类型信息时，spark需要根据一定的数据量进行类型推测；默认情况下，spark会抽取前100的RDD进行推测，之后在真正将RDD转换为DataFrame时如果遇到类型信息不符会报错 Some of types cannot be determined by the first 100 rows, please try again with sampling 。同理采样比例较低，推测类型信息也可能错误。
+
+==========================================
+DataFrame转换为RDD
+有时候DataFrame的表相关操作不能处理一些问题，例如需要对一些数据利用指定的函数进行计算时，就需要将DataFrame转换为RDD。DataFrame可以直接利用.rdd获取对应的RDD对象，此RDD对象的每个元素使用Row对象来表示，每列值会成为Row对象的一个域=>值映射。例如
+
+dataframe = spark.createDataFrame([Row(col1='a', col2=1), Row(col1='b', col2=2)])
+>>> 
++----+----+
+|col1|col2|
++----+----+
+|   a|   1|
+|   b|   2|
++----+----+
+
+rdd = dataframe.rdd
+>>> [Row(col1=u'a', col2=1), Row(col1=u'b', col2=2)]
+DataFrame转化后的RDD如果需要和一般形式的RDD进行操作（例如join），还需要做索引将数值从Row中取出，比如转化为Pair RDD可以这样操作
+
+rdd = rdd.map(lambda x: [x[0], x[1:]])
+>>> [[u'a', (1,)], [u'b', (2,)]]
+1
+2
+注意：DataFrame转化的RDD可能包含Row(col1='a')，它和'a'是不同的对象，所以如果与一般的RDD进行join，还需要索引Row取出数值。
+
+
+
+=================================================================================
+Sample
+#%%
+import findspark
+findspark.init()
+
+from pyspark.sql import SparkSession
+from pyspark import SparkConf
+
+conf = SparkConf().setMaster("local").setAppName("Test App") 
+ss = SparkSession.builder.config(conf=conf).getOrCreate()
+#RDD 读取
+sc = ss.sparkContext
+rdd = sc.textFile("file:///C:/Users/CHNHO02796/Downloads/prince.txt")
+res_rdd = rdd.flatMap(lambda x : x.split())\
+    .map(lambda x: (x,1))\
+    .reduceByKey(lambda x,y:x+y)
+
+for item in res_rdd.collect():
+    print(item)
+    
+# DataFrame 读取     
+# # df_raw = ss.read.text("file:///C:/666.csv")
+# df_raw = ss.read.text("file:///C:/Users/CHNHO02796/Downloads/prince.txt")
+# input_rdd = df_raw.rdd
+# res_rdd = input_rdd.flatMap(lambda x : x["value"].split())\
+#     .map(lambda x: (x,1))\
+#     .reduceByKey(lambda x,y:x+y)
+
+# for item in res_rdd.collect():
+#     print(item)
+
+
+
