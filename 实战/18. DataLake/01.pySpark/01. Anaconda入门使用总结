@@ -164,6 +164,26 @@ jupyter notebook # 启动jupyter notebook，然后在"新建"中就会有py3这�
 增加环境变量export PYTHONPATH=$SPARK_HOME/python/:$PYTHONPATH
 window类似加入就好了
 
+
+下载spark-2.2.0-bin-hadoop2.7后进入python文件夹
+在python文件夹下有pyspark和pyspark.egg-info文件夹，将这两个文件夹放入anaconda所在的文件夹下
+我的目录是C:\ProgramData\Anaconda3\Lib\site-packages，放入该文件夹下即可
+然后打开pycharm后，在 file ----》  default setting ---》 project interpreter 中指定好anaconda的python解释器
+然后写入写入代码
+from pyspark.sql import SparkSession
+问题出现：会报     No module named 'pyspark.sql'; 'pyspark' is not a package  找不到这个包
+出现这个问题有各种解法：看https://stackoverflow.com/questions/42030183/jupyter-pyspark-no-module-named-pyspark
+其中有个最简单的方法，我说的是windows环境下的
+解决方法：
+1  cmd  ----》  pip  install  findspark  
+2  代码中写
+
+import findspark
+findspark.init('/path_to_spark/spark-x.x.x-bin-hadoopx.x')
+from pyspark.sql import SparkSession
+就可以了
+
+
 =========================================================================================================
 jupyter notebook 代码例子
 #%%
@@ -197,6 +217,3 @@ print("WordCount - Done")
 
 #%%
 print("222")
-
-
-
