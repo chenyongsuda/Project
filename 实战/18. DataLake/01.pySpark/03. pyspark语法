@@ -132,5 +132,20 @@ res_rdd = rdd.flatMap(lambda x : x.split())\
 for item in res_rdd.collect():
     print(item)
     
+==================#通过dataframe的SQL来解决计数问题
+sc = ss.sparkContext
+rdd = sc.textFile("file:///C:/Users/CHNHO02796/Downloads/prince.txt")
+res_rdd = rdd.flatMap(lambda x : x.split())\
+    .map(lambda x: (x,1))\
+    .filter(lambda x : x)\
+    .reduceByKey(lambda x,y:x+y)
+    
+df_use = ss.createDataFrame(res_rdd,("item","count"))
+df_use.createOrReplaceTempView("items")
+
+sql_df = ss.sql("select item,sum(count) as sum from items group by item order by sum desc")
+sql_df.collect()
+
+
 
 
