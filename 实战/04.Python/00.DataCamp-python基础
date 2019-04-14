@@ -76,6 +76,81 @@ print(np.column_stack((np01,np02)))
  [2 8]
  [3 9]]
 
+------------------------------------------------------------------------
+python 制图
+
+可以参考
+链接：https://www.jianshu.com/p/fe4eaa20a230
+
+import matplotlib.pyplot as plt
+plt.plot(x,y)
+plt.show()
+-------------------------------------------------制作基本线图
+plt.scatter()
+制作散点图,没有线连接
+
+plt.xscale('log')  # 对x轴采用对数刻度
+
+设置XLable YLabel 和Title
+plt.xlabel('人均GDP（美元）') 
+plt.ylabel('人均寿命（年）')   
+plt.title('各国健康和经济水平关系（2015）') 
+
+plt.plot(df.gdp, df.life, 'g.')  # 'g.' 表示用绿色的点绘制
+plt.plot(df.gdp, df.life, 'r+')   # "r" 表示红色 "+"表示用+号来绘图
+
+x坐标的数字一般自动可以重置坐标
+设置轴刻度的显示形式
+tick_val = [1000,10000,100000]
+tick_lab = ['1k','10k','100k']
+plt.xticks(tick_val, tick_lab)  # 重置x坐标刻度
+
+设置各个数据点的大小，与人口数成正比
+size = df.popu / 1e6 * 2  # 数据点大小，正比于人口数
+plt.scatter(x=df.gdp, y=df.life, s=size)  # 参数s设置点的大小
+plt.xscale('log')
+plt.xlabel('人均GDP（美元）')
+plt.ylabel('人均寿命（年）')
+plt.title('全球健康和收入水平关系（2015）')
+tick_val = [1000,10000,100000]
+tick_lab = ['1k','10k','100k']
+plt.xticks(tick_val, tick_lab)
+plt.show()
+
+赋予不同州的国家不同的颜色
+# 新建一个字典来存取各洲对应的颜色.
+map_dict = {      
+    'Asia':'red',
+    'Europe':'green',
+    'Africa':'blue',
+    'North America':'yellow',
+    'South America':'yellow',
+    'Oceania':'black'
+}
+colors = df.continent.map(map_dict)   # 将国家按所在州对于不同的颜色
+size = df.popu / 1e6 * 2
+plt.scatter(x=df.gdp, y=df.life, s=size, c=colors, alpha=0.5)  # 参数c设置颜色，alpha设置透明度
+plt.xscale('log')
+plt.xlabel('人均GDP（美元）')
+plt.ylabel('人均寿命（年）')
+plt.title('全球健康和收入水平关系（2015）')
+tick_val = [1000,10000,100000]
+tick_lab = ['1k','10k','100k']
+plt.xticks(tick_val, tick_lab)
+plt.show()
+
+添加文本和网格
+plt.text(1550, 73, 'India')   # 在图中添加文本
+plt.text(5700, 81, 'China')
+plt.grid(True)  # 添加网格
+
+
+
+--------------------------------------------------制作直方图
+Histogram
+
+
+
 
 
 
