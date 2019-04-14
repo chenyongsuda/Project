@@ -148,6 +148,22 @@ plt.grid(True)  # 添加网格
 
 --------------------------------------------------制作直方图
 Histogram
+直方图Y轴多数为数量
+
+plt.hist(array)
+
+cla()   # Clear axis即清除当前图形中的当前活动轴。其他轴不受影响。
+clf()   # Clear figure清除所有轴，但是窗口打开，这样它可以被重复使用。
+close() # Close a figure window
+
+--------------------------------------------------柱状图
+plt.bar(array-x,array-y)
+
+
+--------------------------------------------------饼图
+plt.pie(conti_count, labels=conti, autopct='%1.1f%%')  # autopct 显示占比
+plt.axis('equal')  # 调整坐标轴的比例
+plt.show()
 
 
 
@@ -157,4 +173,7 @@ Histogram
 
 
 
+
+--------------------------------------------------------------
+Pandas
 
