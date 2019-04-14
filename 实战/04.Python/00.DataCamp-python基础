@@ -166,14 +166,51 @@ plt.axis('equal')  # 调整坐标轴的比例
 plt.show()
 
 
+--------------------------------------------------
+map
+
+map的keys方法 导出所有keys
+map的values方法 导出所有的values
+
+map增加变量 直接  map[xxx] = xxx
+判断在不在map中   xxx in map
+删除              del map[xxx]
 
 
+----------------------------------------------------
+PANDAS 部分
+
+pandas的表包含 x title  y title  和内容
+x title 可以通过对象.index = xxxxx 赋值
+
+可以通过多个map初始化 每个key为column title
+
+读取csv文件
+cars = pd.read_csv('cars.csv',index_col = 0)
+
+     cars_per_cap        country  drives_right
+US            809  United States          True
+AUS           731      Australia         False
+JAP           588          Japan         False
+IN             18          India         False
+RU            200         Russia          True
+MOR            70        Morocco          True
+EG             45          Egypt          True
+
+访问columns使用
+dataframe['xxx']    结果是serious
+dataframe[['xxx']]  结果是df
+dataframe[['xxx','yyy']]  结果是df
+
+访问行
+dataframe[slice]只能用slice不能用存数字
 
 
+还有两种访问方式loc基于title text 或者 iloc基于interge
+loc[]
+或者
+loc[[行,行,行],[列,列,列]]
+loc[:,[xx,xx,xx]]
 
 
-
-
---------------------------------------------------------------
-Pandas
 
