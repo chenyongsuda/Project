@@ -27,6 +27,56 @@ arr1 > 17
 arr1[arr1 > 18] --------->numpy的子元素功能,提供bool数组给numpy数组拿到子元素
 [18]
 
+维度API
+array.ndarray
+
+形状
+np.sharp
+
+访问多维数组
+array[x][y] 等价于array[x,y]
+array[x,y] 可以比较灵活的 比如 array[:,1:3] array[1,:]
+
+np_mat = np.array([[1, 2],
+                   [3, 4],
+                   [5, 6]])
+print(np_mat + np.array([10, 10]))
+
+[[11 12]
+ [13 14]
+ [15 16]]
+ 
+np的加减乘除,如果两边的维度不一致的话,低纬度会自动扩展为相同纬度进行计算.
+
+np的计算
+np.mean
+np.media 
+np.std 标准差
+
+
+模拟值生成
+numpy.random.normal(loc=0.0, scale=1.0, size=None)
+1参数的意义为：
+
+loc：float
+    此概率分布的均值（对应着整个分布的中心centre）
+scale：float
+    此概率分布的标准差（对应于分布的宽度，scale越大越矮胖，scale越小，越瘦高）
+size：int or tuple of ints
+    输出的shape，默认为None，只输出一个值
+
+sample
+np.round(numpy.random.normal(xx,xx,xx),2)
+
+Column 合并
+np01 = [1,2,3]
+np02 = [7,8,9]
+print(np.column_stack((np01,np02)))
+[[1 7]
+ [2 8]
+ [3 9]]
+
+
 
 
 
