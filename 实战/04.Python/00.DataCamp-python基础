@@ -1,0 +1,35 @@
+1. string方法     index,count
+2. List方法       list + list   list.reverse
+
+---------------------package
+import numpy
+numpy.array
+
+可以这样用
+from numpy import array
+array 直接用array
+
+复杂的还可以这样引入
+from scipy.linalg import inv as my_inv
+
+
+---------------------numpy
+numpy为了支持list等的+ - * / 的方法,原生的语言不支持.
+
+普通的list + list 是合并
+np的array + array 是每个元素相加
+np 的array > number 产生一个 bool数组,每个元素和number对比产生的bool值.
+
+sample: arr1 = [12,13,14,15,16,17,18]
+arr1 > 17
+[False,False,False,False,False,False,True]
+
+arr1[arr1 > 18] --------->numpy的子元素功能,提供bool数组给numpy数组拿到子元素
+[18]
+
+
+
+
+
+
+
