@@ -212,5 +212,15 @@ loc[]
 loc[[行,行,行],[列,列,列]]
 loc[:,[xx,xx,xx]]
 
+==========================================
+python类型比较
+int 可以和int比较
+str 可以和str比较
+int 不能和str比较
+
+boolean操作符
+and or not
+
+
 
 
