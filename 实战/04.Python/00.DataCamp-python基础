@@ -234,6 +234,7 @@ pandas 迭代
 for lab,row in df.iterrows():
 
 增加一列数据 笨办法
+
 # Code for loop that adds COUNTRY column
 for rlab, row in cars.iterrows():
     cars.loc[rlab,"COUNTRY"] = row["country"].upper()
@@ -241,6 +242,13 @@ for rlab, row in cars.iterrows():
 高效的办法
 cars["COUNTRY"] = cars["country"].apply(str.upper)
 print(cars)
+
+矩阵转置
+np_aw_t = np.transpose(np.array(all_walks))
+plt.plot(np_aw_t)
+plt.show()
+
+np.mean(ends > 30)
 
 
 
