@@ -222,5 +222,25 @@ boolean操作符
 and or not
 
 
+===========================================
+遍历map
+for key,value in map.items():
+
+numpy多维数组遍历
+for val in np.nditer(array):
+  一层一层数组遍历
+
+pandas 迭代
+for lab,row in df.iterrows():
+
+增加一列数据 笨办法
+# Code for loop that adds COUNTRY column
+for rlab, row in cars.iterrows():
+    cars.loc[rlab,"COUNTRY"] = row["country"].upper()
+    
+高效的办法
+cars["COUNTRY"] = cars["country"].apply(str.upper)
+print(cars)
+
 
 
