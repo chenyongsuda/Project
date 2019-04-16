@@ -270,6 +270,30 @@ nolocal 使用外层变量
 
 for key,val in kvargs.items()
 
+--------------------------------------------------
+可迭代对象
+创建iter
+it = iter(item)
+通过next(it)拿到值
+
+或者通过*it拿到所有的值一次性迭代所有对象
+
+sum函数里面是可迭代对象
+
+enumrate可在任何可迭代对象上
+
+zip后的对象也是可迭代对象
+for x,y in zip(xx,xx)
+
+LIST(zip/enumrate) 构造List对象
+zip/enumrate也可以直接迭代
+
+unzip使用如下所示
+result1, result2 = zip(*z1)
+
+
+
+
 
 
 
