@@ -180,6 +180,7 @@ map增加变量 直接  map[xxx] = xxx
 ----------------------------------------------------
 PANDAS 部分
 
+df.columns 表示列的表头
 pandas的表包含 x title  y title  和内容
 x title 可以通过对象.index = xxxxx 赋值
 
