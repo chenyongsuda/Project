@@ -250,5 +250,26 @@ plt.show()
 
 np.mean(ends > 30)
 
+-----------------------------------------------------------
+python 方法
+方法参数1+
+返回值1+ 多个返回值用tuple表示
+
+
+查看内置函数
+import builtins
+dir(builtins)
+
+global 使用修改全局变量,如果不修改也可以不要用.
+nolocal 使用外层变量
+
+参数固定参数
+不固定参数使用*args
+不固定keyval参数 **kvargs
+
+for key,val in kvargs.items()
+
+
+
 
 
