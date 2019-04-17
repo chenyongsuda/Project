@@ -301,6 +301,8 @@ a.tail(6)表示显示后6行数据，若tail()中不带参数则也会显示全�
 a.index ; a.columns ; a.values 即可
 
 
+dataframe append dataframe
+data = data.append(df_pop_ceb)
 
 
 
