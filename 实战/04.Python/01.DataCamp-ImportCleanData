@@ -1,0 +1,73 @@
+1.导入平面文件
+ # Load file as array from numpy: digits
+      digits = np.loadtxt(file, delimiter=',')
+      data = np.loadtxt(file, delimiter=',', skiprows=1, usecols=[0,2])
+      data_float = np.loadtxt(file, delimiter='\t', dtype=float, skiprows=1)
+      从文本推测类型使用dtype=None
+      data = np.genfromtxt('titanic.csv', delimiter=',', names=True, dtype=None)
+      data is an object called a structured array
+      注意numpy都是类型array([])
+      Accessing rows and columns of structured arrays is super-intuitive: to get the ith row, 
+      merely execute data[i] and to get the column with name 'Fare', execute data['Fare']
+      
+      d = np.recfromcsv('titanic.csv')
+      using the function np.recfromcsv() and assign it to the variable, d. 
+      You'll only need to pass file to it because it has the defaults delimiter=',' and names=True in addition to dtype=None!
+ 
+ #Load File From Pandas(Best Pratice in Data Anaslsy)
+      #Load Excel
+          df = pd.read_csv(file)
+          df.values =======>convert to numpy
+
+          # Read the first 5 rows of the file into a DataFrame: data
+          data = pd.read_csv(file,nrows=5,header=None)
+
+          takes characters that comments occur after in the file, which in this case is '#'. na_values takes a list of strings to recognize as NA/NaN, in this case the string 'Nothing'.
+          data = pd.read_csv(file, sep='\t', comment='#', na_values=['Nothing'])
+      
+      #Load Excel
+          # Load spreadsheet: xl
+          xl = pd.ExcelFile(file)
+          # Print sheet names
+          print(xl.sheet_names)
+          
+          # Load a sheet into a DataFrame by name: df1
+          df1 = xl.parse('2004')
+          
+          # Parse the first column of the second sheet and rename the column: df2
+          # 只导出一个列,并且给这个列取名Country
+          df2 = xl.parse(1, parse_cols=[0], skiprows=[0], names=['Country'])
+          
+      #Importing SAS/Stata files using pandas
+          # Import sas7bdat package
+          from sas7bdat import SAS7BDAT
+
+          # Save file to a DataFrame: df_sas
+          with SAS7BDAT('sales.sas7bdat') as file:
+              df_sas = file.to_data_frame()
+          
+          #读取分析文件
+          df = pd.read_stata('disarea.dta')
+          
+      #读取HDF5
+          import numpy as np
+          import h5py
+          # Assign filename: file
+          # Load file: data
+          data = h5py.File('LIGO_data.hdf5', 'r')
+          # Print the datatype of the loaded file
+          print(type(data))
+          # Print the keys of the file
+          for key in data.keys():
+              print(key)
+
+
+       #Importing MATLAB files
+          # Import package
+          import scipy.io
+          # Load MATLAB file: mat
+          mat = scipy.io.loadmat('albeck_gene_expression.mat')
+          # Print the datatype type of mat
+          print(type(mat))
+
+        
