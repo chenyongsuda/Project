@@ -69,5 +69,38 @@
           mat = scipy.io.loadmat('albeck_gene_expression.mat')
           # Print the datatype type of mat
           print(type(mat))
-
+  
+       #连接数据库文件
+          # Import necessary module
+          from sqlalchemy import create_engine
+          # Create engine: engine
+          engine = create_engine('sqlite:///Chinook.sqlite')
+          Save the table names to a list: table_names
+          table_names = engine.table_names()
+          # Print the table names to the shell
+          print(table_names)
+          
+          #查询数据
+          # Open engine in context manager
+          engine = create_engine('sqlite:///Chinook.sqlite')
+          # Perform query and save results to DataFrame: df
+          with engine.connect() as con:
+              rs = con.execute("SELECT LastName, Title FROM Employee")
+              df = pd.DataFrame(rs.fetchmany(size=3))
+              df.columns = rs.keys()
+          # Print the length of the DataFrame df
+          print(len(df))
+          # Print the head of the DataFrame df
+          print(df.head())
         
+          #简单的读取数据库数据到pandas
+          # Create engine: engine
+          engine = create_engine('sqlite:///Chinook.sqlite')
+          # Execute query and store records in DataFrame: df
+          df = pd.read_sql_query('SELECT * FROM Album', engine)
+          # Print head of DataFrame
+          print(df.head())
+        
+          
+          
+          
