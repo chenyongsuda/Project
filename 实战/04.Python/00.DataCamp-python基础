@@ -292,6 +292,13 @@ unzip使用如下所示
 result1, result2 = zip(*z1)
 
 
+1.查看DataFrame前xx行或后xx行
+a=DataFrame(data);
+a.head(6)表示显示前6行数据，若head()中不带参数则会显示全部数据。
+a.tail(6)表示显示后6行数据，若tail()中不带参数则也会显示全部数据。
+
+2.查看DataFrame的index，columns以及values
+a.index ; a.columns ; a.values 即可
 
 
 
