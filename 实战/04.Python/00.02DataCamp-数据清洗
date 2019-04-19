@@ -9,5 +9,31 @@
 df.columns 看出columns的一些情况
 df.shape() 看出一共多少数据
 df.info() 看一看出各列非none多少行等信息
+df.xxx.value_counts(dropna=False) 判断某列值的评率
+df.discribe() 查看数值型类的均值最大最小等信息
 
-
+3.统计数据可视化
+比如直方图
+      df.xxxxxx.plot('hist')
+      import matplotlib.pyplot as plt
+      plt.show()
+      这样直接看图中的异常值.
+      通过df[df.xxxxxx > xxxxx]来浏览数据
+      
+比如箱线图可以看出异常点和25,50,75,100范围值
+      Histograms are great ways of visualizing single variables. To visualize multiple variables, boxplots are useful, 
+      especially when one of the variables is categorical.
+      # Create the boxplot
+      df.boxplot(column='initial_cost', by='Borough', rot=90)
+      
+ 点图比较适合两个比较
+      Boxplots are great when you have a numeric column that you want to compare across different categories. When you want to visualize two numeric columns, scatter plots are ideal.
+      # Import necessary modules
+      import pandas as pd
+      import matplotlib.pyplot as plt
+      # Create and display the first scatter plot
+      df.plot(kind='scatter', x='initial_cost', y='total_est_fee', rot=70)
+      plt.show()
+      # Create and display the second scatter plot
+      df_subset.plot(kind='scatter', x='initial_cost', y='total_est_fee', rot=70)
+      plt.show()
