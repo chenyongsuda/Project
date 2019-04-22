@@ -66,4 +66,9 @@ df.discribe() 查看数值型类的均值最大最小等信息
     # The melted DataFrame airquality_melt has been pre-loaded for you.
     airquality_pivot = airquality_melt.pivot_table(index=['Month', 'Day'], columns='measurement', values='reading')
     
-    
+    pivot后Index会变成复合Index
+    #There's a very simple method you can use to get back the original DataFrame from the pivoted DataFrame:
+    .reset_index(). Dan didn't show you how to use this method in the video, 
+    but you're now going to practice using it in this exercise to get back the original DataFrame from airquality_pivot,
+    which has been pre-loaded.
+    airquality_pivot_reset = airquality_pivot.reset_index()
