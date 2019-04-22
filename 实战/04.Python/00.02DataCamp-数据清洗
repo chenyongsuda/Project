@@ -74,3 +74,10 @@ df.discribe() 查看数值型类的均值最大最小等信息
     but you're now going to practice using it in this exercise to get back the original DataFrame from airquality_pivot,
     which has been pre-loaded.
     airquality_pivot_reset = airquality_pivot.reset_index()
+    
+    pivot后如果数据有多条的话需要使用聚合函数
+    # Pivot table the airquality_dup: airquality_pivot 
+    airquality_pivot = airquality_dup.pivot_table(index=['Month', 'Day'], columns='measurement', values='reading', aggfunc=np.mean)
+    
+    
+    
