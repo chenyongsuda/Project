@@ -68,6 +68,7 @@ df.discribe() 查看数值型类的均值最大最小等信息
     
     pivot后Index会变成复合Index
     可以参考下层次化索引
+    参考 https://blog.csdn.net/sinat_29957455/article/details/79028730
     层次化索引(hierarchical indexing)是pandas的一个重要的功能，它可以在一个轴上有多个（两个以上）的索引，这就表示着，它能够以低维度形式来表示高维度的数据。
     #There's a very simple method you can use to get back the original DataFrame from the pivoted DataFrame:
     .reset_index(). Dan didn't show you how to use this method in the video, 
@@ -81,3 +82,209 @@ df.discribe() 查看数值型类的均值最大最小等信息
     
     
     
+==================================================================================
+层次化索引
+一、层次化索引
+层次化索引(hierarchical indexing)是pandas的一个重要的功能，它可以在一个轴上有多个（两个以上）的索引，这就表示着，它能够以低维度形式来表示高维度的数据。
+
+二、Series的层次化索引
+    # Series的层次化索引，索引是一个二维数组，相当于两个索引决定一个值
+    # 有点类似于DataFrame的行索引和列索引
+    s = Series(np.arange(1,10),index=[["a","a","a","b","b","c","c","d","d"],
+                                      [1,2,3,1,2,3,1,2,3]])
+    print(s)
+    '''
+    a  1    1
+       2    2
+       3    3
+    b  1    4
+       2    5
+    c  3    6
+       1    7
+    d  2    8
+       3    9
+    '''
+    #显示层次化索引
+    print(s.index)
+    '''
+    MultiIndex(levels=[['a', 'b', 'c', 'd'], [1, 2, 3]],
+           labels=[[0, 0, 0, 1, 1, 2, 2, 3, 3], [0, 1, 2, 0, 1, 2, 0, 1, 2]])
+    '''
+    #选取第一个索引为a的数据
+    print(s["a"])
+    '''
+    1    1
+    2    2
+    3    3
+    '''
+    #层次化索引的切片，包括右端的索引
+    print(s["c":"d"])#等价于s.ix[["c","d"]]
+    '''
+    c  3    6
+       1    7
+    d  2    8
+       3    9
+    '''
+    print(type(s))
+    #<class 'pandas.core.series.Series'>
+    print(type(s.unstack()))
+    #<class 'pandas.core.frame.DataFrame'>
+    #通过unstack方法可以将Series变成一个DataFrame
+    #数据的类型以及数据的输出结构都变成了DataFrame，对于不存在的位置使用NaN填充
+    print(s.unstack())
+    '''
+         1    2    3
+    a  1.0  2.0  3.0
+    b  4.0  5.0  NaN
+    c  7.0  NaN  6.0
+    d  NaN  8.0  9.0
+    '''
+    #通过stack方法，可以将DataFrame变成Series，它是unstack的逆运算
+    print(type(s.unstack().stack()))
+    #<class 'pandas.core.series.Series'>
+    print(s.unstack().stack())
+    '''
+    a  1    1.0
+       2    2.0
+       3    3.0
+    b  1    4.0
+       2    5.0
+    c  1    7.0
+       3    6.0
+    d  2    8.0
+       3    9.0
+    '''
+二、DataFrame的层次化索引
+对于DataFrame来说，行和列都能够进行层次化索引。
+
+    #DataFrame的行和列都是用层次化索引
+    #也就是四个索引来决定一个值，将一个二维数据变成了一个四维数据
+    data = DataFrame(np.arange(12).reshape(4,3),
+                     index=[["a","a","b","b"],[1,2,1,2]],
+                     columns=[["A","A","B"],["Z","X","C"]])
+    print(data)
+    '''
+         A       B
+         Z   X   C
+    a 1  0   1   2
+      2  3   4   5
+    b 1  6   7   8
+      2  9  10  11
+    '''
+    #选取列,参数只能选取"A"或"B"
+    print(data["A"])#等价于data.ix[:,"A"]
+    '''
+         Z   X
+    a 1  0   1
+      2  3   4
+    b 1  6   7
+      2  9  10
+    '''
+    #选取行
+    print(data.ix["a"])
+    '''
+       A     B
+       Z  X  C
+    1  0  1  2
+    2  3  4  5
+    '''
+三、重排分级顺序
+在使用层次化索引的时候，我们可以重新调整某条轴上各级别的顺序，或根据级别上的值对数据进行排序。swaplevel接受两个级别编号或名称，返回一个互换了级别的新对象（数据不变）。我们可以对每个级别设置一个名称，就像对DataFrame设置行列索引的名称一样。
+
+    data = DataFrame(np.arange(12).reshape(4,3),
+                     index=[["a","a","b","b"],[1,2,1,2]],
+                     columns=[["A","A","B"],["Z","X","C"]])
+    print(data)
+    '''
+         A       B
+         Z   X   C
+    a 1  0   1   2
+      2  3   4   5
+    b 1  6   7   8
+      2  9  10  11
+    '''
+    #对每一个级别设置一个名称
+    #设置行级别的名称
+    data.index.names=["row1","row2"]
+    #设置列级别的名称
+    data.columns.names=["column1","column2"]
+    print(data)
+    '''
+    column1    A       B
+    column2    Z   X   C
+    row1 row2
+    a    1     0   1   2
+         2     3   4   5
+    b    1     6   7   8
+         2     9  10  11
+    '''
+    #通过swaplevel，调整行的顺序
+    print(data.swaplevel("row1","row2"))
+    '''
+    column1    A       B
+    column2    Z   X   C
+    row2 row1
+    1    a     0   1   2
+    2    a     3   4   5
+    1    b     6   7   8
+    2    b     9  10  11
+    '''
+    #对指定级别中的值进行排序
+    #对级别名称为row2中的值进行排序
+    print(data.sortlevel(1))#等价于data.swaplevel(0,1).sortlevel(0)
+    '''
+    column1    A       B
+    column2    Z   X   C
+    row1 row2           
+    a    1     0   1   2
+    b    1     6   7   8
+    a    2     3   4   5
+    b    2     9  10  11
+    '''
+四、根据级别汇总统计
+    data = DataFrame(np.arange(12).reshape(4,3),
+                     index=[["a","a","b","b"],[1,2,1,2]],
+                     columns=[["A","A","B"],["Z","X","C"]])
+    print(data)
+    '''
+         A       B
+         Z   X   C
+    a 1  0   1   2
+      2  3   4   5
+    b 1  6   7   8
+      2  9  10  11
+    '''
+    #对每一个级别设置一个名称
+    #设置行级别的名称
+    data.index.names=["row1","row2"]
+    #设置列级别的名称
+    data.columns.names=["column1","column2"]
+    print(data)
+    '''
+    column1    A       B
+    column2    Z   X   C
+    row1 row2
+    a    1     0   1   2
+         2     3   4   5
+    b    1     6   7   8
+         2     9  10  11
+    '''
+    #指定行级别的名称进行求和
+    print(data.sum(level="row1"))
+    '''
+    column1   A       B
+    column2   Z   X   C
+    row1
+    a         3   5   7
+    b        15  17  19
+    '''
+    #指定列级别的名称进求和
+    print(data.sum(level="column1",axis=1))
+    '''
+    column1     A   B
+    row1 row2        
+    a    1      1   2
+         2      7   5
+    b    1     13   8
+         2     19  11
+
