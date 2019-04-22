@@ -67,6 +67,8 @@ df.discribe() 查看数值型类的均值最大最小等信息
     airquality_pivot = airquality_melt.pivot_table(index=['Month', 'Day'], columns='measurement', values='reading')
     
     pivot后Index会变成复合Index
+    可以参考下层次化索引
+    层次化索引(hierarchical indexing)是pandas的一个重要的功能，它可以在一个轴上有多个（两个以上）的索引，这就表示着，它能够以低维度形式来表示高维度的数据。
     #There's a very simple method you can use to get back the original DataFrame from the pivoted DataFrame:
     .reset_index(). Dan didn't show you how to use this method in the video, 
     but you're now going to practice using it in this exercise to get back the original DataFrame from airquality_pivot,
