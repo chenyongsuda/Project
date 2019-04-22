@@ -53,6 +53,12 @@ df.discribe() 查看数值型类的均值最大最小等信息
     # Melt airquality: airquality_melt
     airquality_melt = pd.melt(airquality, id_vars=['Month','Day'])
     
+    # Melt airquality: airquality_melt
+    Melt the columns of airquality with the defaultvariablecolumn renamed to'measurement'and the defaultvaluecolumn renamed to'reading'. 
+    You can do this by specifying, respectively, thevarnameandvaluename` parameters.
+    airquality_melt = pd.melt(airquality, id_vars=['Month', 'Day'], var_name='measurement', value_name='reading')
+    
+    melt的反向操作pivot
     
     
     
