@@ -80,6 +80,32 @@ df.discribe() 查看数值型类的均值最大最小等信息
     # Pivot table the airquality_dup: airquality_pivot 
     airquality_pivot = airquality_dup.pivot_table(index=['Month', 'Day'], columns='measurement', values='reading', aggfunc=np.mean)
     
+    切分字段：
+    In order to parse this value, you need to extract the first letter into a new column for gender, 
+    and the rest into a column for age_group. Here, since you can parse values by position, 
+    you can take advantage of pandas' vectorized string slicing by using the str attribute of columns of type object.
+    # Melt tb: tb_melt
+    tb_melt = pd.melt(tb, id_vars=['country', 'year'])
+    # Create the 'gender' column
+    tb_melt['gender'] = tb_melt.variable.str[0]
+    # Create the 'age_group' column
+    tb_melt['age_group'] = tb_melt.variable.str[1:]
+    # Print the head of tb_melt
+    print(tb_melt.head())
+  
+    进入某个字段使用str进入后如果是string的话可以使用string特有的操作 如果是list的话可以使用list的一些操作比如get(0) get(1)等
+    例子：
+    # Melt ebola: ebola_melt
+    ebola_melt = pd.melt(ebola, id_vars=['Date', 'Day'], var_name='type_country', value_name='counts')
+    print(ebola_melt)
+    # Create the 'str_split' column
+    ebola_melt['str_split'] = ebola_melt.type_country.str.split('_')
+    # Create the 'type' column
+    ebola_melt['type'] = ebola_melt.str_split.str[0]
+    # Create the 'country' column
+    ebola_melt['country'] = ebola_melt.str_split.str[1]
+    # Print the head of ebola_melt
+    print(ebola_melt.head())
     
     
 ==================================================================================
