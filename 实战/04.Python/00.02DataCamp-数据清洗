@@ -107,6 +107,19 @@ df.discribe() 查看数值型类的均值最大最小等信息
     # Print the head of ebola_melt
     print(ebola_melt.head())
     
+    合并数据源,可以行级别合并和列级别合并
+    # Row级别合并
+    # Concatenate uber1, uber2, and uber3: row_concat
+    row_concat = pd.concat([uber1,uber2,uber3])
+    
+    # Column级别合并
+    # Concatenate ebola_melt and status_country column-wise: ebola_tidy
+    ebola_tidy = pd.concat([ebola_melt,status_country],axis=1)
+    
+    # 忽略index合并,不忽略的话index重复,忽略的话自动生成新的index
+    # Concatenate uber1, uber2, and uber3: row_concat
+    row_concat = pd.concat([uber1,uber2,uber3],ignore_index=true)
+    
     
 ==================================================================================
 层次化索引
