@@ -120,6 +120,44 @@ df.discribe() 查看数值型类的均值最大最小等信息
     # Concatenate uber1, uber2, and uber3: row_concat
     row_concat = pd.concat([uber1,uber2,uber3],ignore_index=true)
     
+    #获取glob匹配的文件然后构造dataframe
+    # Import necessary modules
+    import glob
+    import pandas as pd
+    # Write the pattern: pattern
+    pattern = '*.csv'
+    # Save all file matches: csv_files
+    csv_files = glob.glob(pattern)
+    # Print the file names
+    print(csv_files)
+    # Load the second file into a DataFrame: csv2
+    csv2 = pd.read_csv(csv_files[1])
+    # Print the head of csv2
+    print(csv2.head())
+
+    #合并每一个dataframe
+    # Create an empty list: frames
+    frames = []
+    #  Iterate over csv_files
+    for csv in csv_files:
+    #  Read csv into a DataFrame: df
+    df = pd.read_csv(csv)
+    # Append df to frames
+    frames.append(df)
+    # Concatenate frames into a single DataFrame: uber
+    uber = pd.concat(frames)
+    # Print the shape of uber
+    print(uber.shape)
+    # Print the head of uber
+    print(uber.head())
+    
+    #合并列数据的另一种方式
+    #之前方式列合并两个dataframe是靠index 现在如果有相同的column的话但是这个column的顺序不一致,如何合并呢
+    pandas有merge on 方法,类似于SQL中的join on...
+    # Merge the DataFrames: o2o
+    o2o = pd.merge(left=site, right=visited, left_on='name', right_on='site')
+    
+    
     
 ==================================================================================
 层次化索引
