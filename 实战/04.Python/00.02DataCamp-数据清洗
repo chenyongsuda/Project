@@ -59,6 +59,11 @@ df.discribe() 查看数值型类的均值最大最小等信息
     airquality_melt = pd.melt(airquality, id_vars=['Month', 'Day'], var_name='measurement', value_name='reading')
     
     melt的反向操作pivot
-    
+    # Pivot airquality_melt: airquality_pivot
+    # pivot_table() has an index parameter which you can use to specify the columns that you don't want pivoted: 
+    # It is similar to the id_vars parameter of pd.melt(). Two other parameters that you have to specify are columns
+    # (the name of the column you want to pivot), and values (the values to be used when the column is pivoted). 
+    # The melted DataFrame airquality_melt has been pre-loaded for you.
+    airquality_pivot = airquality_melt.pivot_table(index=['Month', 'Day'], columns='measurement', values='reading')
     
     
