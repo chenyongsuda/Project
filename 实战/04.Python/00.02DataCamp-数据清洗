@@ -192,7 +192,59 @@ df.discribe() 查看数值型类的均值最大最小等信息
     # Find the numeric values: matches
     matches = re.findall('\d+', 'the recipe calls for 10 strawberries and 1 banana')
 
+    #数据操作Apply 可以serise操作或者Dataframe操作
+    # serise操作
+    # Define recode_gender()
+    def recode_gender(gender):
+        # Return 0 if gender is 'Female'
+        if gender == 'Female':
+            return 0
+        # Return 1 if gender is 'Male'    
+        elif gender == 'Male':
+            return 1
+        # Return np.nan    
+        else:
+            return np.nan
+    # Apply the function to the sex column
+    tips['recode'] = tips.sex.apply(recode_gender)
+    # Print the first five rows of tips
+    print(tips.head())
     
+    #使用lambda表达式
+    # Write the lambda function using replace
+    tips['total_dollar_replace'] = tips.total_dollar.apply(lambda x: x.replace('$', ''))
+    # Write the lambda function using regular expressions
+    tips['total_dollar_re'] = tips.total_dollar.apply(lambda x: re.findall('\d+\.\d+', x)[0])
+    
+    #删除重复的值/填新的值
+    Dropping duplicate data
+    # Create the new DataFrame: tracks
+    tracks = billboard[['year', 'artist', 'track', 'time']]
+    # Drop the duplicates: tracks_no_duplicates
+    tracks_no_duplicates = tracks.drop_duplicates()
+    
+    #填入新值
+    # Calculate the mean of the Ozone column: oz_mean
+    oz_mean = airquality.Ozone.mean()
+    # Replace all the missing values in the Ozone column with the mean
+    airquality['Ozone'] = airquality.Ozone.fillna(oz_mean)
+    或者可以dataframe替换
+    airquality[['Ozone','xxxxx']] = airquality[['Ozone','xxxxx']].fillna(oz_mean)
+    
+    判断是否有空值
+    In the video, you saw Dan use the .all() method together with the .notnull() DataFrame method to check for missing values in a column. 
+    The .all() method returns True if all values are True. When used on a DataFrame, it returns a Series of Booleans - one for each column in the DataFrame. So if you are using it on a DataFrame, like in this exercise, 
+    you need to chain another .all() method so that you return only one True or False value.
+    
+    Use the pd.notnull() function on ebola (or the .notnull() method of ebola) and chain two .all() methods 
+    (that is, .all().all()). The first .all() method will return a True or False for each column, while the second .all() 
+    method will return a single True or False.
+    
+    # Assert that there are no missing values
+    assert pd.notnull(ebola).all().all()
+
+    # Assert that all values are >= 0
+    assert (ebola >= 0).all().all()
     
 ==================================================================================
 层次化索引
