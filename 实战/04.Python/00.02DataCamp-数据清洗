@@ -281,6 +281,23 @@ df.discribe() 查看数值型类的均值最大最小等信息
     # Check that there is only one instance of each country
     assert g1800s['Life expectancy'].value_counts()[0] == 1
     
+    #做的一个简单的例子
+    import numpy as np
+    data = {
+         'state': [np.nan, 6, 7, 8, 9],
+         'year': [11, np.nan, 12, 13, 14],
+         'pop': [21, 22, np.nan, 23, 24]
+    }
+
+    def test(row):
+        no_na =  row.dropna()
+        res = no_na > 2
+        return res
+
+    df = pd.DataFrame(data)
+    # print(df)
+    df.apply(test,axis=1)
+    print(df.all().all())
     
     
 ==================================================================================
