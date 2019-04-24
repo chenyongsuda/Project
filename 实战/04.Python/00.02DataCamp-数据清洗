@@ -334,8 +334,70 @@ df.discribe() 查看数值型类的均值最大最小等信息
     # Print invalid_countries
     print(invalid_countries)
     
-    
-    
+    #处理缺失数据
+        https://www.jianshu.com/p/14135f91f0b2
+        isnull()
+        notnull()
+        dropna()
+        fillna()
+
+        判断数据是否缺失
+
+        使用isnull()函数，返回bool类型数据
+        dataframe.isnull()
+
+        使用notnull()函数，同样返回bool类型数据
+        dataframe.notnull()
+
+        使用sum()函数，统计缺失数据
+        dataframe.isnull().sum()
+
+        过滤缺失数据
+
+        dataframe[dataframe.colname.isnull()]
+        dataframe[dataframe.colname.notnull()]
+
+        丢弃缺失数据
+        how按行row判断
+        dataframe.dropna(how='any')
+        dataframe.dropna(how='any', inplace=True)
+        dataframe.dropna(how='all')
+        dataframe.dropna(how='all', inplace=True)
+
+        对特定列操作
+        dataframe.dropna(subset=["col1",  "col2"], how='any')
+        dataframe.dropna(subset=["col1",  "col2"], how='all')
+
+        填充缺失数据
+        fillna()函数
+     
+     #直方图和线形图
+          # Add first subplot
+          plt.subplot(2, 1, 1) 
+          # Create a histogram of life_expectancy
+          gapminder.life_expectancy.plot(kind='hist')
+          # Group gapminder: gapminder_agg
+          gapminder_agg = gapminder.groupby('year')['life_expectancy'].mean()
+          # Print the head of gapminder_agg
+          print(gapminder_agg.head())
+          # Print the tail of gapminder_agg
+          print(gapminder_agg.tail())
+          # Add second subplot
+          plt.subplot(2, 1, 2)
+          # Create a line plot of life expectancy per year
+          gapminder_agg.plot()
+          # Add title and specify axis labels
+          plt.title('Life expectancy over the years')
+          plt.ylabel('Life expectancy')
+          plt.xlabel('Year')
+          # Display the plots
+          plt.tight_layout()
+          plt.show()
+          # Save both DataFrames to csv files
+          gapminder.to_csv('gapminder.csv')
+          gapminder_agg.to_csv('gapminder_agg.csv')
+
+
 ==================================================================================
 层次化索引
 一、层次化索引
