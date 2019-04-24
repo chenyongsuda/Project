@@ -397,6 +397,126 @@ df.discribe() 查看数值型类的均值最大最小等信息
           gapminder.to_csv('gapminder.csv')
           gapminder_agg.to_csv('gapminder_agg.csv')
 
+          分组还可以这么用
+          data1     data2         key1 key2
+          0 -1.313101 -0.453361    a  one
+          1  0.791463  1.096693    b  two
+          2  0.462611  1.150597    a  one
+          3 -0.216121  1.381333    b  two
+          4  0.077367 -0.282876    a  one
+          
+          应用groupby,分组键均为Series(譬如df[‘xx’])，实际上分组键可以是任何长度适当的数组
+          #将df['data1']按照分组键为df['key1']进行分组
+          grouped=df['data1'].groupby(df['key1'])
+          
+          或者直接df中groupby
+          from pandas import Series,DataFrame 
+          a=[['Li','男','PE',98.],['Li','男','MATH',60.],['liu','男','MATH',60.],['yu','男','PE',100.]]
+          af=DataFrame(a,columns=['name','sex','course','score']) 
+          af.groupby(['name','course'])['score'].sum()#先将af按照namej进行分组，再按照score进行分组，最后将score进行叠加
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
 
 ==================================================================================
 层次化索引
