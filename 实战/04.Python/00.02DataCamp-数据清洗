@@ -299,6 +299,26 @@ df.discribe() 查看数值型类的均值最大最小等信息
     df.apply(test,axis=1)
     print(df.all().all())
     
+    #通过融合各列后并且修改columns
+    import pandas as pd
+    # Melt gapminder: gapminder_melt
+    gapminder_melt = pd.melt(gapminder, id_vars='Life expectancy')
+    # Rename the columns
+    gapminder_melt.columns = ['country', 'year', 'life_expectancy']
+    # Print the head of gapminder_melt
+    print(gapminder_melt.head())
+
+    #判断dtypes
+    # Convert the year column to numeric
+    gapminder.year = pd.to_numeric(gapminder.year)
+    # Test if country is of type object
+    assert gapminder.country.dtypes == np.object
+    # Test if year is of type int64
+    assert gapminder.year.dtypes == np.int64
+    # Test if life_expectancy is of type float64
+    assert gapminder.life_expectancy.dtypes == np.float64
+    
+    
     
 ==================================================================================
 层次化索引
