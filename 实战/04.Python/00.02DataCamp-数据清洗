@@ -318,6 +318,22 @@ df.discribe() 查看数值型类的均值最大最小等信息
     # Test if life_expectancy is of type float64
     assert gapminder.life_expectancy.dtypes == np.float64
     
+    #去重后通过正则表达式获取bool向量,然后取反.再获取那些异常值
+    # Create the series of countries: countries
+    countries = gapminder['country']
+    # Drop all the duplicates from countries
+    countries = countries.drop_duplicates()
+    # Write the regular expression: pattern
+    pattern = '^[a-zA-Z\.\s]*$'
+    # Create the Boolean vector: mask
+    mask = countries.str.contains(pattern)
+    # Invert the mask: mask_inverse
+    mask_inverse = ~mask
+    # Subset countries using mask_inverse: invalid_countries
+    invalid_countries = countries[mask_inverse]
+    # Print invalid_countries
+    print(invalid_countries)
+    
     
     
 ==================================================================================
