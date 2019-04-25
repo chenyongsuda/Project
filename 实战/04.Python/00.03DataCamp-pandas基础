@@ -1,1 +1,87 @@
+# Pandas 基础
+      
+      如下解答中说明了dataframe的values为numpy的ndarray
+      
+      # Import numpy
+      import numpy as np
 
+      # Create array of DataFrame values: np_vals
+      np_vals = df.values
+
+      # Create new array of base 10 logarithm values: np_vals_log10
+      np_vals_log10 = np.log10(np_vals)
+
+      # Create array of new DataFrame by passing df to np.log10(): df_log10
+      df_log10 = np.log10(df)
+
+      # Print original and new data containers
+      [print(x, 'has type', type(eval(x))) for x in ['np_vals', 'np_vals_log10', 'df', 'df_log10']]
+      
+      输出：
+          np_vals has type <class 'numpy.ndarray'>
+          np_vals_log10 has type <class 'numpy.ndarray'>
+          df has type <class 'pandas.core.frame.DataFrame'>
+          df_log10 has type <class 'pandas.core.frame.DataFrame'>
+          
+#构造DataFrame方式
+    1. 通过map来构造
+    
+    2. read_csv
+    
+    3. 也是通过map
+        通过column的list和值的list进行zip
+        然后通过map强制转为map 再用map构造为dataframe
+        参考：
+        zipped = list(zip(list_keys,list_values))
+        # Inspect the list using print()
+        print(zipped)
+        # Build a dictionary with the zipped list: data
+        data = dict(zipped)
+        # Build and inspect a DataFrame from the dictionary: df
+        df = pd.DataFrame(data)
+
+#Dataframe的index和column可修改(relabeling特征)
+    df.index = []
+    df.columns = []
+
+#Dataframe的值的传播特征
+    # Make a string with the value 'PA': state
+    state = 'PA'
+    # Construct a dictionary: data
+    data = {'state':state, 'city':cities}
+    # Construct a DataFrame from dictionary data: df
+    df = pd.DataFrame(data)
+    
+    通过只赋值给state一个值来把其他行的值都赋值了
+    
+
+#导入导出dataframe数据
+  pd.read_csv(file_path, header=None, names=columns_name,delimiter=' ', index_column=xxx, comment='#', na_values = {columnsname : ['-1']}, prase_data = [[0,1,2]])
+  
+  可以重制df.index
+  可以设置index的name df.index.name
+  
+  
+  写csv的话可以 df.to_csv(out_csv, sep='\t')
+  
+  
+ #Pandas画图
+   画图方式可以是
+   1.plt.plot(ndarray)
+   2.plt.plot(serise)
+   3.serise.plot()
+   4.dataframe一样有这几种
+   
+   xxx.plot(color=xxx,style='xxx',legend=True) 等参数
+   
+   保存
+   plt.saveplg(xxx.jpg)
+   plt.saveplg(xxx.png)
+   plt.saveplg(xxx.pdf)
+   可以保存三种
+   
+   
+
+
+
+    
