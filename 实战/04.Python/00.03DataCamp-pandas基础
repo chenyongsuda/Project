@@ -80,8 +80,53 @@
    plt.saveplg(xxx.pdf)
    可以保存三种
    
-   
+#图形密度
+      #线形图
+      # Create a list of y-axis column names: y_columns
+      y_columns = ['AAPL','IBM']
+      # Generate a line plot
+      df.plot(x='Month', y=y_columns)
+      # Add the title
+      plt.title('Monthly stock prices')
+      # Add the y-axis label
+      plt.ylabel('Price ($US)')
+      
+      #点图
+      # Generate a scatter plot
+      size为点的大小
+      df.plot(kind='scatter', x='hp', y='mpg', s=sizes)
+      
+      #箱线图
+      # Generate the box plots
+      subplots表示图片分为多个单独绘制
+      df[cols].plot(kind='box',subplots=True)
+      
+      #PDF 和 CDF 密度话和归一化
+      # This formats the plots such that they appear on separate rows
+      fig, axes = plt.subplots(nrows=2, ncols=1)
+      # Plot the PDF
+      df.fraction.plot(ax=axes[0], kind='hist', bins=30, normed=True, range=(0,.3))
+      plt.show()
+      # Plot the CDF
+      df.fraction.plot(ax=axes[1], kind='hist', bins=30, cumulative=True, normed=True, range=(0,.3))
+      plt.show()
 
-
-
+#数据统计基础
+      std	      标准差   标准差能反映一个数据集的离散程度  两组数的集合{0,5,9,14}和{5,6,8,9}其平均值都是7，但第二个集合具有较小的标准差。
+      mean	      均值  df.mean(axis='columns') 安装每行计算一个平均值
+      median	中位数
+      count	非 NA 值的数量
+      describe	针对 Series 或 DF 的列计算汇总统计
+      min , max	最小值和最大值
+      argmin , argmax	最小值和最大值的索引位置（整数）
+      idxmin , idxmax	最小值和最大值的索引值
+      quantile	样本分位数（0 到 1）                  df.quantile([0.05,0.95])
+      sum	求和
+      
+      
+      
+      
+      
+      
+      
     
