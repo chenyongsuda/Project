@@ -251,65 +251,105 @@ d	6	7	100	8
       
 --------------------------------------------------------------------
 pandas-resample按时间聚合
+
+转化string为date
+read_csv(file,prase_dates=['',''])
+或者指定
+read_csv(file,prase_dates=True,index_col='')
+
 import pandas as pd
 
 #如果需要的话,需将df中的date列转为datetime
-
 df.date = pd.to_datetime(df.date,format="%Y%m%d")
 
 #将改好格式的date列,设置为df的index
-
 df.set_index('date',drop=True)
 
-
-
 #按年来提数据  (因为此时的datetime已经为index了,可以直接[]取行内容)
-
 df['2018']
-
 df['2018':'2021']
 
 #按月来提数据
-
 df['2018-01']
-
 df['2018-01':'2018-05']
 
 #按天来提出数据
-
 df['2018-05-24':'2018-09-27']
 
-
-
 #按日期汇总数据
-
+resampleing相当于按照时间维度聚合
 #将数据以W星期,M月,Q季度,QS季度的开始第一天开始,A年,10A十年,10AS十年聚合日期第一天开始.的形式进行聚合
-
 df.resample('W').sum()
-
 df.resample('M').sum()
 
-
-
 #具体某列的数据聚合
-
 df.price.resample('W').sum().fillna(0)   #星期聚合,以0填充NaN值
 
 #某两列
-
 df[['price','num']].resample('W').sum().fillna(0)
 
 #某个时间段内,以W聚合,
-
 df["2018-5":"2018-9"].resample("M").sum().fillna(0)
 
-还有以下方式聚合
+#rolling 通过rolling方法来平缓值
 
+# Extract data from 2010-Aug-01 to 2010-Aug-15: unsmoothed
+unsmoothed = df['Temperature']['2010-Aug-01':'2010-Aug-15']
+# Apply a rolling mean with a 24 hour window: smoothed
+smoothed = unsmoothed.rolling(window=24).mean()
+# Create a new DataFrame with columns smoothed and unsmoothed: august
+august = pd.DataFrame({'smoothed':smoothed, 'unsmoothed':unsmoothed})
+# Plot both smoothed and unsmoothed data using august.plot().
+august.plot()
+plt.show()
       
-      
-      
-      
-      
+样例2
+# Extract the August 2010 data: august
+august = df['Temperature']['2010-08']
+# Resample to daily data, aggregating by max: daily_highs
+daily_highs = august.resample('D').max()
+# Use a rolling 7-day window with method chaining to smooth the daily high temperatures in August
+daily_highs_smoothed = daily_highs.rolling(window=7).mean()
+print(daily_highs_smoothed)
+
+--------------------------------------------------------------------------
+各种类型的属性
+比如string
+xx.str.upper()
+xx.str.contains()
+xx.dt.hour
+
+缺失值补充
+interpolate('liner')
+
+示例：通过reindex给原先缺失的index来补几个日期值,再通过线下补充值来填充
+# Reset the index of ts2 to ts1, and then use linear interpolation to fill in the NaNs: ts2_interp
+ts2_interp = ts2.reindex(ts1.index).interpolate(how='linear')
+# Compute the absolute difference of ts1 and ts2_interp: differences 
+differences = np.abs(ts1 - ts2_interp)
+# Generate and print summary statistics of the differences
+print(differences.describe())
+
+可以通过比较
+# Build a Boolean mask to filter out all the 'LAX' departure flights: mask
+mask = df['Destination Airport'] == ‘LAX’
+或者
+df['Destination Airport'].str.contains('LAX')
+
+#时间本地化等转化
+# Build a Boolean mask to filter out all the 'LAX' departure flights: mask
+mask = df['Destination Airport'] == 'LAX'
+# Use the mask to subset the data: la
+la = df[mask]
+# Combine two columns of data to create a datetime series: times_tz_none 
+times_tz_none = pd.to_datetime( la['Date (MM/DD/YYYY)'] + ' ' + la['Wheels-off Time'] )
+# Localize the time to US/Central: times_tz_central
+times_tz_central = times_tz_none.dt.tz_localize('US/Central')
+# Convert the datetimes from US/Central to US/Pacific
+times_tz_pacific = times_tz_central.dt.tz_convert('US/Pacific')
+
+
+
       
       
       
