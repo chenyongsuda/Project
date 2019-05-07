@@ -1,0 +1,102 @@
+Spring-boot的2大优点：
+1.基于Spring框架的“约定优先于配置（COC）”理念以及最佳实践之路。
+2.针对日常企业应用研发各种场景的Spring-boot-starter自动配置依赖模块，且“开箱即用”（约定spring-boot-starter- 作为命名前缀，都位于org.springframenwork.boot包或者命名空间下）。
+
+========应用日志和spring-boot-starter-logging
+常见的日志系统大致有：java.util默认提供的日志支持，log4j,log4j2,commons logging,下面的spring-boot-starter-logging也是其中的一种。
+maven依赖：
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-logging</artifactId>
+        </dependency>
+
+springBoot将使用logback作为应用日志的框架，程序启动时，由org.springframework.boot.logging-Logging-Application-Lisetener根据情况初始化并使用。
+如果要想改变springBoot提供的应用日志设定，可以通过以下原则：
+
+遵循logback的约定，在classpath中使用自己定制的logback.xml配置文件。
+在文件系统的任意一个位置提供自己的logback.xml配置文件，然后通过logging.config配置项指向这个配置文件然后引用它，例如在application.properties中指定如下的配置：
+
+logging.config=/{some.path.you.defined}/any-logfile-name-I-like.log}
+
+========速web应用开发与spring-boot-starter-web
+maven依赖：
+       <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+在当下项目运行mvn spring-boot:run就可以直接启用一个嵌套了tomcat的web应用。
+如果没有提供任何服务的Cotroller,访问任何路径都会返回一个springBoot默认的错误页面（Whitelabel error page）。
+嵌入式Web容器层面的约定和定制
+spring-boot-starter-web默认使用嵌套式的Tomcat作为Web容器对外提供HTTP服务，默认端口8080对外监听和提供服务。
+我们同样可以使用spring-boot-starter-jetty或者spring-boot-starter-undertow作为Web容器。
+想改变默认的配置端口，可以在application.properties中指定：
+server.port = 9000(the port number you want)
+
+类似的配置还有：
+server.address
+server.ssl.*
+server.tomcat.*
+
+如果上诉仍然没有办法满足要求，springBoot支持对嵌入式的Web容器实例进行定制，可以通过向IoC容器中注册一个EmbeddedServletContainerCustomizer类型的组件来对嵌入式的Web容器进行定制
+public class UnveilSpringEmbeddedTomcatCustomizer implements EmbeddedServletContainer{
+        public void customize(ConfigurableEmbeddedServletContainer container){
+            container.setPort(9999);
+            container.setContextPath("C\\hello");
+                           ...
+        }
+    }
+
+数据访问与spring-boot-starter-jdbc
+maven依赖：
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+
+默认情况下，当我们没有配置任何DataSource,SpringBoot会为我们自动配置一个DataSource，这种自动配置的方式一般适用于测试，开发还是自己配置一个DataSource的实例比较好。
+如果我们的工程只依赖一个数据库，那么，使用DataSource自动配置模块提供的参数是最方便的：
+spring.datasource.url=jdbc:mysql://{datasource host}:3306/{databaseName}
+spring.datasource.username={database username}
+spring.datasource.passwd={database passwd}
+
+还会自动配置的有：JdbcTemplate DateSourceTransactionManager等，我们只要在使用的时候注入（@Autowired）就好了
+此外，SpringBoot还支持的数据库有spring-boot-data-jpa spring-boot-data-mongodb
+spring-boot-starter-aop应用及其使用场景
+AOP:Aspect Oriented Programming,面向切面编程
+maven依赖：
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
+
+========spring-boot-starter-aop主要由2部分组成：
+1.位于spring-boot-autoconfigure的org.sringframework.boot.autoconfigure.aop.AopAutoConfiguration提供的@Configuration配置类和相应的配置项，即下面的2个配置项：
+spring.aop.auto=true
+spring.aop.proxy-target-class=false
+
+2.spring-boot-starter-aop模块提供了针对spring-aop aspectjrt 和aspectjweaver的依赖
+应用安全与spring-boot-starter-security
+spring-boot-starter-security 主要面向的是Web应用开发，配合spring-boot-starter-web,所以，对应的maven依赖如下：
+       <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+========spring-boot-starter-security 默认会提供一个基于HTTP Basic认证的安全防护策略，默认用户为user,访问密码则在当前web应用启动的时候，打印到控制台，要想定制，则在配置文件如下进行配置：
+security.user.name={username}
+security.user.password={passwd}
+
+除此之外，spring-boot-starter-security还会默认启动一些必要的Web安全防护，比如针对XSS CSRF等场针对Web应用的攻击，同时，也会将一些常见的静态资源路径排除在安全防护之外。
+AuthenticationManager AccessDecisionManager AbstractSecurityInterceptor被称为Spring Security的基础铁三角，前2者负责制定规则， AbstractSecurityInterceptor负责执行。我们常见的Filter类就可以定制和扩展SpringSecurity的防护机制。
+进一步定制spring-boot-starter-security
+上诉使用SecurityProperties暴露的配置项，即以security.*对spring-boot-starter-security进行简单的配置，还可以通过给出一个继承了WebSecurityConfigurerAdapter的JavaConfig配置类对spring-boot-starter-security的行为进行更深级别的定制，例如：
+
+使用其他的AuthenticationManager实例
+对默认的HttpSecurity定义的资源访问的规则重新定义
+对默认提供的WebSecurity行为进行调整
+一般配合@Order（SecurityProperties.ACCESS_OVERRIDE_ORDER）进行标注。
