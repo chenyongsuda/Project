@@ -1,0 +1,29 @@
+因网络原因，国外的Maven仓库访问下载速度属于“龟速”，阿里云搭建了国内的maven仓库，方便了国内的广大开发者下载依赖jar包，提高开发效率。在maven中设置阿里云的中央仓库方法如下：
+在<mirrors>....</mirrors>中间增加如下内容：
+<mirror> <id>alimaven</id> <mirrorOf>central</mirrorOf> <name>aliyun maven</name> <url>http://maven.aliyun.com/nexus/content/groups/public/</url> </mirror>
+注意：
+<mirror>
+      <id>nexus-aliyun</id>
+      <mirrorOf>*</mirrorOf>
+      <name>Nexus aliyun</name>
+      <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+</mirror>
+
+碰到的问题
+配置阿里云maven仓库后，执行mvn 命令报错如下。
+[ERROR][ERROR] Some problems were encountered while processing the POMs:[ERROR] Non-resolvable import POM: 
+Failure to find org.springframework.cloud:spring-cloud-dependencies:pom:Greenwich.RC2 in 
+http://maven.aliyun.com/nexus/content/groups/public was cached in the local repository, 
+resolution will not be reattempted until the update interval of nexus-aliyun has elapsed or updates are forced @ line 45, column 25
+
+分析：
+在配置阿里云Maven仓库是mirrorOf 属性写成了<mirrorOf>*</mirrorOf>这样在工程的pom文件中如果自定义一些repository时会不生效，
+要写成<mirrorOf>central</mirrorOf>。如一个spring cloud项目中的POM文件中指定了repository如下：
+<repositories> 
+    <repository> 
+        <id>spring-milestones</id> 
+        <name>Spring Milestones</name> 
+        <url>https://repo.spring.io/milestone</url> 
+    </repository>
+</repositories>
+maven 会到阿里中央仓库下载Greenwich.RC2的jar包，但是下载失败，从https://repo.spring.io/milestone是可以下载的。
