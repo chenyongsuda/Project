@@ -1,0 +1,244 @@
+SQLAlchemy简单入门
+
+SQlAlchemy简单使用
+sqlalchemy介绍
+ SQLAlchemy的是Python的SQL工具包和对象关系映射器，让应用程序开发人员可以使用上SQL的强大功能和灵活性。
+ 它提供了一套完整的企业级持久化模式，专为高效率和高性能的数据库访问而设计，简单易用用，专门为Python语言而准备。
+ 
+
+SQLAlchemy的理念
+SQL数据库与对象集合目标不同，它需要关注更大的数据容量与更高的性能;而对象集合则和数据表或数据行的目标不同，它需要更好的数据抽象。 SQLAlchemy设计的目的，就是适配这两个原则。
+SQLAlchemy把数据库当作是一个关系型代数引擎，不只是数据表的一个集合。数据行不仅可以从数据表中查询出来，也可以从数据表关联后成形成的逻辑数据表和其他的查询语句结果中进行查询;这些元素可以组合形成更大的数据结构。 SQLAlchemy的表达式语言就是建立在这个核心概念之上的。
+SQLAlchemy组件中最有名的是它的对象关系映射器（ORM），是一个提供数据映射器模式的可选组件，利用这个组件，类可以以开放式的多种方式映射到数据库上，允许对象模型的设计和数据库架构的设计，一开始就以分离方式进行各自的开发。实现松耦合的架构.
+
+sqlalchemgy文档
+
+连接数据库
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+
+DB_CONNECT_STRING = 'mysql+mysqldb://root:123@localhost/mydb?charset=utf8'
+engine = create_engine(DB_CONNECT_STRING)
+DB_Session = sessionmaker(bind=engine)
+session = DB_Session()
+上面的DB_CONNECT_STRING是连接数据库的路径,这个路径也就是database_urls包含了使用的数据库驱动以及数据库的连接信息等.一般格式是:dialect+driver://username:password@host:port/database
+ 下面给出其他形式的数据库连接示例:
+
+# default
+engine = create_engine('postgresql://scott:tiger@localhost/mydatabase')
+
+# psycopg2
+engine = create_engine('postgresql+psycopg2://scott:tiger@localhost/mydatabase')
+
+# pg8000
+engine = create_engine('postgresql+pg8000://scott:tiger@localhost/mydatabase')
+
+
+# default
+engine = create_engine('mysql://scott:tiger@localhost/foo')
+
+# mysql-python
+engine = create_engine('mysql+mysqldb://scott:tiger@localhost/foo')
+
+# MySQL-connector-python
+engine = create_engine('mysql+mysqlconnector://scott:tiger@localhost/foo')
+
+# OurSQL
+engine = create_engine('mysql+oursql://scott:tiger@localhost/foo')
+直接操作sql
+sql= 'show tables'
+session.execute(sql)
+result = session.excute(sql).fetchall()
+
+sql = 'create database test'
+session.excute(sql)
+以上使用sqlalchemy直接执行sql语句,这和mysql-python没有任何区别.当然,需要注意在事务操作中,记得commit.在操作很复杂的sql语句,不能映射到对应的ORM上,这是备用选项.
+
+下面开始介绍sqlalchemy的ORM.从数据库的增删查改.
+
+关联一个数据表
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, Integer
+
+engine = create_engine('mysql+mysqldb://root:youdi@localhost:3306/alchemy?charset=utf8')
+Base = declarative_base()
+
+class User(Base):
+
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    name = Column('username',String(64), nullable=False)
+    password = Column(String(64), nullable=False)
+
+    email = Column(String(64), nullable=False)
+
+    def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self.username)
+插入数据
+import User
+from sqlalchemy.orm import sessionmaker
+session = sessionmaker(bind=engine)
+mysql = session()
+
+user1 = User()
+user1.id = 2
+user1.name = 'hello'
+user1.email = '123@gmail.net'
+user1.password = 'password'
+
+mysql.add(user1)
+
+user2 = User(id=3,name='youmi',password='1234',email='12@you.net')
+
+mysql.add(user2)
+
+mysql.commit()
+上面插入了两条数据
+
+mysql> select * from users;
++----+----------+----------+---------------+
+| id | username | password | email         |
++----+----------+----------+---------------+
+|  2 | hello    | password | 123@gmail.net |
+|  3 | youmi    | 1234     | 12@you.net    |
++----+----------+----------+---------------+
+2 rows in set (0.02 sec)
+查询表中的数据
+1.查询所有的数据
+如同select * from tb_name
+
+query = mysql.query(User)
+sql = str(query) # 执行的sql语句
+sql = query.statement # 执行的sql语句
+
+users_name = []
+for i in query:  #遍历时查询
+    users_name.append(i.name)
+
+query.all() #返回所有对象的列表
+query.first() #返回第一个对象,记录不存在时，first() 会返回 None
+query.one()  # 不存在，或有多行记录时会抛出异常
+
+另外,query也可以使用User直接获得
+query = User.query
+2.显示指定字段的数据
+如同: select name,id from users
+
+names = mysql.query(User.name)
+names.all() #每行都是一个元组
+3.筛选条件
+limit
+
+mysql.query(User).limit(10)
+User.query.limit(10)
+offset
+
+offset = 10
+mysql.query(User).offset(offset).limit(10)
+# or
+User.query.offset(offset).limit(10)
+oder by
+
+mysql.query(User).order_by('id')
+mysql.query(User).order_by(User.id.desc())
+mysql.query(User).order_by('id asc')
+mysql.query(User).order_by(User.name.desc(),User.id)
+filter
+ sql中的where后面的条件
+
+mysql.query(User).filter(User.id == 1).scalar()
+# or 使用字面量
+mysql.query(User).filter('id = 1').scalar()
+# 多个条件
+mysql.query(User).filter(User.id > 1,User.name != 'youmi').scalar()
+# in条件
+mysql.query(User).filter(User.id.in_((1,2,3))).scalar()
+
+# or条件需要导入or_()函数
+mysql.query(User).filter(or_(User.id > 1,User.name != 'youmi')).scalar()
+补充(所有的额外函数):
+ 其中func映射到sql中的很多函数,如:count,sum,now,current_timestamp,md5等等,
+ 其他的函数,有case对应sql中when case
+
+from .sql import (
+    alias,
+    and_,
+    asc,
+    between,
+    bindparam,
+    case,
+    cast,
+    collate,
+    delete,
+    desc,
+    distinct,
+    except_,
+    except_all,
+    exists,
+    extract,
+    false,
+    func,
+    insert,
+    intersect,
+    intersect_all,
+    join,
+    literal,
+    literal_column,
+    modifier,
+    not_,
+    null,
+    or_,
+    outerjoin,
+    outparam,
+    over,
+    select,
+    subquery,
+    text,
+    true,
+    tuple_,
+    type_coerce,
+    union,
+    union_all,
+    update,
+    )
+4.联表查询(join)
+INNER JOIN
+
+query = User.query.join(Group, User.gid == Group.id)
+.filter(User.id != None,"is_superuser & 1 = 1")
+.order_by(User.last_edit.asc()).limit(10)
+LEFT JOIN
+
+query = User.query.outerjoin(Group, User.gid == Group.id)
+.filter(User.id != None,"is_superuser & 1 = 1")
+.order_by(User.last_edit.asc()).limit(10)
+RIGHT JOIN
+
+query = User.query.outerjoin(Group, User.gid == Group.id)
+.filter(User.id != None,"is_superuser & 1 = 1")
+.order_by(User.last_edit.asc()).limit(10)
+其他的连接方式,需要自己指定参数,可以灵活的操作:
+
+    def join(self, right, onclause=None, isouter=False, join_to_left=None):
+        return _ORMJoin(self, right, onclause, isouter)
+
+    def outerjoin(self, right, onclause=None, join_to_left=None):
+        return _ORMJoin(self, right, onclause, True)
+修改数据
+mysql.query(User).filter(User.id == 1).update({User.name:'youmi'})
+
+# or 
+user = mysql.query(User).filter(User.id == 1)
+user.name = 'test'
+mysql.flush() #写入数据库,但并没有提交
+删除数据
+mysql.query(User).filter(User.id == 1).delete()
+mysql.commit()
+
+心 * 自由
+
+不过相比Django的ORM.sqlalchemy对sql的支持更好.
+ 上面只是简单的介绍了sqlalchemy的增删查改,需要更加深入的特性,可以查看官方文档,或者查看源码.
