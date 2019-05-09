@@ -242,3 +242,15 @@ mysql.commit()
 
 不过相比Django的ORM.sqlalchemy对sql的支持更好.
  上面只是简单的介绍了sqlalchemy的增删查改,需要更加深入的特性,可以查看官方文档,或者查看源码.
+
+
+===============================================================================
+数据库使用注意点
+SQL字符串可以用如下语句进行sql的转义处理
+sqlalchemy.text
+sqlalchemy.text('select xxxx from xxx xxx xxxx')
+
+
+
+
+
