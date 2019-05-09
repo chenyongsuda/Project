@@ -1,0 +1,152 @@
+在Pandas中更改列的数据类型【方法总结】
+
+
+先看一个非常简单的例子：
+a = [['a', '1.2', '4.2'], ['b', '70', '0.03'], ['x', '5', '0']]
+df = pd.DataFrame(a)
+
+ 
+
+有什么方法可以将列转换为适当的类型？例如，上面的例子，如何将列2和3转为浮点数？有没有办法将数据转换为DataFrame格式时指定类型？或者是创建DataFrame，然后通过某种方法更改每列的类型？理想情况下，希望以动态的方式做到这一点，因为可以有数百个列，明确指定哪些列是哪种类型太麻烦。可以假定每列都包含相同类型的值。
+
+ 
+
+解决方法
+可以用的方法简单列举如下：
+
+对于创建DataFrame的情形
+如果要创建一个DataFrame，可以直接通过dtype参数指定类型：
+
+df = pd.DataFrame(a, dtype='float')  #示例1
+df = pd.DataFrame(data=d, dtype=np.int8) #示例2
+df = pd.read_csv("somefile.csv", dtype = {'column_name' : str})
+ 
+
+对于单列或者Series
+下面是一个字符串Seriess的例子，它的dtype为object：
+
+复制代码
+>>> s = pd.Series(['1', '2', '4.7', 'pandas', '10'])
+>>> s
+0         1
+1         2
+2       4.7
+3    pandas
+4        10
+dtype: object
+复制代码
+ 
+
+使用to_numeric转为数值。默认情况下，它不能处理字母型的字符串'pandas'：
+
+>>> pd.to_numeric(s) # or pd.to_numeric(s, errors='raise')
+ValueError: Unable to parse string
+ 
+
+可以将无效值强制转换为NaN，如下所示：
+
+复制代码
+>>> pd.to_numeric(s, errors='coerce')
+0     1.0
+1     2.0
+2     4.7
+3     NaN
+4    10.0
+dtype: float64
+复制代码
+ 
+
+如果遇到无效值，第三个选项就是忽略该操作：
+
+>>> pd.to_numeric(s, errors='ignore')
+# the original Series is returned untouched
+ 
+
+对于多列或者整个DataFrame
+如果想要将这个操作应用到多个列，依次处理每一列是非常繁琐的，所以可以使用DataFrame.apply处理每一列。
+
+对于某个DataFrame：
+
+复制代码
+>>> a = [['a', '1.2', '4.2'], ['b', '70', '0.03'], ['x', '5', '0']]
+>>> df = pd.DataFrame(a, columns=['col1','col2','col3'])
+>>> df
+  col1 col2  col3
+0    a  1.2   4.2
+1    b   70  0.03
+2    x    5     0
+复制代码
+ 
+
+然后可以写：
+
+df[['col2','col3']] = df[['col2','col3']].apply(pd.to_numeric)
+ 
+
+那么'col2'和'col3'根据需要具有float64类型。
+
+但是，可能不知道哪些列可以可靠地转换为数字类型。在这种情况下，设置参数：
+
+df.apply(pd.to_numeric, errors='ignore')
+ 
+
+然后该函数将被应用于整个DataFrame，可以转换为数字类型的列将被转换，而不能(例如，它们包含非数字字符串或日期)的列将被单独保留。
+
+另外pd.to_datetime和pd.to_timedelta可将数据转换为日期和时间戳。
+
+软转换——类型自动推断
+版本0.21.0引入了infer_objects()方法，用于将具有对象数据类型的DataFrame的列转换为更具体的类型。
+
+例如，用两列对象类型创建一个DataFrame，其中一个保存整数，另一个保存整数的字符串：
+
+>>> df = pd.DataFrame({'a': [7, 1, 5], 'b': ['3','2','1']}, dtype='object')
+>>> df.dtypes
+a    object
+b    object
+dtype: object
+ 
+
+然后使用infer_objects()，可以将列'a'的类型更改为int64：
+
+>>> df = df.infer_objects()
+>>> df.dtypes
+a     int64
+b    object
+dtype: object
+ 
+
+由于'b'的值是字符串，而不是整数，因此'b'一直保留。
+
+astype强制转换
+如果试图强制将两列转换为整数类型，可以使用df.astype(int)。
+
+ 
+
+示例如下：
+
+复制代码
+a = [['a', '1.2', '4.2'], ['b', '70', '0.03'], ['x', '5', '0']]
+df = pd.DataFrame(a, columns=['one', 'two', 'three'])
+df
+Out[16]: 
+  one  two three
+0   a  1.2   4.2
+1   b   70  0.03
+2   x    5     0
+
+df.dtypes
+Out[17]: 
+one      object
+two      object
+three    object
+
+df[['two', 'three']] = df[['two', 'three']].astype(float)
+
+df.dtypes
+Out[19]: 
+one       object
+two      float64
+three    float64
+复制代码
+参考文献
+Change data type of columns in Pandas      
