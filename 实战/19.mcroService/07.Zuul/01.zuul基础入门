@@ -1,0 +1,143 @@
+1.配置POM
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.sk</groupId>
+  <artifactId>basegateway</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>basegateway</name>
+  <url>http://maven.apache.org</url>
+  
+  <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.1.0.RELEASE</version>
+  </parent>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>1.8</java.version>
+    <spring-cloud.version>Greenwich.M1</spring-cloud.version>
+  </properties>
+
+  <dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+  </dependencyManagement> 
+  		
+  <dependencies>
+  	<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    
+    <dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-netflix-zuul</artifactId>
+	</dependency>
+    <dependency>
+		      <groupId>junit</groupId>
+		      <artifactId>junit</artifactId>
+		      <version>3.8.1</version>
+		      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  
+  <!-- Package as an executable jar -->
+  <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+  </build>
+  
+  <repositories>
+		<repository>
+	         <id>spring-milestones</id>
+	         <name>Spring Milestones</name>
+	         <url>https://repo.spring.io/milestone</url>
+	         <snapshots>
+	             <enabled>false</enabled>
+	         </snapshots>
+    	</repository>
+        <repository>
+	         <id>unidal.releases</id>
+	         <url>http://unidal.org/nexus/content/repositories/releases/</url>
+	    </repository>
+	</repositories>
+</project>
+
+
+2.启用配置开关
+@RestController
+@EnableAutoConfiguration
+@EnableZuulProxy
+@RequestMapping("/demo")
+public class App 
+{
+	@RequestMapping("/hello")
+	public String Hello(){
+		return "Hello Master";
+	}
+	
+    public static void main( String[] args )
+    {
+    	SpringApplication.run(App.class, args);
+    }
+}
+
+3.配置文件中写入转发规则
+## 路由规则
+## 传统路由配置：不依赖服务发现。
+## 所有以myapi开头的url路由至http://127.0.0.1:2000/下
+## 如http://127.0.0.1:8888/myapi/hello --> http://127.0.0.1:2000/hello
+zuul.routes.myApi.path=/myapi/**
+zuul.routes.myApi.url=http://127.0.0.1:2000
+
+#forward模式 直接转发至zuul提供的rest服务
+zuul.routes.myDemo.path=/myDemo/**
+zuul.routes.myDemo.url=forward:/demo
+
+还有一种依赖路由发现模式
+## 服务发现模式
+# 路由地址
+zuul.routes.myEureka.path=/eureka/**
+#为具体服务的名称
+zuul.routes.myEureka.service-id=eureka-client
+
+三种路由方式
+====================传统路由配置：不依赖服务发现，如nginx
+单例实例配置：通过zuul.routes.<route>.path和zuul.routes.<route>.url参数对的方式来配置
+# 传统路由配置
+zuul.routes.server-provide.path=/server-provide/**
+zuul.routes.server-provide.url=http://127.0.0.1:1001/
+
+====================多实例配置：通过一组zuul.routes.<route>.path与zuul.routes.<route>.serviceId参数对的方式配置
+# 多实例
+zuul.routes.server-provide.path=/user-service/**
+zuul.routes.server-provide.serviceId=user-service
+ribbon.eureka.enabled=false
+server-provide.ribbon.listOfServers=http://127.0.0.1:1001/,http://127.0.0.1:1001/
+
+====================服务路由配置：依赖服务发现，结合Eureka
+默认规则：http://ZUUL_HOST:ZUUL_PORT/微服务实例名(serverId)/** ，转发至serviceId对应的微服务。
+
+自定义路由规则：通过一组zuul.routes.<route>.path与zuul.routes.<route>.serviceId参数对的方式配置
+
+# 自定义路由
+zuul.routes.server-provide.path=/server-api/**
+zuul.routes.server-provide.serviceId=server-provide
+
+
