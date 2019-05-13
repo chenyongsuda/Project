@@ -1,0 +1,4 @@
+1.配置window使用anaconda python环境
+添加环境变量就可以解决了，比如安装路径为D:\anaconda3, 在环境变量中添加 D:\anaconda3；D:\anaconda3\Scripts;D:\anaconda3\Library\bin
+再加上python.exe在的路径就好了
+
