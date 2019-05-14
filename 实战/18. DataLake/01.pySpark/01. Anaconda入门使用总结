@@ -217,3 +217,9 @@ print("WordCount - Done")
 
 #%%
 print("222")
+
+
+=========================================================================================================
+conda 代理设置
+conda config --set proxy_servers.http http://user:pwd@xxxxx:port/
+conda config --set proxy_servers.https http://user:pwd@xxxxx:port/
