@@ -1,1 +1,91 @@
+1. DataFrame的几种方式
+    df[column-name][index-name]
+    or
+    df.column-name[index-name]
+    or
+    df[[col-name01,col-name02]]
+    or
+    df.loc[index,col]
+    or
+    df.iloc[int-index,int-col]
+    
+ 2. Slicing DataFrames
+    如果df只有一个参数并且要row的话只能用
+    df[row-index01:row-index02] 
+    逆序的话df[::-1] 倒叙输出
+    第一种通过拿到serise后再用slice
+    df[col-name][:]
+    or
+    第二种
+    df.loc[:,:]
+    or
+    df.loc[[],[]]
+    or
+    df.loc[[],:]
+    or
+    df.loc[:,[]]
+    iloc也一样
+    第三种
+    df[col]得到一维serise
+    df[[col]]得到二维度dataframe
+    
+3.  Filtering DataFrames
+    过滤器可以用 & | 
+    df.copy()拷贝一个
+    
+    df有几个方法
+    df.all() 要全非0的列才留下来
+    df.any() 只要有非零的列就留下来
+    df.isnull().any() 返回任何有NAN的列
+    df.notnull().all() 返回没有NAN的列
+    
+    删除NAN的方法
+    df.dropna(how='any') 删除只要有NAN的行  还可以用aisx换成列
+    dropna(thresh=1000, axis='columns') 保留最少1000个NAN的列其余删除
 
+4.  Transforming DataFrames
+    1. apply方法
+        默认是一列一列处理
+        def to_celsius(F):
+          return 5/9*(F - 32)
+
+        # Apply the function over 'Mean TemperatureF' and 'Mean Dew PointF': df_celsius
+        df_celsius = weather[['Mean TemperatureF','Mean Dew PointF']].apply(to_celsius)
+    
+    2.The .map() method is used to transform values according to a Python dictionary look-up. In this exercise you'll practice this method while returning to working with the election DataFrame, which has been pre-loaded for you.
+        # Create the dictionary: red_vs_blue
+        red_vs_blue = {'Obama':'blue','Romney':'red'}
+
+        # Use the dictionary to map the 'winner' column to the new column: election['color']
+        election['color'] = election.winner.map(red_vs_blue)
+
+        # Print the output of election.head()
+        print(election.head())
+         
+        
+        另一种map
+        df.index.map(str.lower)
+        或者
+        直接使用
+        df.index.str.lower() 字符串的方法
+        
+     3. numpy提高计算效率
+        通用函数
+        Numpy提供常见的数学函数，如sin，cos，exp。
+        在numpy中，这些被称为universal functions（ufunc），在numpy内部，这些函数按元素在数组中计算，产生一个数组作为输出
+       
+        df = pd.DataFrame ({'a' : np.random.randn(6),
+                            'b' : ['foo', 'bar'] * 3,
+                            'c' : np.random.randn(6)})
+        def my_test(a, b):
+         return a + b
+        df['Value'] = df.apply(lambda row: my_test(row['a'], row['c']), axis=1)
+        print df
+        以上这篇pandas 使用apply同时处理两列数据的方法
+       
+       
+       
+       
+        
+    
+    
