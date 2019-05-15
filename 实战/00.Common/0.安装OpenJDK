@@ -1,0 +1,19 @@
+yum search java|grep openjdk
+yum -y install java-1.8.0-openjdk java-1.8.0-openjdk-devel
+
+#dirname $(readlink $(readlink $(which java)))
+【/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.181-3.b13.el7_5.x86_64/jre/bin】
+
+
+vim /etc/profile
+   export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.181-7.b13.el7.x86_64
+   export PATH=$PATH:$JAVA_HOME/bin
+   export CLASSPATH=.:$JAVA_HOME/jre/lib:$JAVA_HOME/lib:$JAVA_HOME/lib/tools.jar
+
+保存退出文件，然后执行一下使设置立即生效
+   source /etc/profile
+
+[root@iZm5e46125tswtbtri94d1Z ~]# java -version
+openjdk version "1.8.0_181"
+OpenJDK Runtime Environment (build 1.8.0_181-b13)
+OpenJDK 64-Bit Server VM (build 25.181-b13, mixed mode)
