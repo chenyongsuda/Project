@@ -83,6 +83,31 @@
         print df
         以上这篇pandas 使用apply同时处理两列数据的方法
        
+5.   Advanced indexing
+       df.index = xxxx
+       df.index.name = xxx
+       df.columns.name='PRODUCTS'
+       index不能单独换某一个需要换整体的.
+       
+       多维index
+       df.index.names
+       通过sort_index来美化多维index
+       
+       如何访问多维index使用
+       df.loc[('',''),xxxxxx]
+       或者外层index
+       df['':'']
+       或者选多个
+       df.loc[(['',''],''),xxxxxx]
+       或者index多层slice由于()内没实现 ：所以用slice实现
+       df.loc[(slice(None),slice('','')),:]
+       
+6.   Pivoting DataFrames
+
+       
+       
+       
+       
        
        
        
