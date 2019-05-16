@@ -103,7 +103,22 @@
        df.loc[(slice(None),slice('','')),:]
        
 6.   Pivoting DataFrames
-
+       df.pivot(index=xxxxx,columns=xxxxx,values='')
+       可以不指定values 那就是有多少个值类都计的表格中
+       
+       Stacking & unstacking DataFrames
+       unstacking
+       多种索引进行unstack 将第二层索引进项column化
+       就是相当于长表变成短表
+       
+       Stacking类似从上往下拍======>变长
+       
+       swaplevel(0,1) 交换index 0 1 位置
+       
+       
+       
+       
+       
        
        
        
