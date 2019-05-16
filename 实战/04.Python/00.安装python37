@@ -1,0 +1,60 @@
+Centos 7 安装 Python3.7
+
+安装 GCC
+yum install gcc openssl-devel bzip2-devel
+
+下载 Python3.7压缩包并解压
+cd /usr/src
+wget https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tgz
+tar xzf Python-3.7.0.tgz
+
+安装 Python3.7, 删除压缩包
+
+cd Python-3.7.0
+./configure --enable-optimizations
+make altinstall
+
+检查 Python 版本
+
+[root@host ~]# python -V
+Python 3.7.0
+
+更换系统默认 Python 和 pip 版本
+1).备份原系统旧版本python
+mv /usr/bin/python /usr/bin/python.bak
+
+2).创建新版本Python3.7，pip3.7的软链接
+ln -s /usr/local/bin/python3.7 /usr/bin/python
+ln -s /usr/local/bin/pip3.7 /usr/bin/pip
+
+3).查看 Python 和 pip 版本
+[root@host ~]# python -V
+Python 3.7.0
+[root@host ~]# pip -V
+pip 10.0.1 from /usr/local/lib/python3.7/site-packages/pip (python 3.7)
+
+修改yum功能
+因为yum的功能依赖Pyhon2，现在更改默认Python版本后会导致yum无法正常工作，所以进行以下修复
+vi /usr/bin/yum
+
+打开文件后，修改第一行为：
+#!/usr/bin/python2.7
+
+再重新执行yum命令，发现已经可以正常使用了。
+安装 sqlite-devel 报错:
+yum -y install sqlite-devel
+
+Downloading packages:
+  File "/usr/libexec/urlgrabber-ext-down", line 28
+    except OSError, e:
+                  ^
+
+查看/usr/libexec/urlgrabber-ext-down文件,修改python参数
+vi /usr/libexec/urlgrabber-ext-down
+
+打开文件后，修改第一行为：
+#!/usr/bin/python2.7
+
+参考：
+How to Install Python 3.7.0 on CentOS/RHEL 7/6 & Fedora 28-23
+Centos 7安装Python3.7
