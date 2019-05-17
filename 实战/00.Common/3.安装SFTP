@@ -1,0 +1,30 @@
+CentOS7 sftp 配置与添加用户
+
+创建 sftp 用户组
+    groupadd sftp
+    mysftp 加入用户组
+    -s 禁止用户 ssh 登陆
+    -G 加入 sftp 用户组
+
+useradd -G sftp -s /sbin/nologin mysftp
+    设置用户密码
+    passwd mysftp
+    修改配置文件
+    vim /etc/ssh/sshd_config
+    说明
+    Match Group sftp 匹配 sftp 用户组中的用户
+    ChrootDirectory % h 只能访问默认的用户目录 (自己的目录)，例如 /home/mysftp
+
+##下面这行注释掉
+#Subsystem sftp /usr/libexec/openssh/sftp-server
+##文件后面加 尾部 最后 DD
+    Subsystem sftp internal-sftp
+
+    Match Group sftp
+    X11Forwarding no
+    AllowTcpForwarding no
+    ChrootDirectory %h
+    ForceCommand internal-sftp
+    重启 ssh
+    systemctl restart sshd.service
+    
