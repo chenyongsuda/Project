@@ -1,0 +1,274 @@
+Spring @RequestMapping 注解使用技巧
+
+1.@RequestMapping 是 Spring Web 应用程序中最常被用到的注解之一。这个注解会将 HTTP 请求映射到 MVC 和 REST 控制器的处理方法上。在这篇文章中，你将会看到 @RequestMapping 注解在被用来进行 Spring MVC 控制器方法的映射可以如何发挥其多才多艺的功能的。
+  如果加入该注解的话,类中的方法返回值和网页模板相对应,可以使用@ResponseBody改变成为返回json,如是string直接返回string.
+  
+  @Controller
+  @Controller注解标注类的方法，return时会被视图处理器识别成静态文件的路径。默认为templates文件夹下。如return "test/hello"表示的是默认路径下的test文件夹中的名叫hello的文件，带上后缀名.html或btl等也可以识别。
+
+  @ResponseBody
+  @ResponseBody可以标注方法也可以标注类，当标注方法时表示该方法的返回值会被解析成json（字符串会不会被转换），直接写入HTTP Response Body中，视图处理器将不会将return的参数识别成路径。当它标注类时，类中所有方法的返回值都将直接返回值到页面，相当于给所有的类都加上@ResponseBody注解。
+
+  @RestController
+  @RestController是@Controller和@ResponseBody的结合体，只能注解类，return返回的值将被转换成json，字符串除外，直接写入HTTP相应体返回到页面中。
+
+  需要注意的是，只在类上注解@ResponseBody类中方法映射的URL并不能起作用，加上@Controller注解后才可以接受处理HTTP请求，同时加上 @RestController是@Controller和只写@ResponseBody是一样的效果
+
+  @RequestMapping
+  它可以注解类也可以注解方法，注解类时标注请求的路径，标注方法时表示将特定的URL映射到指定的方法。@RequestMapping中有多个属性来进一步匹配HTTP请求到方法：
+  value，请求的URL路径，支持URL模板，正则表达式。和Ant路径表达式。例如：
+  @RequestMapping(value = '/test/{name}')
+  public string hello(@PathVariable String name){
+    
+  }
+  则/test/tom，/test/123等路径都会被匹配到Hello方法中来
+  
+  @RequestMapping(value = '/test/{name:[a-z]}')
+  public string hello(@PathVariable String name){
+    
+  }
+  加入正则表达式[a-z]表示匹配一位所有的小写字母。所以类似/test/a；/test/b等路径都会被映射到Hello方法中。
+  
+  @RequestMapping(value = '/**/hello')
+  public string hello(@PathVariable String name){
+    
+  }
+  使用Ant路径表达式时。“ * ”单个星号表示匹配任意字符：/test/ *.html，/test/hello. *
+" ** "用两个星号表示任意路径如图中的/**/hello。使用？匹配单个字符，如/test/?.html
+
+  method，指定HTTP请求的方法，GET,POST,PUT,DELETE等，只有匹配才能调用。Spring提供了简化的写法：
+  @GetMapping
+  @PostMapping
+  @PutMapping等
+
+  所以
+   @RequestMapping(value = "/test/hello",method = RequestMethod.GET)和
+   @GetMapping("/test/hello")表示的意思是一样的
+   
+================================================
+   参数相关注解
+   @PathVariable：
+   用于获取URL中的参数：一般{ }中的变量名与方法中的形参名一致(可以不加@PathVariable注解)
+    @RequestMapping(value = '/test/{name}')
+    public string hello(@PathVariable String name){
+
+    }
+    如果不一样可以加
+    @RequestMapping(value = '/test/{name}')
+    public string hello(@PathVariable('name') String abc){
+
+    }
+    
+    @RequestBody(通常来处理POST)
+    @RequestBody 注解一般用来处理非Content-Type: application/x-www-form-urlencoded编码格式的数据，在GET请求中没有请求体所以一般不适用，在post请求中必须指定Content-Type后才能使用它，如ajax请求指定发送格式为application/json。
+
+    @RequestParam(通常来处理Get)
+    @RequestParam，用来处理Content-Type为application/x-www-form-urlencoded（默认类型如果不指定），使用value属性可以指定获取参数的key。
+
+    综合实例
+    第一类：请求路径参数
+
+    @PathVariable
+    获取路径参数。即url/{id}。
+
+    @RequestParam
+    获取查询参数。即url?name=我是渣渣辉
+    例子
+    GET
+    http://localhost:8080/demo/1?name=我是渣渣辉
+    对应的java代码：
+    @GetMapping("/demo/{id}")
+    public void demo(@PathVariable(name = "id") String id, @RequestParam(name = "name") String name) {
+        System.out.println("id="+id);
+        System.out.println("name="+name);
+    }
+    输出结果：
+    id=1
+    name=我是渣渣辉
+    
+    第二类：Body参数
+    ---------'content-type' : application/json
+    @PostMapping(path = "/demo")
+    public void demo1(@RequestBody Person person) {
+        System.out.println(person.toString());
+    }
+
+    @PostMapping(path = "/demo")
+    public void demo1(@RequestBody Map<String, String> person) {
+        System.out.println(person.get("name"));
+    }
+
+    ---------'content-type' : form-data
+    @PostMapping(path = "/demo2")
+    public void demo2(Person person) {
+        System.out.println(person.toString());
+    }
+
+    ---------'content-type' :x-www-form-urlencoded
+    multipart/form-data与x-www-form-urlencoded的区别:
+     multipart/form-data：可以上传文件或者键值对，最后都会转化为一条消息
+     x-www-form-urlencoded：只能上传键值对，而且键值对都是通过&间隔分开的。
+
+    第三类：请求头参数以及Cookie
+    @GetMapping("/demo3")
+    public void demo3(@RequestHeader(name = "myHeader") String myHeader,
+            @CookieValue(name = "myCookie") String myCookie) {
+        System.out.println("myHeader=" + myHeader);
+        System.out.println("myCookie=" + myCookie);
+    }
+
+    或者
+    @GetMapping("/demo3")
+    public void demo3(HttpServletRequest request) {
+        System.out.println(request.getHeader("myHeader"));
+        for (Cookie cookie : request.getCookies()) {
+            if ("myCookie".equals(cookie.getName())) {
+                System.out.println(cookie.getValue());
+            }
+        }
+    }
+
+================================================
+@RequestMapping 来处理多个 URI
+    @RequestMapping(value = {
+        "",
+        "/page",
+        "page*",
+        "view/*,**/msg"
+    })
+    String indexMultipleMapping() {
+        return "Hello from index multiple mapping.";
+    }
+    
+带有 @RequestParam 的@RequestMapping
+    @RequestMapping(value = "/id")
+    String getIdByValue(@RequestParam("id") String personId) {
+        System.out.println("ID is " + personId);
+        return "Get ID from query string of URL with value element";
+    }
+    
+ @RequestParam 注解的 required 这个参数定义了参数值是否是必须要传的
+  @RestController
+  @RequestMapping("/home")
+  public class IndexController {
+      @RequestMapping(value = "/name")
+      String getName(@RequestParam(value = "person", required = false) String personName) {
+          return "Required element of request param";
+      }
+  }
+  
+  在这段代码中，因为 required 被指定为 false，所以 getName() 处理方法对于如下两个 URL 都会进行处理：
+  /home/name?person=xyz
+  /home/name
+  @RequestParam 的 defaultValue 取值就是用来给取值为空的请求参数提供一个默认值的。
+  
+  @RestController
+  @RequestMapping("/home")
+  public class IndexController {
+      @RequestMapping(value = "/name")
+      String getName(@RequestParam(value = "person", defaultValue = "John") String personName) {
+          return "Required element of request param";
+      }
+  }
+  在这段代码中，如果 person 这个请求参数为空，那么 getName() 处理方法就会接收 John 这个默认值作为其参数。
+  
+  一般method有五种
+    @RequestMapping(method = RequestMethod.GET)
+    @RequestMapping(method = RequestMethod.DELETE)
+    @RequestMapping(method = RequestMethod.POST)
+    @RequestMapping(method = RequestMethod.PUT)
+    @RequestMapping(method = RequestMethod.PATCH)
+    
+    
+    @requestMapping的produces和consumes属性
+      produces：它的作用是指定返回值类型，不但可以设置返回值类型还可以设定返回值的字符编码；
+      consumes： 指定处理请求的提交内容类型（Content-Type），例如application/json, text/html;
+      一、produces的例子
+      produces第一种使用，返回json数据，下边的代码可以省略produces属性，因为我们已经使用了注解@responseBody就是返回值是json数据：
+      @Controller  
+      @RequestMapping(value = "/pets/{petId}", method = RequestMethod.GET, produces="application/json")  
+      @ResponseBody  
+      public Pet getPet(@PathVariable String petId, Model model) {     
+          // implementation omitted  
+      }  
+      
+      produces第二种使用，返回json数据的字符编码为utf-8：
+      @Controller  
+      @RequestMapping(value = "/pets/{petId}", produces="MediaType.APPLICATION_JSON_VALUE"+";charset=utf-8")  
+      @ResponseBody  
+      public Pet getPet(@PathVariable String petId, Model model) {      
+          // implementation omitted  
+      }  
+      
+      二、consumes的例子（方法仅处理request Content-Type为“application/json”类型的请求。）
+      @Controller  
+      @RequestMapping(value = "/pets", method = RequestMethod.POST, consumes="application/json")  
+      public void addPet(@RequestBody Pet pet, Model model) {      
+          // implementation omitted  
+      }  
+
+    
+    @RequestMapping 注解提供了一个 header 元素来根据请求中的消息头内容缩小请求映射的范围。
+    在可以指定 header 元素的值，用 myHeader = myValue 这样的格式：
+    @RestController
+    @RequestMapping("/home")
+    public class IndexController {
+        @RequestMapping(value = "/head", headers = {
+            "content-type=text/plain"
+        })
+        String post() {
+            return "Mapping applied along with headers";
+        }
+    }
+    在上面这段代码中， @RequestMapping 注解的 headers 属性将映射范围缩小到了 post() 方法。有了这个，post() 方法就只会处理到 /home/head 并且 content-typeheader 被指定为 text/plain 这个值的请求。
+    你也可以像下面这样指定多个消息头：
+    @RestController
+    @RequestMapping("/home")
+    public class IndexController {
+        @RequestMapping(value = "/head", headers = {
+            "content-type=text/plain",
+            "content-type=text/html"
+        }) String post() {
+            return "Mapping applied along with headers";
+        }
+    
+  六、使用 @RequestMapping 来处理请求参数
+      @RequestMapping 直接的 params 元素可以进一步帮助我们缩小请求映射的定位范围。使用 params 元素，你可以让多个处理方法处理到同一个URL 的请求, 而这些请求的参数是不一样的。
+
+      你可以用 myParams = myValue 这种格式来定义参数，也可以使用通配符来指定特定的参数值在请求中是不受支持的。
+      @RestController
+      @RequestMapping("/home")
+      public class IndexController {
+          @RequestMapping(value = "/fetch", params = {
+              "personId=10"
+          })
+          String getParams(@RequestParam("personId") String id) {
+              return "Fetched parameter using params attribute = " + id;
+          }
+          @RequestMapping(value = "/fetch", params = {
+              "personId=20"
+          })
+          String getParamsDifferent(@RequestParam("personId") String id) {
+              return "Fetched parameter using params attribute = " + id;
+          }
+      }
+      在这段代码中，getParams() 和 getParamsDifferent() 两个方法都能处理相同的一个 URL (/home/fetch) ，但是会根据 params 元素的配置不同而决定具体来执行哪一个方法。
+
+      例如，当 URL 是 /home/fetch?id=10 的时候, getParams() 会执行，因为 id 的值是10,。对于 localhost:8080/home/fetch?personId=20 这个URL, getParamsDifferent() 处理方法会得到执行，因为 id 值是 20。
+      
+  八、@RequestMapping 默认的处理方法
+
+      在控制器类中，你可以有一个默认的处理方法，它可以在有一个向默认 URI 发起的请求时被执行。
+      下面是默认处理方法的示例：
+      @RestController
+      @RequestMapping("/home")
+      public class IndexController {
+          @RequestMapping()
+          String
+          default () {
+              return "This is a default method for the class";
+          }
+      }
+      在这段代码中，向 /home 发起的一个请求将会由 default() 来处理，因为注解并没有指定任何值。
+    
+    
