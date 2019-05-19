@@ -1,0 +1,224 @@
+我们都知道springboot的这个原理@SpringBootApplication = @Configuration + @EnableAutoConfiguration + @ComponentScan
+那么这三个注释代表什么意思？@Configuration 和 @EnableAutoConfiguration都有配置，有什么区别？
+@EnableAutoConfiguration：启用Spring Boot的自动配置机制，类似在java代码中自动import，属于自动导入。
+这是告诉Spring Boot根据你添加的jar依赖关系“猜测”你想要如何配置Spring。如果你在pom.xml中配置了依赖spring-boot-starter-web,那么其jar包会加入到类路径classpath，spring会自动配置Tomcat和Spring MVC。
+自动配置spring mvc是什么意思？如果不是自动配置，我们需要手工配置如下:
+
+    <servlet>
+        <servlet-name>dispatcher</servlet-name>
+        <servlet-class>
+            org.springframework.web.servlet.DispatcherServlet
+        </servlet-class>
+        <init-param>
+            <param-name>contextConfigLocation</param-name>
+            <param-value>/WEB-INF/todo-servlet.xml</param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>dispatcher</servlet-name>
+        <url-pattern>/</url-pattern>
+    </servlet-mapping>
+<p>
+当我们使用Hibernate / JPA时，我们还需要配置数据源，实体管理器工厂，事务管理器等。
+
+使用自动配置以后，就不需要手工配置了。
+
+@Configuration：有自动导入就有属于自动导出，需要配合该类中方法的@bean，这就相当于一个xml配置:
+
+<beans>
+ <bean id="b" class="springsimple.B"/>
+ <bean id="a" class="springsimple.A"/>
+</beans>
+<p>
+@bean等于一行bean配置，整个
+
+Xml配置文件等于@Configuration注释的类，spring已经从xml配置为主模式转变到类注释为主的代码模式，估计以后走向函数式方式。
+
+上面这份配置中的A和B类型如果被其他地方需要，比如在其他某处有:
+
+public class C{
+   @Autowire
+    private A a;
+
+}
+<p>
+那么在C类就可以使用你提供的A类型了，所以说是导出作用，提供bean源。
+
+@ComponentScan：扫描所有使用@Component 的类，不管自动导入还是导出，首先需要告诉spring boot到哪里去找导入导出的原料。
+
+@SpringBootApplication注解相当于使用@Configuration，@EnableAutoConfiguration以及@ComponentScan 与他们的默认属性。
+
+===================================================================================================================
+如果一个类带了@Service注解，将自动注册到Spring容器，不需要再在applicationContext.xml文件定义bean了，类似的还包括@Component、@Repository、@Controller。
+@Controller 用于标记在一个类上，使用它标记的类就是一个SpringMVC Controller 对象。分发处理器将会扫描使用了该注解的类的方法。通俗来说，被Controller标记的类就是一个控制器，这个类中的方法，就是相应的动作。
+1、@controller 控制器（注入服务）
+2、@service 服务（注入dao）
+3、@repository dao（实现dao访问）
+4、@component （把普通pojo实例化到spring容器中，相当于配置文件中的<bean id="" class=""/>）
+
+ @Configuation总结
+ @Configuation等价于<Beans></Beans>
+ @Bean等价于<Bean></Bean>
+ @ComponentScan等价于<context:component-scan base-package="com.dxz.demo"/>
+ 
+======================================================================================================================
+自动配置的例子详解
+使用姿势
+讲原理前先说下使用姿势。
+在project A中定义一个bean。
+package com.wangzhi;
+
+import org.springframework.stereotype.Service;
+
+@Service
+public class Dog {
+}
+
+并在该project的resources/META-INF/下创建一个叫spring.factories的文件，该文件内容如下
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=com.wangzhi.Dog
+
+然后在project B中引用project A的jar包。
+projectA代码如下：
+package com.wangzhi.springbootdemo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
+
+@EnableAutoConfiguration
+public class SpringBootDemoApplication {
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(SpringBootDemoApplication.class, args);
+        System.out.println(context.getBean(com.wangzhi.Dog.class));
+    }
+
+}
+
+打印结果：
+com.wangzhi.Dog@3148f668
+
+原理解析
+总体分为两个部分：一是收集所有spring.factories中EnableAutoConfiguration相关bean的类，二是将得到的类注册到spring容器中。
+收集bean定义类
+在spring容器启动时，会调用到AutoConfigurationImportSelector#getAutoConfigurationEntry
+protected AutoConfigurationEntry getAutoConfigurationEntry(
+        AutoConfigurationMetadata autoConfigurationMetadata,
+        AnnotationMetadata annotationMetadata) {
+    if (!isEnabled(annotationMetadata)) {
+        return EMPTY_ENTRY;
+    }
+    // EnableAutoConfiguration注解的属性：exclude，excludeName等
+    AnnotationAttributes attributes = getAttributes(annotationMetadata);
+    // 得到所有的Configurations
+    List<String> configurations = getCandidateConfigurations(annotationMetadata,
+            attributes);
+    // 去重
+    configurations = removeDuplicates(configurations);
+    // 删除掉exclude中指定的类
+    Set<String> exclusions = getExclusions(annotationMetadata, attributes);
+    checkExcludedClasses(configurations, exclusions);
+    configurations.removeAll(exclusions);
+    configurations = filter(configurations, autoConfigurationMetadata);
+    fireAutoConfigurationImportEvents(configurations, exclusions);
+    return new AutoConfigurationEntry(configurations, exclusions);
+}
+
+getCandidateConfigurations会调用到方法loadFactoryNames：
+public static List<String> loadFactoryNames(Class<?> factoryClass, @Nullable ClassLoader classLoader) {
+        // factoryClassName为org.springframework.boot.autoconfigure.EnableAutoConfiguration
+        String factoryClassName = factoryClass.getName();
+        // 该方法返回的是所有spring.factories文件中key为org.springframework.boot.autoconfigure.EnableAutoConfiguration的类路径
+        return loadSpringFactories(classLoader).getOrDefault(factoryClassName, Collections.emptyList());
+    }
+
+
+public static final String FACTORIES_RESOURCE_LOCATION = "META-INF/spring.factories";
+
+private static Map<String, List<String>> loadSpringFactories(@Nullable ClassLoader classLoader) {
+        MultiValueMap<String, String> result = cache.get(classLoader);
+        if (result != null) {
+            return result;
+        }
+
+        try {
+            // 找到所有的"META-INF/spring.factories"
+            Enumeration<URL> urls = (classLoader != null ?
+                    classLoader.getResources(FACTORIES_RESOURCE_LOCATION) :
+                    ClassLoader.getSystemResources(FACTORIES_RESOURCE_LOCATION));
+            result = new LinkedMultiValueMap<>();
+            while (urls.hasMoreElements()) {
+                URL url = urls.nextElement();
+                UrlResource resource = new UrlResource(url);
+                // 读取文件内容，properties类似于HashMap，包含了属性的key和value
+                Properties properties = PropertiesLoaderUtils.loadProperties(resource);
+                for (Map.Entry<?, ?> entry : properties.entrySet()) {
+                    String factoryClassName = ((String) entry.getKey()).trim();
+                    // 属性文件中可以用','分割多个value
+                    for (String factoryName : StringUtils.commaDelimitedListToStringArray((String) entry.getValue())) {
+                        result.add(factoryClassName, factoryName.trim());
+                    }
+                }
+            }
+            cache.put(classLoader, result);
+            return result;
+        }
+        catch (IOException ex) {
+            throw new IllegalArgumentException("Unable to load factories from location [" +
+                    FACTORIES_RESOURCE_LOCATION + "]", ex);
+        }
+    }
+
+注册到容器
+在上面的流程中得到了所有在spring.factories中指定的bean的类路径，在processGroupImports方法中会以处理@Import注解一样的逻辑将其导入进容器。
+public void processGroupImports() {
+    for (DeferredImportSelectorGrouping grouping : this.groupings.values()) {
+        // getImports即上面得到的所有类路径的封装
+        grouping.getImports().forEach(entry -> {
+            ConfigurationClass configurationClass = this.configurationClasses.get(
+                    entry.getMetadata());
+            try {
+                // 和处理@Import注解一样
+                processImports(configurationClass, asSourceClass(configurationClass),
+                        asSourceClasses(entry.getImportClassName()), false);
+            }
+            catch (BeanDefinitionStoreException ex) {
+                throw ex;
+            }
+            catch (Throwable ex) {
+                throw new BeanDefinitionStoreException(
+                        "Failed to process import candidates for configuration class [" +
+                                configurationClass.getMetadata().getClassName() + "]", ex);
+            }
+        });
+    }
+}
+
+private void processImports(ConfigurationClass configClass, SourceClass currentSourceClass,
+            Collection<SourceClass> importCandidates, boolean checkForCircularImports) {
+    ...
+    // 遍历收集到的类路径
+    for (SourceClass candidate : importCandidates) {
+       ...
+        //如果candidate是ImportSelector或ImportBeanDefinitionRegistrar类型其处理逻辑会不一样，这里不关注
+        // Candidate class not an ImportSelector or ImportBeanDefinitionRegistrar ->
+                        // process it as an @Configuration class
+                        this.importStack.registerImport(
+                                currentSourceClass.getMetadata(), candidate.getMetadata().getClassName());
+        // 当作 @Configuration 处理         
+        processConfigurationClass(candidate.asConfigClass(configClass));
+   ...
+}
+            
+    ...
+}
+
+可以看到，在第一步收集的bean类定义，最终会被以Configuration一样的处理方式注册到容器中。
+End
+@EnableAutoConfiguration注解简化了导入了二方包bean的成本。提供一个二方包给其他应用使用，只需要在二方包里将对外暴露的bean定义在spring.factories中就好了。对于不需要的bean，可以在使用方用@EnableAutoConfiguration的exclude属性进行排除。
+
+
