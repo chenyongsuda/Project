@@ -331,6 +331,31 @@ public class StudentControllerTest {
 
 }
 
+============================================================================================
+mybatis几种annotation测试
+public interface UserMapper
+{
+	//selectAll
+	@Select("select * from user")
+	public List<User> getAllUsers();
+	//select
+	@Select("select * from user where userId = #{userId}")
+	public User getUserById(int userId);
+	
+	//insert
+	@Insert("insert into user(userName,userPassword,userAge,userEmail) "
+			+ "values(#{userName},#{userPassword},#{userAge},#{userEmail}) ")
+	public void insertUser(User user);
+	
+	//delete
+	@Delete("delete from user where userId = #{userId}")
+	public void deleteUserById(int userId);
+	
+	//update
+	@Update("UPDATE USER SET userName = #{userName},userPassword = #{userPassword},userAge = #{userAge},userEmail = #{userEmail}" + 
+			"WHERE userId = #{userId}")
+	public void updateUser(User user);
+}
 
 
 
