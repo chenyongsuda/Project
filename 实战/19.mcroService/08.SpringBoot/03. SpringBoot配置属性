@@ -91,3 +91,11 @@ useUnicode=true&characterEncoding=utf-8&useSSL=true&autoReconnect=true #数据�
 spring.datasource.username=root #数据库用户名
 spring.datasource.password=123 #数据库用户对应的密码
 spring.datasource.driver-class-name=com.mysql.jdbc.Driver #数据库驱动名称
+
+
+--------------------------------------------------------------------------------
+打包完执行命令 可以通过参数覆盖来进行环境切换
+java -jar xxxxx.jar  --spring.profiles.active=test
+
+
+
