@@ -1,1 +1,237 @@
+1.配置
+Logback 会寻找项目中特定文件来配置 Logback 日志记录的设置，一般这个文件我们会命名为 logback.xml。
 
+2.使用
+@Service public class MyServiceImpl implements MyService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyServiceImpl.class);
+    @Override public void doStuff(final String value) {
+        LOGGER.trace("doStuff needed more information - {}", value);
+        LOGGER.debug("doStuff needed to debug - {}", value);
+        LOGGER.info("doStuff took input - {}", value);
+        LOGGER.warn("doStuff needed to warn - {}", value);
+        LOGGER.error("doStuff encountered an error with value - {}", value);
+    }
+}
+
+3.简单例子
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{dd-MM-yyyy HH:mm:ss.SSS} %magenta([%thread]) %highlight(%-5level) %logger{36}.%M - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <root level="info">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>
+
+当你使用 Spring Boot ，添加自己的 logback.xml 时，LogBack 的默认配置将会被覆盖。假如你希望包含 Spring Boot 的配置，你可以在标签内添加如下内容。
+<include resource="org/springframework/boot/logging/logback/base.xml"/>
+
+以下是对每项符号的解释：
+％d - 以 SimpleDateFormat 允许的格式输出日志消息发生的时间。
+％thread - 输出日志消息发生的线程的名称。
+$ -5level - 输出日志消息的日志级别。
+％logger {36} - 输出日志消息发生的包+类名。括号中的数字表示包+类名的最大长度。如果输出长于指定的长度，则从根包中开始，每个包的第一个字符的子串将从根包开始直到输出低于最大长度。类名永远不会减少。转换文字文档中可以找到一个很好的案例。
+％M - 输出日志消息发生的方法的名称（使用起来很慢，不推荐，除非你不担心性能，或者方法名称对你尤其重要）。
+％msg - 输出实际的日志消息。
+％n - 换行。
+％magenta（） - 将括号中包含的输出的颜色设置为品红色（其他颜色也可用）。
+highlight（） - 根据记录级别（例如ERROR = red）设置括号中包含的输出的颜色高亮。
+
+或者
+假如你希望写成和前面的 application.properties 一样效果的的代码例子，你可以如下操作。
+logging.level.root=info		
+logging.pattern.console=%d{dd-MM-yyyy HH:mm:ss.SSS} %magenta([%thread]) %highlight(%-5level) %logger.%M
+
+
+假如你希望为某些类以不同于根级别的消息类型来记录日志消息，你可以为此类定义自己的日志。这样将允许你为特别的类设定日志级别，就像为这个类定制了一些其他属性。下面是你如何为单独的一个类定义日志。
+<logger name="com.lankydan.service.MyServiceImpl" level="debug">
+    <appender-ref ref="STDOUT" />
+</logger>
+
+可以看到，每个日志生产了两次，这或许并不是你希望的。修复这个需要设定 additivity="false" 。如果不设定 additivity="false" ，由于根日志附加器和类级别附加器都写入日志文件，就会导致消息被输出两次。即使根级别是 ERROR ，类级别设定为 DEBUG ，对于 MyServiceImpl 类，它将全局覆盖它，导致根日志附加器为 DEBUG 级别。下面是包含此属性的代码，看起来应该像这样：
+
+<logger name="com.lankydan.service.MyServiceImpl" additivity="false" level="debug">
+    <appender-ref ref="STDOUT" />
+</logger>
+
+类级别的日志可以在 application.properties 文件中添加以下内容。
+logging.level.com.lankydan.service.MyServiceImpl=debug
+
+当您需要标记要记录的日志的输出文件夹时，可以通过配置文件重新定义属性，这是很方便的。
+<property name="LOG_PATH" value="logs"/>
+
+此配置还可以通过 application.properties 实现，因为 LOG_PATH 在 Spring Boot 中非常重要性。
+logging.path=logs
+
+使用 FileAppender 能够将日志保存到文件中。这是一个简单的日志追加程序，并将所有的日志保存到一个单一的文件，但是这样做可能会让文件变得非常大，所以你更有需要使用 RollingFileAppender 来进行切割，稍后我们再来看看。
+<appender name="SAVE-TO-FILE" class="ch.qos.logback.core.FileAppender">
+    <file>${LOG_PATH}/log.log</file>
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+        <Pattern>
+            %d{dd-MM-yyyy HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M - %msg%n
+        </Pattern>
+    </encoder>
+</appender>
+
+这里没有太多配置。它与 ConsoleAppender 具有相同的结构，并添加了将日志消息保存到的文件。值得注意的是，我删除了在保存到文件时添加到编码器日志高亮配置，因为它将包含不想显示的字符，并且会使日志文件变得混乱。然后可以使用与前面显示的 STDOUT appender 相同的方法来引用这个 appender 。正如下面的代码引用片段：
+<logger name="com.lankydan.service.MyServiceImpl" additivity="false" level="debug">
+    <appender-ref ref="SAVE-TO-FILE" />
+</logger>
+
+下面的示例将演示与上述 SAVE-TO-FILE appender 类似的配置。
+logging.pattern.console=		
+logging.path=logs		
+logging.file=${logging.path}/log.log		
+logging.pattern.file=%d{dd-MM-yyyy HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M - %msg%n
+
+=======================================================================
+
+RollingFileAppender 将根据日志滚动策略将日志保存到不同的文件。它允许将日志输出分割成您可以控制的各种形式，这样做会方便很多。例如，您可以根据日期分隔日志文件，以便查看过去在特定日期发生的错误。您可以根据文件大小或按照日期和大小组合进行分割，而无需在大量长期的文件中进行搜索。
+
+TimeBasedRollingPolicy 将根据日期创建一个新的文件。以下配置将每天创建一个新文件，并使用 ％d 符号将日期附加到日志文件的名称上。 ％d 符号的格式很重要，因为要根据它来推断日志滚动的时间段。下面的示例是每天滚动，如果要每月滚动，可以使用 ％d {MM-yyyy} 模式来包含日期部分。只要 ％d 符号中的格式符合 SimpleDateFormat 类允许的格式，就可以使用不同的日志滚动周期 - 不局限于每天或每月。
+
+<appender name="SAVE-TO-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_PATH}/log.log</file>
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+        <Pattern>%d{dd-MM-yyyy HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M - %msg%n</Pattern>
+    </encoder>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <fileNamePattern>${LOG_PATH}/archived/log_%d{dd-MM-yyyy}.log</fileNamePattern>
+        <maxHistory>10</maxHistory>
+        <totalSizeCap>100MB</totalSizeCap>
+    </rollingPolicy>
+</appender>
+亚林瓜子
+亚林瓜子
+翻译于 2017/09/14 08:23
+ 
+我已经在上面的例子中包含了 TimeBasedRollingPolicy 可用的一些属性。maxHistory 用于设置归档日志文件在被自动删除之前将被保留多久。保留的时间取决于文件名中指定的回转时间，因此在上述示例中，回转周期为一天，允许在删除之前存储最多 10 天的归档日志。 totalSizeCap 用于限制所有归档日志文件的最大大小。它需要使用 maxHistory 锁设置的 maxHistory 属性，在删除归档文件时优先级高于 totalSizeCap 。
+
+此配置超出了在 application.properties 文件内就可以完成的范围。对于以下示例也可以这样说，尽管默认配置将允许日志文件在达到 10 MB时进行回转，并支持最多 7 个归档日志文件。
+
+Tocy
+Tocy
+翻译于 2017/09/10 10:21
+ 
+为了使滚动仅依赖与文件大小，需要使用 FixedWindowRollingPolicy 的滚动策略和 SizeBasedTriggeringPolicy 的触发策略。 在上一个示例中，日志在滚动时保存到归档文件夹，但是对于此策略，我并没有保存它们，因为较小的文件大小使得分离的日志更容易遍历。
+
+<appender name="SAVE-TO-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_PATH}/log.log</file>
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+        <Pattern>%d{dd-MM-yyyy HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M - %msg%n</Pattern>
+    </encoder>
+    <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+        <fileNamePattern>${LOG_PATH}/log_%i.log</fileNamePattern>
+        <minIndex>2</minIndex>
+        <maxIndex>3</maxIndex>
+    </rollingPolicy>
+    <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+        <maxFileSize>1KB</maxFileSize>
+    </triggeringPolicy>
+</appender>
+在 FixedWindowRollingPolicy 中找到的 minIndex 和 maxIndex 的可选属性指定了在日志文件名中可以使用的%i的最小值和最大值。 因此，在上述示例中，当日志滚动时，它们可以使用名称 log_2.log 和 log_3.log （尽管从2开始是奇怪的，仅为了清楚而被包括。通常从1开始）。 生成日志文件的过程如下（以上述代码片段为例）：
+
+log.log 文件达到最大文件大小时--> log.log 重命名为 log_2.log 并新生成一个 log.log 文件
+
+log_2.log 文件达到最大文件大小时-->log_2.log 重命名为 log_3.log, log.log 重命名为 log_2.log  并生成一个新的 log.log 文件
+
+log_3.log 文件达到最大文件大小时-->log_3.log 删除，log_2.log 重命名为 log_3.log，log.log 重命名为 log_2.log 并新生成一个 log.log 文件
+
+aaronday
+翻译于 2017/09/14 17:44
+ 
+如果我仍然没有做好给你解释这个流程的工作，那么看看 FixedWindowRollingPolicy 文档，在我没解释清楚的情况下，希望它能让你理解清楚。
+
+SizeAndTimeBasedRollingPolicy 作为上述两个示例的一部分，允许它在大小和时间上回滚。请注意，它使用 ％d 和 ％i 符号将日期和日志号分别包含在文件名中。
+
+<appender name="SAVE-TO-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_PATH}/log.log</file>
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+        <Pattern>%d{dd-MM-yyyy HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M - %msg%n</Pattern>
+    </encoder>
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>${LOG_PATH}/archived/log_%d{dd-MM-yyyy}_%i.log</fileNamePattern>
+        <maxFileSize>10MB</maxFileSize>
+        <maxHistory>10</maxHistory>
+        <totalSizeCap>100MB</totalSizeCap>
+    </rollingPolicy>
+</appender>
+如你所看到的，它包含 maxFileSize、maxHistory 和 totalSizeCap ，可以控制单个文件以及文件集合的大小。因此，上述示例将把 10 天的历史记录分割为 10MB 的文件，当所有文件的总大小达到 100MB 时，最旧的文件将被删除。
+
+Tocy
+Tocy
+翻译于 2017/09/10 10:46
+ 
+现在我们已经看过如何定义可以输出到控制台或文件的多个 appender ，我们可以将它们组合一次输出到两种格式，只需在 logger 中引用多个 appender 即可：
+
+<logger name="com.lankydan.service.MyServiceImpl" additivity="false" level="debug">
+    <appender-ref ref="STDOUT" />
+    <appender-ref ref="SAVE-TO-FILE" />
+</logger>
+所以现在这个 logger 将输出到控制台，使用 STDOUT 以及 SAVE-TO-FILE appender 输出到文件。
+
+可以通过 application.properties 实现类似的配置。如果你回到该页面，你可能可以弄清楚自己要如何配置，因为上一个例子有一个额外添加的行，以阻止它输出到控制台和文件中。同样，这将包含来自根 logger 的日志消息，而不仅仅像 MyServiceImpl 上面的代码段一样。
+
+logging.path=logs		
+logging.file=${logging.path}/log.log		
+logging.pattern.file=%d{dd-MM-yyyy HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M - %msg%n
+ 
+在使用 Logback 时，Spring Boot 提供的一个有用功能是在不同环境之间隔离配置的能力。 因此，你要在开发环境中需要保存到文件并打印到控制台，但只能在生产中打印到文件，那么这可以轻松实现。
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- config for STDOUT and SAVE-TO-FILE -->
+    <springProfile name="dev">
+        <root level="info">
+            <appender-ref ref="STDOUT" />
+            <appender-ref ref="SAVE-TO-FILE" />
+        </root>
+        <logger name="com.lankydan.service.MyServiceImpl" additivity="false" level="debug">
+            <appender-ref ref="STDOUT" />
+            <appender-ref ref="SAVE-TO-FILE" />
+        </logger>
+    </springProfile>
+    <springProfile name="prod">
+        <root level="info">
+            <appender-ref ref="SAVE-TO-FILE" />
+        </root>
+        <logger name="com.lankydan.service.MyServiceImpl" additivity="false" level="error">
+            <appender-ref ref="SAVE-TO-FILE" />
+        </logger>
+    </springProfile>
+</configuration>
+要使其正常工作的第一步是将 logback.xml 文件重命名为 logback-spring.xml ，以便使用 springProfile 标签。在此标签中会提供一个名字，可以通过属性、环境变量或 VM 选项设置。以下是如何将 springProfile 名称设置为已被用于表示开发环境的 dev 。
+
+====================================================================================================================
+使用实例
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false" scan="true" scanPeriod="1 seconds">
+
+    <contextName>logback</contextName>
+    <property name="log.path" value="/data/applogs/xxl-job/xxl-job-admin.log"/>
+
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %contextName [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}.%d{yyyy-MM-dd}.zip</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%date %level [%thread] %logger{36} [%file : %line] %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <root level="info">
+        <appender-ref ref="console"/>
+        <appender-ref ref="file"/>
+    </root>
+
+</configuration>
