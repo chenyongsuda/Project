@@ -281,3 +281,60 @@ public class MybatisAutoConfiguration implements InitializingBean {
 从类上的注解可以看出，当当前类路径下存在SqlSessionFactory、 SqlSessionFactoryBean以及DataSource时，这里的配置才会生效，SqlSessionFactory和SqlTemplate都被提供了。为什么要看这段代码呢？下篇文章，松哥和大伙分享Spring Boot中MyBatis多数据源的配置时，这里将是一个重要的参考。
 
 好了，本文就先说到这里，关于在Spring Boot中整合MyBatis，这里还有一个小小的视频教程，加入我的星球即可免费观看：
+
+
+=============================================================================================
+5. 加入测试框架
+	<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Junit依赖 -->
+        <!--junit不需要springboot已经自动加载了。-->
+　　　　　<!--spring-boot-starter-jdbc已经包含在了mybatis-spring-boot-starter中了。-->
+
+请注意注掉junit相关依赖否则会报错
+
+新增测试类普通Mapper Controller Service
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class MapperTester {
+	@Resource
+	private TestMapper test;
+	
+	@Test
+	public void mybatis(){
+		List<JobGroup> job = test.getAllGroup();
+		System.out.println(job.size());
+		assertEquals(job.size(), 1);//通过断言判断执行结果
+	}
+}
+
+
+项目右键Run Junit Test
+
+新增测试Web类
+@RunWith(SpringRunner.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+public class StudentControllerTest {
+    @Autowired
+    private MockMvc mvc;
+
+    @Test
+    public void getStudentList() throws Exception {
+        mvc.perform(MockMvcRequestBuilders.get("/students"))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        //.andExpect(MockMvcResultMatchers.content().string("365"));  //测试接口返回内容
+    }
+
+}
+
+
+
+
+
+
+
+
