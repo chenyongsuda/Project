@@ -104,18 +104,9 @@ TimeBasedRollingPolicy 将根据日期创建一个新的文件。以下配置将
         <totalSizeCap>100MB</totalSizeCap>
     </rollingPolicy>
 </appender>
-亚林瓜子
-亚林瓜子
-翻译于 2017/09/14 08:23
  
 我已经在上面的例子中包含了 TimeBasedRollingPolicy 可用的一些属性。maxHistory 用于设置归档日志文件在被自动删除之前将被保留多久。保留的时间取决于文件名中指定的回转时间，因此在上述示例中，回转周期为一天，允许在删除之前存储最多 10 天的归档日志。 totalSizeCap 用于限制所有归档日志文件的最大大小。它需要使用 maxHistory 锁设置的 maxHistory 属性，在删除归档文件时优先级高于 totalSizeCap 。
-
-此配置超出了在 application.properties 文件内就可以完成的范围。对于以下示例也可以这样说，尽管默认配置将允许日志文件在达到 10 MB时进行回转，并支持最多 7 个归档日志文件。
-
-Tocy
-Tocy
-翻译于 2017/09/10 10:21
- 
+此配置超出了在 application.properties 文件内就可以完成的范围。对于以下示例也可以这样说，尽管默认配置将允许日志文件在达到 10 MB时进行回转，并支持最多 7 个归档日志文件。 
 为了使滚动仅依赖与文件大小，需要使用 FixedWindowRollingPolicy 的滚动策略和 SizeBasedTriggeringPolicy 的触发策略。 在上一个示例中，日志在滚动时保存到归档文件夹，但是对于此策略，我并没有保存它们，因为较小的文件大小使得分离的日志更容易遍历。
 
 <appender name="SAVE-TO-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -235,3 +226,46 @@ logging.pattern.file=%d{dd-MM-yyyy HH:mm:ss.SSS} [%thread] %-5level %logger{36}.
     </root>
 
 </configuration>
+
+============================
+二、统一路径写法
+2.1 问题
+对于Windows、Linux 不同的配置参数，最常见的是日志文件的路径。例如以下分别是 Linux、Windows 下的日志目录——
+
+/mysystem/app1/log
+E:\mysystem\app1\log
+可见，这2种目录的目录结构是类似，仅是因为 Linux、Windows 的路径格式不同，而有了2点差异——
+
+文件分隔符不同。Linux（等Unix类）系统用斜杠（/），而Windows系统用反斜杠（\）。
+根目录写法不同。Linux（等Unix类）系统是单根的 /，而Windows系统有盘符的概念（如 E:\）。
+2.2 办法
+对于操作系统的路径格式区别，我们可以使用 System.getProperty("file.separator") 得到文件分隔符，使用 File.listRoots() 得到根目录情况。根据这些信息，我们理论上能写个函数，将约定好格式的路径，给翻译为当前操作系统的路径格式。
+
+但我后来测试File类时发现，其实有更简单的办法的。
+File类的2点特性，对我们很有用——
+
+在给File类的构造函数传递 Linux风格的路径时，会自动转为当前系统的文件分隔符。例如传递 /mysystem/app1/log，随后File构造好后实际为 \mysystem\app1\log。
+在Windows下通过File类打开文件流时，若路径中没有盘符，则会自动选择当前工作目录（user.dir）的盘符。例如对于 \mysystem\app1\log，假设当前工作目录是E盘，那么实际的路径是 E:\mysystem\app1\log。
+即File类会自动将 Linux（等Unix类）系统风格的路径，转为Windows风格的路径。只要我们能保证工作目录的所在盘符，就是所需的盘符。
+
+2.3 应用：logback的日志路径
+2.3.1 之前
+之前在 logback.xml 文件中是这样指定路径的。
+
+<property name="LOG_HOME" value="/mysystem/app1/log" />
+<!-- <property name="LOG_HOME" value="E:\mysystem\app1\log" /> -->
+它默认用Linux的路径参数，而Windows的路径参数是处于被注释的状态。
+然后在需要部署到Windows系统时，调整一下注释使第2行生效，并根据实际情况调整一下盘符。
+
+2.3.2 之后
+现在 logback.xml 文件中只需写Linux目录就行。
+
+<property name="LOG_HOME" value="/mysystem/app1/log" />
+war包一般是在tomcat等web容器中运行的。对于Windows下，工作目录的盘符就是web容器所在盘符。
+
+假设该war部署在E盘的tomcat上的，那么配置文件中的 /mysystem/app1/log，实际上是 E:\mysystem\app1\log。
+假设该war部署在F盘的weblogic上的，那么配置文件中的 /mysystem/app1/log，实际上是 F:\mysystem\app1\log。
+……
+
+2.4 小结
+统一路径写法是非常简单的，即只保留Linux（Unix类）路径写法就行。这样大多数程序都能正常工作的。
