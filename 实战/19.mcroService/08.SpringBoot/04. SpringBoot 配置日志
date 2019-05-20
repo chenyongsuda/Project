@@ -269,3 +269,14 @@ war包一般是在tomcat等web容器中运行的。对于Windows下，工作目�
 
 2.4 小结
 统一路径写法是非常简单的，即只保留Linux（Unix类）路径写法就行。这样大多数程序都能正常工作的。
+
+====================================================
+默认的命名规则，并且放在 src/main/resources 下面即可
+
+如果你即想完全掌控日志配置，但又不想用 logback.xml 作为 Logback 配置的名字， application.yml 可以通过 logging.config 属性指定自定义的名字：
+
+1
+logging.config=classpath:logging-config.xml
+虽然一般并不需要改变配置文件的名字，但是如果你想针对不同运行时 Profile 使用不同的日志配置，这个功能会很有用。
+
+一般不需要这个属性，而是直接在 logback-spring.xml 中使用 springProfile 配置，不需要 logging.config 指定不同环境使用不同配置文件。 springProfile 配置在下面介绍。
