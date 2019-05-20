@@ -1,0 +1,152 @@
+spring boot整合mybatis事务配置
+接着上一篇文章，spring boot整合mybatis，需要配置事务。 
+只需要修改两个地方
+
+一，service
+事务主要是配置在处理业务逻辑的service层。在设计service层的时候，应该合理的抽象出方法包含的内容。然后将方法用@Trasactional注解注释，默认的话在抛出Exception.class异常的时候，就会触发方法中所有数据库操作回滚，当然这指的是增、删、改。 
+当然，@Transational方法是可以带参数的，具体的参数解释如下：
+
+属性	类型	描述
+value	String	可选的限定描述符，指定使用的事务管理器
+propagation	enum: Propagation	可选的事务传播行为设置
+isolation	enum: Isolation	可选的事务隔离级别设置
+readOnly	boolean	读写或只读事务，默认读写
+timeout	int (in seconds granularity)	事务超时时间设置
+rollbackFor	Class对象数组，必须继承自Throwable	导致事务回滚的异常类数组
+rollbackForClassName	类名数组，必须继承自Throwable	导致事务回滚的异常类名字数组
+noRollbackFor	Class对象数组，必须继承自Throwable	不会导致事务回滚的异常类数组
+noRollbackForClassName	类名数组，必须继承自Throwable	不会导致事务回滚的异常类名字数组
+示例代码
+@Service
+public class TSUserServiceImpl implements TSUserService{
+    @Autowired
+    private TSUserDao tSUserDao;
+
+    @Transactional
+    public int insertTSUser(TSUser value){
+        return tSUserDao.insertTSUser(value);
+    }
+    @Transactional
+    public int insertNonEmptyTSUser(TSUser value){
+        return tSUserDao.insertNonEmptyTSUser(value);
+    }
+    @Transactional
+    public int insertTSUserByBatch(List<TSUser> value){
+        return tSUserDao.insertTSUserByBatch(value);
+    }
+    @Transactional
+    public int deleteTSUserById(String id){
+        return tSUserDao.deleteTSUserById(id);
+    }
+    @Transactional
+    public int deleteTSUser(Assist assist){
+        return tSUserDao.deleteTSUser(assist);
+    }
+    @Transactional
+    public int updateTSUserById(TSUser enti){
+        return tSUserDao.updateTSUserById(enti);
+    }
+}
+
+二，启动类
+开启事务
+最后你要在Application类中开启事务管理，开启事务管理很简单，只需要@EnableTransactionManagement注解就行
+
+@SpringBootApplication
+@EnableTransactionManagement
+public class Application {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+
+
+三，事务传播行为
+关于propagation属性的7个传播行为 
+REQUIRED：指定当前方法必需在事务环境中运行，如果当前有事务环境就加入当前正在执行的事务环境，如果当前没有事务，就新建一个事务。这是默认值。 
+SUPPORTS：指定当前方法加入当前事务环境，如果当前没有事务，就以非事务方式执行。 
+MANDATORY：指定当前方法必须加入当前事务环境，如果当前没有事务，就抛出异常。 
+REQUIRES_NEW：指定当前方法总是会为自己发起一个新的事务，如果发现当前方法已运行在一个事务中,则原有事务被挂起,自己创建一个属于自己的事务, 
+一直我自己这个方法commit结束,原先的事务才会恢复执行。 
+NOT_SUPPORTED：指定当前方法以非事务方式执行操作，如果当前存在事务，就把当前事务挂起，等我以非事务的状态运行完，再继续原来的事务。 
+NEVER：指定当前方法绝对不能在事务范围内执行，如果方法在某个事务范围内执行，容器就抛异常，只有没关联到事务，才正常执行。 
+NESTED：指定当前方法执行时， 如果已经有一个事务存在,则运行在这个嵌套的事务中.如果当前环境没有运行的事务，就新建一个事务， 
+并与父事务相互独立，这个事务拥有多个可以回滚的保证点。就是指我自己内部事务回滚不会对外部事务造成影响，只对DataSourceTransactionManager事务管理器起效。 
+REQUIRED是默认值，示例代码中就没有写，也就是说service实现类话可以这样写
+
+@Service
+public class TSUserServiceImpl implements TSUserService{
+    @Autowired
+    private TSUserDao tSUserDao;
+
+    @Transactional
+    public int insertTSUser(TSUser value){
+        return tSUserDao.insertTSUser(value);
+    }
+     @Transactional(propagation = Propagation.REQUIRED)
+    public int insertNonEmptyTSUser(TSUser value){
+        return tSUserDao.insertNonEmptyTSUser(value);
+    }
+     @Transactional(propagation = Propagation.REQUIRED)
+    public int insertTSUserByBatch(List<TSUser> value){
+        return tSUserDao.insertTSUserByBatch(value);
+    }
+     @Transactional(propagation = Propagation.REQUIRED)
+    public int deleteTSUserById(String id){
+        return tSUserDao.deleteTSUserById(id);
+    }
+    @Transactional(propagation = Propagation.REQUIRED)
+    public int deleteTSUser(Assist assist){
+        return tSUserDao.deleteTSUser(assist);
+    }
+     @Transactional(propagation = Propagation.REQUIRED)
+    public int updateTSUserById(TSUser enti){
+        return tSUserDao.updateTSUserById(enti);
+    }      
+}
+
+
+=============================================================================================
+事务隔离级别
+
+隔离级别是指若干个并发的事务之间的隔离程度。TransactionDefinition 接口中定义了五个表示隔离级别的常量：
+
+TransactionDefinition.ISOLATION_DEFAULT：这是默认值，表示使用底层数据库的默认隔离级别。对大部分数据库而言，通常这值就是TransactionDefinition.ISOLATION_READ_COMMITTED。
+TransactionDefinition.ISOLATION_READ_UNCOMMITTED：该隔离级别表示一个事务可以读取另一个事务修改但还没有提交的数据。该级别不能防止脏读，不可重复读和幻读，因此很少使用该隔离级别。比如PostgreSQL实际上并没有此级别。
+TransactionDefinition.ISOLATION_READ_COMMITTED：该隔离级别表示一个事务只能读取另一个事务已经提交的数据。该级别可以防止脏读，这也是大多数情况下的推荐值。
+TransactionDefinition.ISOLATION_REPEATABLE_READ：该隔离级别表示一个事务在整个过程中可以多次重复执行某个查询，并且每次返回的记录都相同。该级别可以防止脏读和不可重复读。
+TransactionDefinition.ISOLATION_SERIALIZABLE：所有的事务依次逐个执行，这样事务之间就完全不可能产生干扰，也就是说，该级别可以防止脏读、不可重复读以及幻读。但是这将严重影响程序的性能。通常情况下也不会用到该级别。
+事务传播行为
+
+所谓事务的传播行为是指，如果在开始当前事务之前，一个事务上下文已经存在，此时有若干选项可以指定一个事务性方法的执行行为。在TransactionDefinition定义中包括了如下几个表示传播行为的常量：
+
+TransactionDefinition.PROPAGATION_REQUIRED：如果当前存在事务，则加入该事务；如果当前没有事务，则创建一个新的事务。这是默认值。
+TransactionDefinition.PROPAGATION_REQUIRES_NEW：创建一个新的事务，如果当前存在事务，则把当前事务挂起。
+TransactionDefinition.PROPAGATION_SUPPORTS：如果当前存在事务，则加入该事务；如果当前没有事务，则以非事务的方式继续运行。
+TransactionDefinition.PROPAGATION_NOT_SUPPORTED：以非事务方式运行，如果当前存在事务，则把当前事务挂起。
+TransactionDefinition.PROPAGATION_NEVER：以非事务方式运行，如果当前存在事务，则抛出异常。
+TransactionDefinition.PROPAGATION_MANDATORY：如果当前存在事务，则加入该事务；如果当前没有事务，则抛出异常。
+TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建一个事务作为当前事务的嵌套事务来运行；如果当前没有事务，则该取值等价于TransactionDefinition.PROPAGATION_REQUIRED。
+事务超时
+
+所谓事务超时，就是指一个事务所允许执行的最长时间，如果超过该时间限制但事务还没有完成，则自动回滚事务。在 TransactionDefinition 中以 int 的值来表示超时时间，其单位是秒。
+
+默认设置为底层事务系统的超时值，如果底层数据库事务系统没有设置超时值，那么就是none，没有超时限制。
+
+事务只读属性
+
+只读事务用于客户代码只读但不修改数据的情形，只读事务用于特定情景下的优化，比如使用Hibernate的时候。
+默认为读写事务。
+
+spring事务回滚规则
+
+指示spring事务管理器回滚一个事务的推荐方法是在当前事务的上下文内抛出异常。spring事务管理器会捕捉任何未处理的异常，然后依据规则决定是否回滚抛出异常的事务。
+默认配置下，spring只有在抛出的异常为运行时unchecked异常时才回滚该事务，也就是抛出的异常为RuntimeException的子类(Errors也会导致事务回滚)，而抛出checked异常则不会导致事务回滚。
+可以明确的配置在抛出那些异常时回滚事务，包括checked异常。也可以明确定义那些异常抛出时不回滚事务
+还可以编程性的通过setRollbackOnly()方法来指示一个事务必须回滚，在调用完setRollbackOnly()后你所能执行的唯一操作就是回滚。
+
+@Transactional注解
+@Transactional 可以作用于接口、接口方法、类以及类方法上。当作用于类上时，该类的所有 public 方法将都具有该类型的事务属性，同时，我们也可以在方法级别使用该标注来覆盖类级别的定义。
+虽然 @Transactional 注解可以作用于接口、接口方法、类以及类方法上，但是 Spring 建议不要在接口或者接口方法上使用该注解，因为这只有在使用基于接口的代理时它才会生效。另外， @Transactional 注解应该只被应用到 public 方法上，这是由 Spring AOP 的本质决定的。如果你在 protected、private 或者默认可见性的方法上使用 @Transactional 注解，这将被忽略，也不会抛出任何异常。
+默认情况下，只有来自外部的方法调用才会被AOP代理捕获，也就是，类内部方法调用本类内部的其他方法并不会引起事务行为，即使被调用方法使用@Transactional注解进行修饰。
