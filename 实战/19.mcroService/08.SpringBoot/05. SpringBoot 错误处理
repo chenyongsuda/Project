@@ -1,0 +1,119 @@
+错误处理
+项目中常常需要一个全局异常，防止未处理的异常信息直接暴露给用户，影响用户体验。
+springboot中可以使用ControllerAdvice和ExceptionHandler这两个注解来做全局异常，这种方式比较便捷，但是也有一个问题： 
+ContollerAdvice只能拦截控制器中的异常，换言之，只能拦截500之类的异常，但是对于404这样不会进入控制器处理的异常不起作用。
+
+springboot会将所有的异常发送到路径为server.error.path（application.properties中可配置，默认为”/error”）的控制器方法中进行处理，
+页面请求和ajax请求会分别打到对应的处理方法上。具体的处理可查看BasicErrorController的源代码：
+@RequestMapping(produces = "text/html")
+public ModelAndView errorHtml(HttpServletRequest request,
+        HttpServletResponse response) {
+    HttpStatus status = getStatus(request);
+    Map<String, Object> model = Collections.unmodifiableMap(getErrorAttributes(
+            request, isIncludeStackTrace(request, MediaType.TEXT_HTML)));
+    response.setStatus(status.value());
+    ModelAndView modelAndView = resolveErrorView(request, response, status, model);
+    return (modelAndView != null) ? modelAndView : new ModelAndView("error", model);
+}
+
+@RequestMapping
+@ResponseBody
+public ResponseEntity<Map<String, Object>> error(HttpServletRequest request) {
+    Map<String, Object> body = getErrorAttributes(request,
+            isIncludeStackTrace(request, MediaType.ALL));
+    HttpStatus status = getStatus(request);
+    return new ResponseEntity<>(body, status);
+}
+
+注释信息也说明了，这是一个基础全局错误controller,Spring Boot自带的，看到这个RequestMapping地址，这是一个相当于三元写法，如果你在配置文件配置了server.
+error.path的话，就会使用你配置的异常处理地址，如果没有就会使用你配置的error.path路径地址，如果还是没有，默认使用/error来作为发生异常的处理地址
+
+它提供了两个接口处理方法，上面一个标注了produces为text/html，当你是网页请求的时候返回的网页数据，下面的接口是当你的请求为其他的时候，
+返回的是ResponseEntity对象（json数据或者其他，取决与你的返回数据类型配置）。
+
+所以覆盖掉Spring Boot默认异常处理
+为以下几种方式
+1. 自定义一个ErrorAttribute类型的bean，那么还是默认的两种响应方式，只不过改变了内容项而已。
+2. 自定义一个bean，继承BasicErrorController类，使用一部分现成的功能，自己也可以添加新的public方法，使用@RequestMapping及其produces属性指定新的地址映射。
+3. 自定义一个bean，实现ErrorController接口，那么默认的错误处理机制将不再生效。
+4. 继承AbstractErrorController
+
+主要讲解
+1. ErrorController
+   @Controller
+    class MainsiteErrorController implements ErrorController {
+
+        @RequestMapping("/error")
+        public String handleError(HttpServletRequest request){
+            //获取statusCode:401,404,500
+            Integer statusCode = (Integer) request.getAttribute("javax.servlet.error.status_code")
+            if(statusCode == 401){
+                return "/401"
+            }else if(statusCode == 404){
+                return "/404"
+            }else if(statusCode == 403){
+                return "/403"
+            }else{
+                return "/500"
+            }
+
+        }
+        @Override
+        public String getErrorPath() {
+            return "/error"
+        }
+    }
+    
+2. 默认处理位置
+      html静态页面：在resources/public/error/ 下定义
+          如添加404页面： resources/public/error/404.html页面，中文注意页面编码
+      模板引擎页面：在templates/error/下定义
+          如添加5xx页面： templates/error/5xx.ftl
+      注：templates/error/ 这个的优先级比较 resources/public/error/高
+      
+3. @ControllerAdvice
+      /**
+       * 全局异常处理类
+       */
+      @ControllerAdvice
+      public class WebAjaxExceptionHandler {
+      
+      
+           @ExceptionHandler({ Exception.class })
+           @ResponseStatus(HttpStatus.OK)
+           public ModelAndView processException(Exception exception) {
+              logger.info("异常");
+              ModelAndView modelAndView = new ModelAndView();
+              modelAndView.addObject("myException", exception.getMessage());
+              modelAndView.setViewName("error/500");
+              return modelAndView;
+           }   
+           
+          @ExceptionHandler(value = Exception.class)
+          public Object errorHandler(HttpServletRequest request, HttpServletResponse response, Exception e) throws Exception {
+              e.printStackTrace();
+              //判断请求是否为Ajax请求
+              if (isAjax(request)) { //如果是的话，就直接返回错误信息
+                  return WebResponse.errorException(e.getMessage());
+              } else { //如果不是的话，就跳转到错误页面
+                  ModelAndView modelAndView = new ModelAndView();
+                  modelAndView.setViewName(“error”); //这里需要在templates文件夹下新建一个error.html文件用作错误页面
+                  return modelAndView;
+              }
+          }
+
+          /**
+           * 判断是否是Ajax请求
+           *
+           * @param request
+           * @return
+           */
+          public boolean isAjax(HttpServletRequest request) {
+              return (request.getHeader("X-Requested-With") != null &&
+                      "XMLHttpRequest".equals(request.getHeader("X-Requested-With").toString()));
+          }
+
+      }
+
+
+
