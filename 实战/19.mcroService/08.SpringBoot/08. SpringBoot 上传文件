@@ -1,0 +1,89 @@
+上传文件
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>文件上传</title>
+</head>
+<body>
+<form enctype="multipart/form-data" method="post" action="/file/upload">
+    文件:<input type="file" name="file"/>
+    姓名:<input type="text" name="name"/>
+    <input type="submit" value="上传"/>
+</form>
+</body>
+</html>
+--------------------- 
+
+@RestController
+@RequestMapping("/file")
+public class FileController {
+
+    private final static String filePath = "D://data/";
+
+    @RequestMapping("/upload")
+    public JSONObject upload(@RequestParam("file") MultipartFile file, HttpServletRequest request){
+
+        JSONObject result = new JSONObject();
+
+        // 姓名
+        String name = request.getParameter("name");
+        System.out.println("姓名：" + name);
+
+        // 文件名
+        String fileName = file.getOriginalFilename();
+        System.out.println("文件名： " + fileName);
+
+        // 文件后缀
+        String suffixName = fileName.substring(fileName.lastIndexOf("."));
+        System.out.println("文件后缀名： " + suffixName);
+
+        // 重新生成唯一文件名，用于存储数据库
+        String newFileName = UUID.randomUUID().toString()+suffixName;
+        System.out.println("新的文件名： " + newFileName);
+
+        //创建文件
+        File dest = new File(filePath + newFileName);
+
+        Map map = new HashMap();
+        map.put("filePath", dest.getAbsolutePath());
+        map.put("name", name);
+        try {
+            file.transferTo(dest);
+            result.put("success", true);
+            result.put("data", map);
+            return result;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return (JSONObject) result.put("success", false);
+    }
+}
+--------------------- 
+
+当然了，在实际开发中，我们需要上传的文件大小做限制，这里我们在 application.yml 中通过配置的方式 限制上传大小为 100kb
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 100kb
+      
+或者动态修改
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) throws Exception {
+        SpringApplication.run(Application.class, args);
+    }
+
+    @Bean
+    public MultipartConfigElement multipartConfigElement() {
+        MultipartConfigFactory factory = new MultipartConfigFactory();
+        //单个文件最大   KB,MB 
+        factory.setMaxFileSize("100KB");  
+        /// 设置总上传数据总大小  
+        factory.setMaxRequestSize("1024000KB");
+        return factory.createMultipartConfig();
+    }
+}
+
