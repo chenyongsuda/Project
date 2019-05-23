@@ -1,0 +1,78 @@
+事务处理原则
+controller只是负责前后台传递参数， 还是建议统一把处理业务放到service层 这样就不会事务不统一了。
+
+Spring提供的@Transactional，只需要加在代码上就可以，这个注解可以加在类上也可以加在方法上。加到哪里，哪里就会被spring自动接管进行事务控制。
+
+加在类上：代表这个类所有的公共（public）非静态的方法都将启动事务功能。
+加在方法上：代表当前方法将启动事务功能。
+当然，在@Transactional注解中，还允许配置许多的属性，如发生异常是否回滚啊、如事务的隔离级别和传播行为啊，后文会有讲解。
+
+下面介绍@Transactional属性的配置：
+
+timeout 属性
+事务的超时时间，默认值为-1。如果超过该时间限制但事务还没有完成，则自动回滚事务。
+
+readOnly 属性
+指定事务是否为只读事务，默认值为 false；为了忽略那些不需要事务的方法，比如读取数据，可以设置 read-only 为 true。
+
+rollbackFor 属性
+用于指定能够触发事务回滚的异常类型，可以指定多个异常类型。
+
+noRollbackFor 属性
+抛出指定的异常类型，不回滚事务，也可以指定多个异常类型。
+
+isolation 属性
+事务的隔离级别，默认值为 Isolation.DEFAULT。
+可选的值有：
+Isolation.DEFAULT //使用底层数据库默认的隔离级别。
+Isolation.READ_UNCOMMITTED //未提交读隔离级别
+Isolation.READ_COMMITTED //读写提交隔离级别
+Isolation.REPEATABLE_READ//可重复读隔离级别
+Isolation.SERIALIZABLE //串行化隔离级别
+
+propagation 属性
+事务的传播行为，默认值为 Propagation.REQUIRED。
+可选的值有：
+Propagation.REQUIRED
+如果当前存在事务，则加入该事务，如果当前不存在事务，则创建一个新的事务。
+Propagation.SUPPORTS
+如果当前存在事务，则加入该事务；如果当前不存在事务，则以非事务的方式继续运行。
+Propagation.MANDATORY
+如果当前存在事务，则加入该事务；如果当前不存在事务，则抛出异常。
+Propagation.REQUIRES_NEW
+重新创建一个新的事务，如果当前存在事务，暂停当前的事务。
+Propagation.NOT_SUPPORTED
+以非事务的方式运行，如果当前存在事务，暂停当前的事务。
+Propagation.NEVER
+以非事务的方式运行，如果当前存在事务，则抛出异常。
+Propagation.NESTED
+在批量任务执行单独任务时，如果当前任务出现异常，回滚当前任务的SQL，不回滚批量任务的SQL
+
+这些概念性的东西可以截个图，留作备用，后文会有详细讲解。
+
+③、隔离级别
+上面介绍了事务简单的使用，下面两个是重头戏，大家理解了这两个的概念以及用法，事务控制就差不多了。
+由于隔离级别是个比较难理解的东西，我们先从数据库事务的知识入手：
+数据库事务具有4个基本特性，也就是著名的ACID：
+Atomic (原子性) ：
+事务中的全部操作在数据库中是不可分割的，要么全部完成，要么均不执行
+Consistency（一致性）：
+事务在完成时，必须所有的数据都保持一致，保证数据完整
+Isolation（隔离性）：
+隔离性是当多个用户并发访问数据库时，比如操作同一张表时，数据库为每一个用户开启的事务，不能被其他事务的操作所干扰，多个并发事务之间要相互隔离
+Durability（持久性）：
+事务结束后，所有的数据会固化到一个地方，比如保存到磁盘，即使断点重启也能找到数据
+--------------------- 
+
+
+1.开启事务第一步
+开启事务管理很简单，只需要@EnableTransactionManagement注解就行
+再需要事务的方法上放入@Transactional
+(spring boot 不需要开发者显式地配置@EnableTransactionManagement,已经自动配置了)
+
+
+
+
+
+
+
