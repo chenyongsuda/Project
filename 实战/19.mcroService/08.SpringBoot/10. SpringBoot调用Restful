@@ -1,0 +1,128 @@
+1. 增加依赖
+<dependency>
+    <groupId>org.apache.httpcomponents</groupId>
+    <artifactId>httpclient</artifactId>
+</dependency>
+
+2.
+GET请求
+第一种：getForEntity
+getForEntity方法的返回值是一个ResponseEntity<T>，ResponseEntity<T>是Spring对HTTP请求响应的封装，包括了几个重要的元素，如响应码、contentType、contentLength、响应消息体等。比如下面一个例子：
+
+@RequestMapping("/gethello")
+public String getHello() {
+    ResponseEntity<String> responseEntity = restTemplate.getForEntity("http://HELLO-SERVICE/hello", String.class);
+    String body = responseEntity.getBody();
+    HttpStatus statusCode = responseEntity.getStatusCode();
+    int statusCodeValue = responseEntity.getStatusCodeValue();
+    HttpHeaders headers = responseEntity.getHeaders();
+    StringBuffer result = new StringBuffer();
+    result.append("responseEntity.getBody()：").append(body).append("<hr>")
+            .append("responseEntity.getStatusCode()：").append(statusCode).append("<hr>")
+            .append("responseEntity.getStatusCodeValue()：").append(statusCodeValue).append("<hr>")
+            .append("responseEntity.getHeaders()：").append(headers).append("<hr>");
+    return result.toString();
+}
+关于这段代码，我说如下几点：
+
+getForEntity的第一个参数为我要调用的服务的地址，这里我调用了服务提供者提供的/hello接口，注意这里是通过服务名调用而不是服务地址，如果写成服务地址就没法实现客户端负载均衡了。
+getForEntity第二个参数String.class表示我希望返回的body类型是String
+拿到返回结果之后，将返回结果遍历打印出来
+
+
+有时候我在调用服务提供者提供的接口时，可能需要传递参数，有两种不同的方式，如下：
+
+@RequestMapping("/sayhello")
+public String sayHello() {
+    ResponseEntity<String> responseEntity = restTemplate.getForEntity("http://HELLO-SERVICE/sayhello?name={1}", String.class, "张三");
+    return responseEntity.getBody();
+}
+@RequestMapping("/sayhello2")
+public String sayHello2() {
+    Map<String, String> map = new HashMap<>();
+    map.put("name", "李四");
+    ResponseEntity<String> responseEntity = restTemplate.getForEntity("http://HELLO-SERVICE/sayhello?name={name}", String.class, map);
+    return responseEntity.getBody();
+}
+
+可以用一个数字做占位符，最后是一个可变长度的参数，来一一替换前面的占位符
+也可以前面使用name={name}这种形式，最后一个参数是一个map，map的key即为前边占位符的名字，map的value为参数值
+第一个调用地址也可以是一个URI而不是字符串，这个时候我们构建一个URI即可，参数神马的都包含在URI中了，如下：
+
+@RequestMapping("/sayhello3")
+public String sayHello3() {
+    UriComponents uriComponents = UriComponentsBuilder.fromUriString("http://HELLO-SERVICE/sayhello?name={name}").build().expand("王五").encode();
+    URI uri = uriComponents.toUri();
+    ResponseEntity<String> responseEntity = restTemplate.getForEntity(uri, String.class);
+    return responseEntity.getBody();
+}
+
+通过Spring中提供的UriComponents来构建Uri即可。
+
+当然，服务提供者不仅可以返回String，也可以返回一个自定义类型的对象，比如我的服务提供者中有如下方法：
+
+@RequestMapping(value = "/getbook1", method = RequestMethod.GET)
+public Book book1() {
+    return new Book("三国演义", 90, "罗贯中", "花城出版社");
+}
+对于该方法我可以在服务消费者中通过如下方式来调用：
+
+@RequestMapping("/book1")
+public Book book1() {
+    ResponseEntity<Book> responseEntity = restTemplate.getForEntity("http://HELLO-SERVICE/getbook1", Book.class);
+    return responseEntity.getBody();
+}
+
+第二种：getForObject
+getForObject函数实际上是对getForEntity函数的进一步封装，如果你只关注返回的消息体的内容，对其他信息都不关注，此时可以使用getForObject，举一个简单的例子，如下：
+
+@RequestMapping("/book2")
+public Book book2() {
+    Book book = restTemplate.getForObject("http://HELLO-SERVICE/getbook1", Book.class);
+    return book;
+}
+--------------------- 
+POST
+post请求实践
+同样的,post请求也有postForObject和postForEntity。
+public <T> T postForObject(String url, @Nullable Object request, Class<T> responseType, Object... uriVariables)
+            throws RestClientException {}
+public <T> T postForObject(String url, @Nullable Object request, Class<T> responseType, Map<String, ?> uriVariables)
+            throws RestClientException {}
+public <T> T postForObject(URI url, @Nullable Object request, Class<T> responseType) throws RestClientException {}
+
+示例
+我用一个验证邮箱的接口来测试。
+public void rtPostObject(){
+    RestTemplate restTemplate = new RestTemplate();
+    String url = "http://47.xxx.xxx.96/register/checkEmail";
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+    MultiValueMap<String, String> map= new LinkedMultiValueMap<>();
+    map.add("email", "844072586@qq.com");
+ 
+    HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+    ResponseEntity<String> response = restTemplate.postForEntity( url, request , String.class );
+    System.out.println(response.getBody());
+}
+
+
+
+
+-------------------------------------------------------
+使用exchange指定调用方式
+ public void rtExchangeTest() throws JSONException {
+        RestTemplate restTemplate = new RestTemplate();
+        String url = "http://xxx.top/notice/list";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        JSONObject jsonObj = new JSONObject();
+        jsonObj.put("start",1);
+        jsonObj.put("page",5);
+ 
+        HttpEntity<String> entity = new HttpEntity<>(jsonObj.toString(), headers);
+        ResponseEntity<JSONObject> exchange = restTemplate.exchange(url,
+                                          HttpMethod.GET, entity, JSONObject.class);
+        System.out.println(exchange.getBody());
+    }
+    
