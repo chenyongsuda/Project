@@ -1,0 +1,70 @@
+SpringBoot2.x配置Cors跨域
+1 跨域的理解
+跨域是指：浏览器A从服务器B获取的静态资源，包括Html、Css、Js，然后在Js中通过Ajax访问C服务器的静态资源或请求。即：浏览器A从B服务器拿的资源，资源中想访问服务器C的资源。
+同源策略是指：浏览器A从服务器B获取的静态资源，包括Html、Css、Js，为了用户安全，浏览器加了限制，其中的Js通过Ajax只能访问B服务器的静态资源或请求。即：浏览器A从哪拿的资源，那资源中就只能访问哪。
+同源是指：同一个请求协议(如：Http或Https)、同一个Ip、同一个端口，3个全部相同，即为同源。
+
+2 跨域的处理
+跨域的这种需求还是有的，因此，W3C组织制定了一个Cross-Origin Resource Sharing规范，简写为Cors，现在这个规范已经被大多数浏览器支持，从而，处理跨域的需求。
+Cors需要在后端应用进行配置，因此，是一种跨域的后端处理方式，这么做也容易理解，一个你不认识的源来访问你的应用，自然需要应用进行授权。除了后端处理方式，也有前端的解决方案，如：JSONP，因这里我们主要讲解SpringBoot2.x对Cors的配置，暂不对前端解决方案进行详细说明。
+==================================================================
+局部跨域支持
+使用@CrossOrigin注解
+@RestController
+@RequestMapping(value = "/api/users")
+@CrossOrigin
+public class UsersController{
+
+    @Autowired
+    private UsersService usersService;
+
+    @PostMapping
+    @CrossOrigin
+    public User create(@RequestBody User user) {
+        return userService.save(user);
+    }
+}
+参数：
+value、origins属性：配置允许访问的源，如: http://anxminise.cc，*表示允许全部的域名
+methods属性：配置跨域请求支持的方式，如：GET、POST，且一次性返回全部支持的方式
+maxAge属性：配置预检请求的有效时间， 单位是秒，表示：在多长时间内，不需要发出第二次预检请求
+allowCredentials属性：配置是否允许发送Cookie，用于 凭证请求， 默认不发送cookie
+allowedHeaders属性：配置允许的自定义请求头，用于 预检请求
+exposedHeaders属性：配置响应的头信息， 在其中可以设置其他的头信息，不进行配置时， 默认可以获取到Cache-Control、Content-Language、Content-Type、Expires、Last-Modified、Pragma字段
+
+=======================================================================
+全局配置
+@Configuration
+public class MyConfiguration {
+
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/api/**")
+                          .allowedOrigins("*")  
+                          .allowCredentials(true)
+                          .allowedMethods("GET", "POST", "DELETE", "PUT","PATCH")
+                          .maxAge(3600);  
+            }
+        };
+    }
+}
+还可以直接继承WebMvcConfigurer
+@Configuration
+public class WebAppConfigurer extends WebMvcConfigurerAdapter {
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+               .allowedOrigins("*")
+           //.allowedOrigins("http://192.168.89.89")
+                //rest集中请求方式
+                .allowedMethods("GET", "POST","DELETE")
+                .allowCredentials(false).maxAge(3600);
+    }
+}
+addMapping：配置可以被跨域的路径，可以任意配置，可以具体到直接请求路径。
+allowedMethods：允许所有的请求方法访问该跨域资源服务器，如：POST、GET、PUT、DELETE等。
+allowedOrigins：允许所有的请求域名访问我们的跨域资源，可以固定单条或者多条内容，如："http://www.baidu.com"，只有百度可以访问我们的跨域资源。
+allowedHeaders：允许所有的请求header访问，可以自定义设置任意请求头信息，如："X-YAUTH-TOKEN"
