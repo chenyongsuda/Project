@@ -1,0 +1,100 @@
+1.注册Servlet
+配置类：
+@Configuration
+public class MyServerConfig {
+    // 注册三大组件
+    @Bean
+    public ServletRegistrationBean myServlet(){
+        ServletRegistrationBean servletregistrationbean =  new ServletRegistrationBean(new MyServlet() ,"/myservlet"){
+        };
+        return servletregistrationbean;
+    }
+}
+
+自定义的Servlet类
+public class MyServlet extends HttpServlet {
+    /**
+     * 处理get请求
+     * @param req
+     * @param resp
+     * @throws ServletException
+     * @throws IOException
+     */
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        doPost(req, resp);
+    }
+    /**
+     * 处理post请求
+     * @param req
+     * @param resp
+     * @throws ServletException
+     * @throws IOException
+     */
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.getWriter().write("hello");
+    }
+}
+
+===========================================================================
+2.注册Filter
+    // 注册filter
+    @Bean
+    public FilterRegistrationBean myfilter(){
+        FilterRegistrationBean filterregistrationbean = new FilterRegistrationBean();
+        filterregistrationbean.setFilter(new MyFilter());
+        filterregistrationbean.setUrlPatterns(Arrays.asList("/hello","/myservlet"));
+        return filterregistrationbean;
+    }
+
+public class MyFilter implements Filter {
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+
+    }
+
+    @Override
+    public void destroy() {
+
+    }
+
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        System.out.println("myfilter");
+        filterChain.doFilter(servletRequest,servletResponse);
+    }
+
+===================================================================================
+3.注册Listener(这里以ServletContextListener为例)
+    // 注册Listener
+    @Bean
+    public ServletListenerRegistrationBean mylistener(){
+        ServletListenerRegistrationBean servletListener = new ServletListenerRegistrationBean<MyListener>(new MyListener());
+        return servletListener;
+    }
+
+public class MyListener implements ServletContextListener {
+    @Override
+    public void contextInitialized(ServletContextEvent sce) {
+        System.out.println("web项目生成");
+    }
+
+    @Override
+    public void contextDestroyed(ServletContextEvent sce) {
+        System.out.println("web项目销毁");
+    }
+}
+
+过滤器和拦截器对比
+（1）、Filter需要在web.xml中注册，依赖于Servlet；
+（2）、Interceptor需要在SpringMVC中注册，依赖于web框架；
+（3）、Filter是基于函数回调 doFilter()，而Interceptor则是基于AOP思想
+（4）、在一次请求的生命周期内，Filter在只在Servlet前后起作用，而Interceptor够深入到方法前，方法里，方法后、异常抛出前后 起作用
+
+在接口调用的生命周期里，Interceptor可以被多次调用，而Filter只能在容器初始化时调用一次。
+（1）过滤器（Filter）：当你有一堆东西的时候，你只希望选择符合你要求的某一些东西。定义这些要求的工具，就是过滤器。（理解：就是一堆字母中取一个B） 在进入某个contorller前，进行操作。
+（2）拦截器（Interceptor）：在一个流程正在进行的时候，你希望干预它的进展，甚至终止它进行，这是拦截器做的事情。（理解：就是一堆字母中，干预他，通过验证的少点，顺便干点别的东西）。 可以在进入方法前，方法中，方法后，进行操作。
+
+Filter和Interceptor的执行顺序
+过滤前->拦截前->action执行->拦截后->过滤后
