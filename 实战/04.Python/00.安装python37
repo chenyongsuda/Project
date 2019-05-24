@@ -2,6 +2,7 @@ Centos 7 安装 Python3.7
 
 安装 GCC
 yum install gcc openssl-devel bzip2-devel
+yum install libffi-devel -y 
 
 下载 Python3.7压缩包并解压
 cd /usr/src
