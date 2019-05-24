@@ -3,6 +3,9 @@ Centos 7 安装 Python3.7
 安装 GCC
 yum install gcc openssl-devel bzip2-devel
 yum install libffi-devel -y 
+yum install openssl-devel bzip2-devel expat-devel gdbm-devel readline-devel sqlite-devel gcc gcc-c++  openssl-devel xorg-x11-xauth
+yum -y install zlib* 
+yum install libffi-devel -y
 
 下载 Python3.7压缩包并解压
 cd /usr/src
@@ -18,7 +21,7 @@ make altinstall
 检查 Python 版本
 
 [root@host ~]# python -V
-Python 3.7.0
+Python 2.7
 
 更换系统默认 Python 和 pip 版本
 1).备份原系统旧版本python
