@@ -1,0 +1,18 @@
+需要在数据库中进行配置
+from pymongo import MongoClient
+#建立和数据库系统的连接,指定host及port参数
+client = MongoClient('xxxxxxxxxxx', 27017)
+#连接mydb数据库,账号密码认证
+db = client.datalake_xxxxxx
+db.authenticate("xxxxxxxxxxxx", "xxxxxxxxxxx")
+#连接表
+collection = db.xxx_table
+#查看全部表名称
+db.collection_names()
+print db.collection_names()
+#访问表的数据,过滤查询
+item = collection.find({},{"name":1,"age":21})
+for rows in item:
+print rows.values()
+#查询一条数据
+collection.find_one()
