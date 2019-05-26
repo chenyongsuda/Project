@@ -33,9 +33,135 @@ Prometheus开始
 2. 如何使用exporter
     
     
+3. 如何使用标签过滤
+   http_requests_total{job="prometheus",group="canary"}
+   标签匹配
+   =：选择正好相等的字符串标签
+  !=：选择不相等的字符串标签
+  =~：选择匹配正则表达式的标签（或子标签）
+  !=：选择不匹配正则表达式的标签（或子标签）
+
+  例如，选择staging、testing、development环境下的，GET之外的HTTP方法的http_requests_total的时间序列：
+  http_requests_total{environment=~"staging|testing|development",method!="GET"}
+  
+  对数值过滤
+    http_requests_total{job="prometheus",group="canary"} > 400
+  选出大于400的哪些曲线的部分线段或者点
+  
+4. 常用的函数
+   rate()函数 专门配合counter数据
+        表示取曲线的时间段然后计算每秒的速率
+   
+   increase()函数  专门配合counter数据
+        表示某个时间段的增量的总数
+   
+   sum()函数
+       比如图中有10条线 
+       通过sum包裹变成一条线
+
+       一般用
+       sum() by (instance)
+       或者
+       sum() by (cluster name)
+   
+   topk()函数
+       topk(n,xxxxxxxx) 可以修饰counter或者guage counter的话要包裹increase或者rate才有意义
+   
+   count()函数
+ 
+ 5.启动参数
+     ./prometheus --help
+        usage: prometheus [<flags>]
+
+        The Prometheus monitoring server
+
+        Flags:
+          -h, --help                     Show context-sensitive help (also try --help-long and --help-man).
+              --version                  Show application version.
+              --config.file="prometheus.yml"
+                                         Prometheus configuration file path.
+              --web.listen-address="0.0.0.0:9090"
+                                         Address to listen on for UI, API, and telemetry.
+              --web.read-timeout=5m      Maximum duration before timing out read of the request, and closing idle connections.
+              --web.max-connections=512  Maximum number of simultaneous connections.
+              --web.external-url=<URL>   The URL under which Prometheus is externally reachable (for example, if Prometheus is served via a reverse
+                                         proxy). Used for generating relative and absolute links back to Prometheus itself. If the URL has a path
+                                         portion, it will be used to prefix all HTTP endpoints served by Prometheus. If omitted, relevant URL
+                                         components will be derived automatically.
+              --web.route-prefix=<path>  Prefix for the internal routes of web endpoints. Defaults to path of --web.external-url.
+              --web.user-assets=<path>   Path to static asset directory, available at /user.
+              --web.enable-lifecycle     Enable shutdown and reload via HTTP request.
+              --web.enable-admin-api     Enable API endpoints for admin control actions.
+              --web.console.templates="consoles"
+                                         Path to the console template directory, available at /consoles.
+              --web.console.libraries="console_libraries"
+                                         Path to the console library directory.
+              --web.page-title="Prometheus Time Series Collection and Processing Server"
+                                         Document title of Prometheus instance.
+              --storage.tsdb.path="data/"
+                                         Base path for metrics storage.
+              --storage.tsdb.retention=15d
+                                         How long to retain samples in storage.
+              --storage.tsdb.no-lockfile
+                                         Do not create lockfile in data directory.
+              --storage.remote.flush-deadline=<duration>
+                                         How long to wait flushing sample on shutdown or config reload.
+              --storage.remote.read-sample-limit=5e7
+                                         Maximum overall number of samples to return via the remote read interface, in a single query. 0 means no
+                                         limit.
+              --storage.remote.read-concurrent-limit=10
+                                         Maximum number of concurrent remote read calls. 0 means no limit.
+              --rules.alert.for-outage-tolerance=1h
+                                         Max time to tolerate prometheus outage for restoring 'for' state of alert.
+              --rules.alert.for-grace-period=10m
+                                         Minimum duration between alert and restored 'for' state. This is maintained only for alerts with configured
+                                         'for' time greater than grace period.
+              --rules.alert.resend-delay=1m
+                                         Minimum amount of time to wait before resending an alert to Alertmanager.
+              --alertmanager.notification-queue-capacity=10000
+                                         The capacity of the queue for pending Alertmanager notifications.
+              --alertmanager.timeout=10s
+                                         Timeout for sending alerts to Alertmanager.
+              --query.lookback-delta=5m  The delta difference allowed for retrieving metrics during expression evaluations.
+              --query.timeout=2m         Maximum time a query may take before being aborted.
+              --query.max-concurrency=20
+                                         Maximum number of queries executed concurrently.
+              --query.max-samples=50000000
+                                         Maximum number of samples a single query can load into memory. Note that queries will fail if they would
+                                         load more samples than this into memory, so this also limits the number of samples a query can return.
+              --log.level=info           Only log messages with the given severity or above. One of: [debug, info, warn, error]
+              --log.format=logfmt        Output format of log messages. One of: [logfmt, json]
+   
+     
+     一般启动参数 --web.listen-address="0.0.0.0:9090" --web.read-timeout=5m --web.max-connections=512 --storage.tsdb.path="data/" --storage.tsdb.retention=15d --query.timeout=2m --query.max-concurrency=20
+     
+     
+ 6.配置文件
+            global:
+              scrape_interval: 15s              抓取间隔时间
+              scrape_timeout: 10s               抓取超时时间
+              evaluation_interval: 15s
+            alerting:
+              alertmanagers:
+              - static_configs:
+                - targets: []
+                scheme: http
+                timeout: 10s
+            scrape_configs:
+            - job_name: prometheus
+              honor_timestamps: true
+              scrape_interval: 15s
+              scrape_timeout: 10s
+              metrics_path: /metrics
+              scheme: http
+              static_configs:
+              - targets:
+                - localhost:9090
+  
+   
     
     
-    
+  
 
 
 
