@@ -1,3 +1,6 @@
+Prometheus知识学习地址
+https://yunlzheng.gitbook.io/prometheus-book/introduction
+
 Prometheus开始
 1. 监控指标手机方式
     1. 脚本---优点简单,开发周期短,缺点不够细粒度
