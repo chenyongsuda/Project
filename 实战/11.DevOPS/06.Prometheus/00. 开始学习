@@ -265,10 +265,55 @@ Prometheus开始
         g.labels('192.168.1.12','shenzhen').inc()  #inc递增，默认增1
         push_to_gateway('localhost:9091', job='ping_status', registry=registry)
     
+10.pushgateway实例
+    import time
+    import random
+    import prometheus_client
+    from prometheus_client import Counter, Gauge
+    from prometheus_client.core import CollectorRegistry
+    import requests
 
+    REGISTRY = CollectorRegistry(auto_describe=False)
 
+    hostname = 'TEST001'
+    instance = 'TEST002'
+    status_onoff = Gauge("store_scale_status_onoff", hostname,['scale_name','instance'],registry=REGISTRY)
+    status_onoff2 = Gauge("store_scale_status_onoff2", instance,['scale_name','ip'],registry=REGISTRY)
 
-        
+    while True:
+        for i in range(8):
+            status_onoff.labels(scale_name=''+str(i), instance='TEST001').set(i * random.randint(0, 8))
+            status_onoff2.labels(scale_name=''+str(i), ip='192.168.1.2').set(i * random.randint(0, 8))
+
+        requests.post("http://localhost:9091/metrics/job/sotre_scale_status",data=prometheus_client.generate_latest(REGISTRY))
+        print('post finish')
+        time.sleep(5)
+
+    status_onoff中的最后在网页上显示为
+    ✔store_scale_status_onoff{instance="TEST001",job="sotre_scale_status",scale_name="7"}
+    ✔store_scale_status_onoff{instance="TEST001",job="sotre_scale_status",scale_name="6"}
+    ✔store_scale_status_onoff{instance="TEST001",job="sotre_scale_status",scale_name="5"}
+    ✔store_scale_status_onoff{instance="TEST001",job="sotre_scale_status",scale_name="4"}
+    ✔store_scale_status_onoff{instance="TEST001",job="sotre_scale_status",scale_name="3"}
+    ✔store_scale_status_onoff{instance="TEST001",job="sotre_scale_status",scale_name="2"}
+    ✔store_scale_status_onoff{instance="TEST001",job="sotre_scale_status",scale_name="1"}
+    ✔store_scale_status_onoff{instance="TEST001",job="sotre_scale_status",scale_name="0"}
+    
+    status_onoff2中的最后在网页上显示为
+    ✔store_scale_status_onoff2{ip="192.168.1.2",job="sotre_scale_status",scale_name="7"}
+    ✔store_scale_status_onoff2{ip="192.168.1.2",job="sotre_scale_status",scale_name="6"}
+    ✔store_scale_status_onoff2{ip="192.168.1.2",job="sotre_scale_status",scale_name="5"}
+    ✔store_scale_status_onoff2{ip="192.168.1.2",job="sotre_scale_status",scale_name="4"}
+    ✔store_scale_status_onoff2{ip="192.168.1.2",job="sotre_scale_status",scale_name="3"}
+    ✔store_scale_status_onoff2{ip="192.168.1.2",job="sotre_scale_status",scale_name="2"}
+    ✔store_scale_status_onoff2{ip="192.168.1.2",job="sotre_scale_status",scale_name="1"}
+    ✔store_scale_status_onoff2{ip="192.168.1.2",job="sotre_scale_status",scale_name="0"}
+    注意
+    instance scale name 来自于
+    status_onoff.labels(scale_name=''+str(i), instance='TEST001')
+    
+    注册Guage的时候写的instance是不起作用的.只是一个描述而已
+    
     
  
  
