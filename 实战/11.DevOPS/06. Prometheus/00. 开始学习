@@ -137,8 +137,9 @@ Prometheus开始
               --log.format=logfmt        Output format of log messages. One of: [logfmt, json]
    
      
-     一般启动参数 --web.listen-address="0.0.0.0:9090" --web.read-timeout=5m --web.max-connections=512 --storage.tsdb.path="data/" --storage.tsdb.retention=15d --query.timeout=2m --query.max-concurrency=20
-     
+     一般启动参数 --config.file="prometheus.yml" --web.listen-address="0.0.0.0:9090" --web.read-timeout=5m --web.max-connections=512 --storage.tsdb.path="data/" --storage.tsdb.retention=15d --query.timeout=2m --query.max-concurrency=20
+     启动命令如下
+     nohup /appl/prometheus-2.10.0.linux-amd64/prometheus --config.file="/appl/prometheus-2.10.0.linux-amd64/prometheus.yml" --web.listen-address="0.0.0.0:9090" --web.read-timeout=5m --web.max-connections=512 --storage.tsdb.path="/appl/data/" --storage.tsdb.retention=15d --query.timeout=2m --query.max-concurrency=20 &
      
  6.配置文件
             global:
@@ -186,9 +187,48 @@ Prometheus开始
               
             1.4 Delete all metrics in the group identified by {job="some_job"} (note that this does not include metrics in the {job="some_job",instance="some_instance"} group from the previous example, even if those metrics have the same job label):
               curl -X DELETE http://pushgateway.example.org:9091/metrics/job/some_job
- 
-   
-    
+
+8. 安装node_exporter
+        1. curl -OL https://github.com/prometheus/node_exporter/releases/download/v0.15.2/node_exporter-0.15.2.darwin-amd64.tar.gz
+        2. tar -xzf node_exporter-0.15.2.darwin-amd64.tar.gz
+        3. 执行node_exporter
+        4. 访问http://localhost:9100/metrics，可以看到当前node exporter获取到的当前主机的所有监控数据
+        
+        每一个监控指标之前都会有一段类似于如下形式的信息：
+        # HELP node_cpu Seconds the cpus spent in each mode.
+        # TYPE node_cpu counter
+        node_cpu{cpu="cpu0",mode="idle"} 362812.7890625
+        # HELP node_load1 1m load average.
+        # TYPE node_load1 gauge
+        node_load1 3.0703125
+        
+        除了这些以外，在当前页面中根据物理主机系统的不同，你还可能看到如下监控指标：
+        node_boot_time：系统启动时间
+        node_cpu：系统CPU使用量
+        nodedisk*：磁盘IO
+        nodefilesystem*：文件系统用量
+        node_load1：系统负载
+        nodememeory*：内存使用量
+        nodenetwork*：网络带宽
+        node_time：当前系统时间
+        go_*：node exporter中go相关指标
+        process_*：node exporter自身进程相关运行指标
+        
+        从Node Exporter收集监控数据
+        为了能够让Prometheus Server能够从当前node exporter获取到监控数据，这里需要修改Prometheus配置文件。编辑prometheus.yml并在scrape_configs节点下添加以下内容:
+        scrape_configs:
+          - job_name: 'prometheus'
+            static_configs:
+              - targets: ['localhost:9090']
+          # 采集node exporter监控数据
+          - job_name: 'node'
+            static_configs:
+              - targets: ['localhost:9100']
+              
+        重新启动Prometheus Server
+        访问http://localhost:9090，进入到Prometheus Server。如果输入“up”并且点击执行按钮以后
+
+9. 安装push gateway
     
   
 
