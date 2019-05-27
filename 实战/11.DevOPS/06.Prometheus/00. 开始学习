@@ -314,8 +314,68 @@ Prometheus开始
     
     注册Guage的时候写的instance是不起作用的.只是一个描述而已
     
-    
- 
- 
+11.pushgateway说明
+    1、pushgateway每次只向Prometheus返回最后一次推送的数据
+        pushgateway并不是将Prometheus的pull改成了push，它只是允许用户向他推送指标信息，并记录。而Prometheus每次从           pushgateway拉取的数据并不是期间用户推送上来的所有数据，而是最后一次push上来的数据。所以设置推送时间与Prometheus拉取的时间相同(<=)一般是较好的方案。
+        注意：如果客户端一直没有推送新的指标到pushgateway，那么Prometheus将始终拉取最后push上来的数据，直到指标消失（默认5分钟）。这里这个机制可以解释一下：
+        pushgateway本意是不会存储指标的，但是为了让pushgateway意外重启一类的故障之后能够重新读取到原来的指标，添加了一个将指标暂时存储到本地的功能，参数--persistence.interval=5m就是默认保持5分钟，5分钟后，本地存储的指标会删除。可以通过调节这个值来修正发现异常的时间。
+
+    2、推送到pushgateway的方法
+        push：删除原有的所有指标并推送新的指标，对应put方法
+        pushadd：更新已有的所有指标，对应post方法
+        delete：删除指标，对应delete方法
+        （以上三个解释来源于《Prometheus : up & running -  Infrastructure and Application Performance Monitoring 》）
+    3、python推送到pushgateway的方式
+        安装并导入相关模块
+        from prometheus_client import CollectorRegistry, Gauge, pushadd_to_gateway
+        def push2gateway(datas):
+            registry = CollectorRegistry()
+            g = Gauge('node_process_status_info','process monitor',['group','process_name','status','days','icon'],registry=registry)
+            for group,process,status,runtime,icon in datas:
+                print group,process,status,runtime,icon
+                g.labels(group,process,status,str(runtime),icon).set(icon)
+            pushadd_to_gateway('10.10.148.34:9091', job='pushgateway' ,registry=registry,timeout=200)
+
+        以上函数中，
+        node_process_status_info 表示指标名
+        list参数中的值表示标签名
+        循环只是为了给同一个指标的不同标签设置不同的value
+        g.labels括号中表示按顺序为标签名赋值
+        g.labels末尾的set表示该标签下的value值
+        最后推送的时候指标越多,timeout应该设置越高，否则会推送失败，具体时间根据现场网络状况测试一下就知道了
+        完整的案例，检测URL返回状态码并推送到pushgateway
+        #coding:utf-8
+        import requests
+        from prometheus_client import CollectorRegistry, Gauge, pushadd_to_gateway
+        url = '[http://10.10.164.119:8500/v1/a/b/net.c.api.d](http://10.10.164.119:8500/v1/a/b/net.c.api.d)'
+        headers = {
+            "User-Agent":"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE"
+        }
+        status_code = requests.get(url,headers=headers).status_code
+        print status_code
+        registry = CollectorRegistry()
+        g = Gauge('node_web_status_code','web monitor',['url'],registry=registry)
+        g.labels(url).set(status_code)
+        pushadd_to_gateway('10.10.148.34:9091', job='pushgateway' ,registry=registry,timeout=200)
+        注意：
+        使用prometheus_client推送到pushgateway的时候，如果你的指标拥有多个标签，并且在循环里写入了很多次推送，但是在pushgateway中往往只能看到最后一个，这大概是因为pushgateway推送的时候相同的指标名是以覆盖的方式进行的（具体没有更多研究和验证，我的问题解决便放下了）。所以这个时候可以将pushadd_to_gateway放在指标注册的最后，如下：
+
+        def findpush(path,g):
+            output = os.popen('hadoop fs -du -h %s'%path)
+            for line in output.readlines():
+                row = filter(lambda x:x,map(lambda x:x.strip().replace(" ",""),line.split("  ")))
+                row_info =  (conversion(row[0]),conversion(row[1]),row[2])
+                g.labels(row_info[2],'false').set(row_info[0])
+                g.labels(row_info[2],'true').set(row_info[1])
+
+        def main():
+            registry = CollectorRegistry()
+            g = Gauge('hadoop_hdfs_du_filesize_metrics','hdfs filepath filesize from hadoop fs du',['path','backupornot'],registry=registry)
+
+            for path in paths:
+                findpush(path,g)
+            pushadd_to_gateway('pushgateway的IP地址:9091', job='custom' ,registry=g,timeout=200)
+        如上代码，我将脚本捕获的多行数据转换，循环注册之后，最后统一一次性推送到pushgateway。
+
  
  
