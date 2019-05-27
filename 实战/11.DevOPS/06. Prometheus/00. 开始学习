@@ -229,12 +229,42 @@ Prometheus开始
         访问http://localhost:9090，进入到Prometheus Server。如果输入“up”并且点击执行按钮以后
 
 9. 安装push gateway
-    
+    The Pushgateway
+    Flags:
+      -h, --help                     Show context-sensitive help (also try --help-long and --help-man).
+          --web.listen-address=":9091"  
+                                     Address to listen on for the web interface, API, and telemetry.
+          --web.telemetry-path="/metrics"  
+                                     Path under which to expose metrics.
+          --web.external-url=        The URL under which the Pushgateway is externally reachable.
+          --web.route-prefix=""      Prefix for the internal routes of web endpoints. Defaults to the path of --web.external-url.
+          --persistence.file=""      File to persist metrics. If empty, metrics are only kept in memory.
+          --persistence.interval=5m  The minimum interval at which to write out the persistence file.
+          --log.level="info"         Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal]
+          --log.format="logger:stderr"  
+                                     Set the log target and format. Example: "logger:syslog?appname=bob&local=7" or "logger:stdout?json=true"
+          --version                  Show application version.
   
+    然后在server端配置
+    prometheus.yml添加target
+     - job_name: 'push-metrics'
+        static_configs:
+        - targets: ['localhost:9091']
+        honor_labels: true
+    # 因为prometheus配置pushgateway 的时候,也会指定job和instance,但是它只表示pushgateway实例,不能真正表达收集数据的含义。所以配置pushgateway需要添加honor_labels:true,避免收集数据本身的job和instance被覆盖。
+     注意:为了防止 pushgateway 重启或意外挂掉，导致数据丢失，可以通过 -persistence.file 和 -persistence.interval 参数将数据持久化下来。
 
-
-
-
+    也可以通过使用官方给的python library，使用push 方式把数据推送到pushgateway。
+        # cat client.py 
+        #!/usr/bin/python3
+        from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
+        registry = CollectorRegistry()
+        g = Gauge('ping', '检测最大响应时间',['dst_ip','city'], registry=registry) #Guage(metric_name,HELP,labels_name,registry=registry)
+        g.labels('192.168.1.10','shenzhen').set(42.2) #set设定值
+        g.labels('192.168.1.11','shenzhen').dec(2)  #dec递减2
+        g.labels('192.168.1.12','shenzhen').inc()  #inc递增，默认增1
+        push_to_gateway('localhost:9091', job='ping_status', registry=registry)
+    
 
 
 
