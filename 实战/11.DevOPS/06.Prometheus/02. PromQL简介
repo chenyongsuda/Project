@@ -5,11 +5,9 @@ Prometheus 提供了一种功能表达式语言 PromQL，允许用户实时选�
 选择指标名称为 http_requests_total 的所有时间序列：
 
 http_requests_total
-1
 可以通过向花括号 {} 里附加一组标签来进一步过滤时间序列。例如：选择指标名称为 http_requests_total，job 标签值为 prometheus，group 标签值为 canary 的时间序列：
 
 http_requests_total{job="prometheus",group="canary"}
-1
 PromQL 还支持用户根据时间序列的标签匹配模式来对时间序列进行过滤，目前主要支持两种匹配模式：完全匹配和正则匹配。总共有以下几种标签匹配运算符：
 
 = : 选择与提供的字符串完全相同的标签。
@@ -20,11 +18,9 @@ PromQL 还支持用户根据时间序列的标签匹配模式来对时间序列�
 例如：选择指标名称为 http_requests_total，环境为 staging、testing 或 development，HTTP 方法不为 GET 的时间序列：
 
 http_requests_total{environment=~"staging|testing|development",method!="GET"}
-1
 我们还可以使用内置的 __name__ 标签来指定监控指标名称。例如：表达式 http_requests_total 等效于 {name=“http_requests_total”}。以下表达式选择指标名称以 job: 开头的所有指标：
 
 {__name__=~"job:.*"}
-1
 区间向量过滤器
 区间向量与瞬时向量的工作方式类似，唯一的差异在于在区间向量表达式中我们需要定义时间选择的范围，时间范围通过时间范围选择器 [] 进行定义，以指定应为每个返回的区间向量样本值中提取多长的时间范围。
 
@@ -40,7 +36,6 @@ y - 年
 例如：选择在过去 5 分钟内指标名称为 http_requests_total，job 标签值为 prometheus 的所有时间序列：
 
 http_requests_total{job="prometheus"}[5m]
-1
 时间位移操作
 在瞬时向量表达式或者区间向量表达式中，都是以当前时间为基准。如果我们想查询5 分钟前的瞬时样本数据，或昨天一天的区间内的样本数据呢? 这个时候我们就可以使用位移操作，位移操作的关键字为 offset。
 
