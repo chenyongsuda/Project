@@ -1,0 +1,10 @@
+linux下获得shell命令执行结果的方法
+
+方法一：使用``
+
+方法二：使用$()
+
+#!/bin/sh
+PID=$(ps -ef|grep pushgateway|grep -v grep|awk '{print $2}')
+kill -9 $PID
+echo > /var/run/pushgateway_server.pid
