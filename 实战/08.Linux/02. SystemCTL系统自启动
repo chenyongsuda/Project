@@ -141,7 +141,7 @@ JAVA_HOME=/usr/local/jdk1.8.0_131、
 
 停止脚本xxx-stop
 #!/bin/sh
-PID=$(cat /var/run/xxx.pid)
+PID=$(cat /var/run/xxx.pid)  or  PID=$(ps -ef|grep pushgateway|grep -v grep|awk '{print $2}')
 kill -9 $PID
 echo > /var/run/xxx.pid
 
