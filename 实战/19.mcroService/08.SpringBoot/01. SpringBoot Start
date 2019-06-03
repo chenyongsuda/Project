@@ -137,6 +137,30 @@ spring.datasource.url=jdbc:mysql:///test01?useUnicode=true&characterEncoding=utf
 spring.datasource.username=root
 spring.datasource.password=root
 spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+
+可选-------------
+spring.datasource.druid.initial-size=5
+spring.datasource.druid.max-active=20
+spring.datasource.druid.min-idle=5
+spring.datasource.druid.max-wait=60000
+spring.datasource.druid.pool-prepared-statements=
+spring.datasource.druid.max-pool-prepared-statement-per-connection-size= 
+spring.datasource.druid.max-open-prepared-statements= #和上面的等价
+spring.datasource.druid.validation-query=SELECT 1
+spring.datasource.druid.validation-query-timeout=2000
+spring.datasource.druid.test-on-borrow=false
+spring.datasource.druid.test-on-return=false
+spring.datasource.druid.test-while-idle=true
+spring.datasource.druid.time-between-eviction-runs-millis=60000
+spring.datasource.druid.min-evictable-idle-time-millis=300000
+spring.datasource.druid.filters=stat,wall,log4j
+--------------------- 
+作者：Moshow郑锴 
+来源：CSDN 
+原文：https://blog.csdn.net/moshowgame/article/details/80304198 
+版权声明：本文为博主原创文章，转载请附上博文链接！
+配置完可以看到http://127.0.0.1:8080/druid/index.html 监控页面
+
 配置完成后，MyBatis就可以创建Mapper来使用了，例如我这里直接创建一个UserMapper2，如下：
 
 public interface UserMapper2 {
