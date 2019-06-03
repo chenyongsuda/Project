@@ -1,0 +1,91 @@
+1.得到当前时间
+使用time模块，首先得到当前的时间戳
+In [42]: time.time()
+Out[42]: 1408066927.208922
+
+将时间戳转换为时间元组 struct_time
+In [43]: time.localtime(time.time())
+Out[43]: time.struct_time(tm_year=2014, tm_mon=8, tm_mday=15, tm_hour=9, tm_min=42, tm_sec=20, tm_wday=4, tm_yday=227, tm_isdst=0)
+
+格式化输出想要的时间
+In [44]: time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+Out[44]: '2014-08-15 09:43:04'
+
+接上文，不加参数时，默认就是输出当前的时间
+In [48]: time.strftime('%Y-%m-%d %H:%M:%S')
+Out[48]: '2014-08-15 09:46:53’
+
+也可以通过字符串转为struct time
+time_today = time.strptime(str(time_now_struct.tm_year)+'-'+str(time_now_struct.tm_mon)+'-'+str(time_now_struct.tm_mday)+' '+'18-00-00','%Y-%m-%d %H-%M-%S')
+
+struct time转为int型
+today_long = time.mktime(time_today)
+
+计算时间差
+使用time模块：
+In [75]: def t():
+   ....:     start = time.time()
+   ....:     time.sleep(10)
+   ....:     end = time.time()
+   ....:     print end - start
+   ....:
+
+In [76]: t()
+10.0014948845
+
+2.也可以用datetime
+当然也可以透过datetime模块来实现，如下：
+In [68]: t = time.time()
+In [69]: datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S')
+Out[69]: '2014-08-15 10:04:51’
+
+同时，也可以只使用datetime模块
+In [46]: datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+Out[46]: '2014-08-15 09:45:27’
+In [47]: datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+Out[47]: '2014-08-15 09:46:10'
+
+计算时间差
+使用datetime模块：
+In [49]: starttime = datetime.datetime.now()
+In [50]: endtime = datetime.datetime.now()
+In [51]: print (endtime - starttime).seconds
+
+计算昨天的日期（发散思维，计算其他日期相加、相减等）：
+In [52]: d1 = datetime.datetime.now()
+In [53]: d2 = d1 - datetime.timedelta(days=1)
+In [54]: d1
+Out[54]: datetime.datetime(2014, 8, 15, 9, 54, 10, 68665)
+In [55]: d2
+Out[55]: datetime.datetime(2014, 8, 14, 9, 54, 10, 68665)
+
+时间元组 struct_time转化为时间戳
+In [56]: datetime.datetime.now()
+Out[56]: datetime.datetime(2014, 8, 15, 9, 57, 52, 779893)
+
+In [57]: datetime.datetime.now().timetuple()
+Out[57]: time.struct_time(tm_year=2014, tm_mon=8, tm_mday=15, tm_hour=9, tm_min=58, tm_sec=12, tm_wday=4, tm_yday=227, tm_isdst=-1)
+
+In [58]: time.mktime(datetime.datetime.now().timetuple())
+Out[58]: 1408067904.0
+
+strptime也挺有用的，将时间字符串转换为时间元组struct_time
+In [73]: time.strftime('%Y-%m-%d %H:%M:%S')
+Out[73]: '2014-08-15 10:27:36'
+
+In [74]: time.strptime('2014-08-15 10:27:36','%Y-%m-%d %H:%M:%S')
+Out[74]: time.struct_time(tm_year=2014, tm_mon=8, tm_mday=15, tm_hour=10, tm_min=27, tm_sec=36, tm_wday=4, tm_yday=227, tm_isdst=-1)
+
+
+=================sample：
+time_now = datetime.datetime.now()
+time_now_struct = time_now.timetuple()
+time_today = time.strptime(str(time_now_struct.tm_year)+'-'+str(time_now_struct.tm_mon)+'-'+str(time_now_struct.tm_mday)+' '+'18-00-00','%Y-%m-%d %H-%M-%S')
+# time_today_str = time.strftime("%Y/%m/%d %H:%M:%S", time_today)
+today_long = time.mktime(time_today)
+time_yes = (datetime.datetime.now()+datetime.timedelta(days=-1))
+time_yes_struct = time_yes.timetuple()
+time_yest = time.strptime(str(time_yes_struct.tm_year)+'-'+str(time_yes_struct.tm_mon)+'-'+str(time_yes_struct.tm_mday)+' '+'19-00-00','%Y-%m-%d %H-%M-%S')
+# time_yest_str = time.strftime("%Y/%m/%d %H:%M:%S", time_yest)
+yest_long = time.mktime(time_yest)
+
