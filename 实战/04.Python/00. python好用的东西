@@ -1,0 +1,11 @@
+1. python fire库 Python Fire 是 Google 开源的一个可从任何 Python 代码自动生成命令行接口（CLI）的库。
+
+2. Physical Web 
+Physical Web 是由 Chrome 团队主导的一个项目， 意在用 URL 连接世界， 方便用户接受数据。在 Web 世界中，各种 URL 可以说是链接的基础，也是去中心化的，所以“The Physical Web”要做的就是让每个智能设备用 URL 来标识自己，然后用户按照自己的需要通过 URL 和设备进行交互。这样一来，你使用智能设备的体验就和在网站上使用各种超链接差不多了。
+
+3.rDSN(Robust Distributed System Nucleus)翻译成中文是高可用分布式系统核心，旨在提供一个健壮的、易于扩展、易于维护运营的分布式软件架构。对于分布式系统的开发人员来说，其提供了几个最高光的特性：
+
+通过Apache Thrift或者Google Protocol Buffer生成兼容性（编程语言异构）代码
+自动测试各种可重现的错误或者调度策略
+方便的集成到已有模块或者集群以获取更高性能
+通过内建的分发机制自动扩展单点服务到具备可伸缩性和可识别性的服务架构
