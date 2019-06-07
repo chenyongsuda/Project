@@ -1,0 +1,169 @@
+SpringBoot配置Email发送功能
+相信使用过Spring的众多开发者都知道Spring提供了非常好用的 JavaMailSender接口实现邮件发送。在Spring Boot的Starter模块中也为此提供了自动化配置。下面通过实例看看如何在Spring Boot中使用 JavaMailSender 发送邮件。
+
+快速入门
+在Spring Boot的工程中的 pom.xml 中引入 spring-boot-starter-mail 依赖：
+
+<dependency>  
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-mail</artifactId>
+</dependency>  
+如其他自动化配置模块一样，在完成了依赖引入之后，只需要在 application.properties 中配置相应的属性内容。
+
+下面我们以QQ邮箱为例，在 application.properties 中加入如下配置（注意替换自己的用户名和密码）：
+
+spring.mail.host=smtp.qq.com  
+spring.mail.username=用户名  //发送方的邮箱
+spring.mail.password=密码  //对于qq邮箱而言 密码指的就是发送方的授权码
+spring.mail.properties.mail.smtp.auth=true  
+spring.mail.properties.mail.smtp.starttls.enable=true  
+spring.mail.properties.mail.smtp.starttls.required=true  
+注意：在spring.mail.password处的值是需要在邮箱设置里面生成的授权码，这个不是真实的密码。
+通过单元测试来实现一封简单邮件的发送：
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@SpringApplicationConfiguration(classes = Application.class)
+public class ApplicationTests {
+
+    @Autowired
+    private JavaMailSender mailSender;
+
+    @Test
+    public void sendSimpleMail() throws Exception {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("dyc87112@qq.com");
+        message.setTo("dyc87112@qq.com");
+        message.setSubject("主题：简单邮件");
+        message.setText("测试邮件内容");
+
+        mailSender.send(message);
+    }
+
+}
+到这里，一个简单的邮件发送就完成了，运行一下该单元测试，看看效果如何？
+
+由于Spring Boot的starter模块提供了自动化配置，所以在引入了 spring-boot-starter-mail 依赖之后，会根据配置文件中的内容去创建 JavaMailSender 实例，因此我们可以直接在需要使用的地方直接 @Autowired 来引入邮件发送对象。
+
+对于qq邮箱这样写过后会报错：
+
+1、异常信息：
+
+org.springframework.mail.MailSendException: Mail server connection failed; nested exception is javax.mail.MessagingException: Could not convert socket to TLS;
+nested exception is:
+javax.net.ssl.SSLHandshakeException: Received fatal alert: handshake_failure. Failed messages: javax.mail.MessagingException: Could not convert socket to TLS;
+nested exception is:
+javax.net.ssl.SSLHandshakeException: Received fatal alert: handshake_failure; message exception details (1) are:
+Failed message 1:
+javax.mail.MessagingException: Could not convert socket to TLS;
+nested exception is:
+javax.net.ssl.SSLHandshakeException: Received fatal alert: handshake_failure
+at com.sun.mail.smtp.SMTPTransport.startTLS(SMTPTransport.java:2046)
+at com.sun.mail.smtp.SMTPTransport.protocolConnect(SMTPTransport.java:711)
+at javax.mail.Service.connect(Service.java:366)
+at org.springframework.mail.javamail.JavaMailSenderImpl.connectTransport(JavaMailSenderImpl.java:501)
+at org.springframework.mail.javamail.JavaMailSenderImpl.doSend(JavaMailSenderImpl.java:421)
+at org.springframework.mail.javamail.JavaMailSenderImpl.send(JavaMailSenderImpl.java:307)
+at org.springframework.mail.javamail.JavaMailSenderImpl.send(JavaMailSenderImpl.java:296)
+
+这种错误一般是因为jre的lib下C:\Program Files\Java\jdk1.8.0_51\jre\lib\security，替换2个jar包，参考文档
+
+http://www.oracle.com/technetwork/java/javase/downloads/jce-7-download-432124.html
+
+2、异常信息
+
+org.springframework.mail.MailAuthenticationException: Authentication failed; nested exception is javax.mail.AuthenticationFailedException: 535 Error: ??ê1ó?êúè¨??μ????￡?ê?é???′: http://service.mail.qq.com/cgi-bin/help?subtype=1&&id=28&&no=1001256
+
+at org.springframework.mail.javamail.JavaMailSenderImpl.doSend(JavaMailSenderImpl.java:424)
+at org.springframework.mail.javamail.JavaMailSenderImpl.send(JavaMailSenderImpl.java:307)
+at org.springframework.mail.javamail.JavaMailSenderImpl.send(JavaMailSenderImpl.java:296)
+at com.vcredit.ddcash.monitor.controller.AppTest.testSendSimple(AppTest.java:36)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.lang.reflect.Method.invoke(Method.java:497)
+at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+发送方必须要开启smtp，获取到的授权码，界面如下：
+
+
+
+ 3、异常信息：
+org.springframework.mail.MailSendException: Mail server connection failed; nested exception is javax.mail.MessagingException: STARTTLS is required but host does not support STARTTLS. Failed messages: javax.mail.MessagingException: STARTTLS is required but host does not support STARTTLS; message exception details (1) are:
+Failed message 1:
+javax.mail.MessagingException: STARTTLS is required but host does not support STARTTLS
+at com.sun.mail.smtp.SMTPTransport.protocolConnect(SMTPTransport.java:721)
+at javax.mail.Service.connect(Service.java:366)
+at org.springframework.mail.javamail.JavaMailSenderImpl.connectTransport(JavaMailSenderImpl.java:501)
+at org.springframework.mail.javamail.JavaMailSenderImpl.doSend(JavaMailSenderImpl.java:421)
+at org.springframework.mail.javamail.JavaMailSenderImpl.send(JavaMailSenderImpl.java:307)
+at org.springframework.mail.javamail.JavaMailSenderImpl.send(JavaMailSenderImpl.java:296)
+at com.vcredit.ddcash.monitor.controller.AppTest.testSendSimple(AppTest.java:36)
+at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+
+换成公司企业邮箱报错，通过将properties文件的内容修改就可以了，这里的用户密码就是自己的邮箱密码(这点不同于qq邮箱)
+
+spring.mail.properties.mail.smtp.starttls.enable=false
+spring.mail.properties.mail.smtp.starttls.required=false
+
+ 
+
+发送HTML格式的邮件
+@Test
+public void testSendHtml() {
+    MimeMessage message = null;
+    try {
+        message = javaMailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        helper.setFrom(username);
+        helper.setTo("398986099@qq.com");
+        helper.setSubject("标题：发送Html内容");
+
+        StringBuffer sb = new StringBuffer();
+        sb.append("<h1>大标题-h1</h1>")
+          .append("<p style='color:#F00'>红色字</p>")
+          .append("<p style='text-align:right'>右对齐</p>");
+        helper.setText(sb.toString(), true);
+    } catch (MessagingException e) {
+        e.printStackTrace();
+    }
+
+    javaMailSender.send(message);
+}
+注意：这里创建的是MimeMessageHelper，且在调用setText时需要在第二个参数传入true，这样才会使用HTML格式发送邮件
+
+ 
+
+通过velocity模板发送邮件：
+
+<dependency> 
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-velocity</artifactId>
+</dependency>
+
+@Autowired
+
+private VelocityEngine velocityEngine;
+
+@Test
+public void sendTemplateMail() throws Exception {
+MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
+helper.setFrom("dingfuzhao@vcredit.com");
+helper.setTo("dingfuzhao@vcredit.com");
+helper.setSubject("主题：模板邮件");
+Map<String, Object> model = new HashedMap();
+model.put("username", "didi");
+String text = VelocityEngineUtils.mergeTemplateIntoString(
+velocityEngine, "template.vm", "UTF-8", model);
+helper.setText(text, true);
+javaMailSender.send(mimeMessage);
+}
+
+在resources下建一个templates包 该包下建立一个文件template.vm，内容以html格式随便写
+
+<html> 
+<body> 
+<h3>你好， ${username}, 这是一封模板邮件!</h3>
+</body> 
+</html>
