@@ -1,0 +1,127 @@
+spingboot2 整合 Scheduled
+
+SpringBoot内置了定时任务Scheduled，操作可谓特别简单。 
+正常引入spring-boot-starter-web依赖包即可实现。
+
+Scheduled 第一步
+再启动类上添加注解@EnableScheduling
+package com.fantj;
+@SpringBootApplication
+@MapperScan("com.fantj.mapper")
+@EnableScheduling  //启动定时任务
+public class MybatisApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(MybatisApplication.class, args);
+    }
+}
+
+Scheduled 第二步
+写Task。即定时任务。
+package com.fantj.myScheduled;
+/**
+ * scheduled 定时任务类
+ * Created by Fant.J.
+ */
+@Component
+public class Task {
+    @Scheduled(cron = "5 0 0 * * ?")
+    public void scheduledTask1(){
+        System.out.println("scheduledTask method run..");
+    }
+
+    @Scheduled(initialDelay =  1000 * 10,fixedDelay = 1000 * 5)
+    public void scheduledTask2(){
+        System.out.println("scheduledTask method run..");
+    }
+
+    @Scheduled(initialDelay =  1000 * 10,fixedDelay = 1000 * 5)
+    public void test() throws Exception {
+        for (int i = 0;i<20;i++){
+            new MailSender()
+                    .title("FantJ给你发送的邮件")
+                    .content("嘻嘻")
+                    .contentType(MailContentTypeEnum.TEXT)
+                    .targets(new ArrayList<String>(){{
+                        add("xxxxxx@qq.com");
+                    }})
+                    .send();
+            System.out.println("第"+i+"次发送成功!");
+        }
+    }
+}
+
+第三个方法是我写的发邮件的一个接口。可以参考我的一篇文章Java 发送qq邮件
+
+我介绍下@Scheduled注解的三（四）个属性：
+cron： 懂点linux的都知道，没听说过的可以自己百度一下，不难。
+fixedRate和fixedDelay: 这和Timer的两个方法（rate和delay）很相似，如果让我粗俗的讲，第一个是任务开始运行的时候就计时，第二个是等任务进行完了才开始计时。
+initialDelay：该属性的作用是 设置第一次执行延迟时间 。需要配合fixedDelay、fixedRate、crom来使用。
+新问题的思考
+虽然上面的方式一直在改进，但是试想一种情况，如果正在执行定时任务的服务器挂掉，那该如何去寻找它之前执行了多少次呢。如果我们把定时任务持久化到数据库，像维护普通逻辑数据那样维护任务，就会避免项目中遇到的种种的特殊情况。
+
+
+
+spingboot2 整合 Quartz
+如果SpringBoot版本是2.0.0以后的，则在spring-boot-starter中已经包含了quart的依赖，则可以直接使用spring-boot-starter-quartz依赖：
+
+1 <dependency>
+2     <groupId>org.springframework.boot</groupId>
+3     <artifactId>spring-boot-starter-quartz</artifactId>
+4 </dependency>
+如果是1.5.9则要使用以下添加依赖：
+
+ 
+
+复制代码
+1 <dependency>
+2   <groupId>org.quartz-scheduler</groupId>
+3   <artifactId>quartz</artifactId>
+4   <version>2.3.0</version>
+5 </dependency>
+6 <dependency>
+7   <groupId>org.springframework</groupId>
+8   <artifactId>spring-context-support</artifactId>
+9 </dependency>
+复制代码
+这里我使用SpringBoot版本是2.0.0.BUILD-SNAPSHOT ，该版本开始集成了Quartz，所以事实现起来很方便。其它好像比较麻烦，这里就不介绍，以后有时间再详细深入了解Quartz。
+
+创建任务类TestQuartz，该类主要是继承了QuartzJobBean
+
+复制代码
+ 1 public class TestQuartz extends QuartzJobBean {
+ 2     /**
+ 3      * 执行定时任务
+ 4      * @param jobExecutionContext
+ 5      * @throws JobExecutionException
+ 6      */
+ 7     @Override
+ 8     protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+ 9         System.out.println("quartz task "+new Date());
+10     }
+11 }
+复制代码
+
+创建配置类QuartzConfig
+
+复制代码
+ 1 @Configuration
+ 2 public class QuartzConfig {
+ 3     @Bean
+ 4     public JobDetail teatQuartzDetail(){
+ 5         return JobBuilder.newJob(TestQuartz.class).withIdentity("testQuartz").storeDurably().build();
+ 6     }
+ 7 
+ 8     @Bean
+ 9     public Trigger testQuartzTrigger(){
+10         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+11                 .withIntervalInSeconds(10)  //设置时间周期单位秒
+12                 .repeatForever();
+13         return TriggerBuilder.newTrigger().forJob(teatQuartzDetail())
+14                 .withIdentity("testQuartz")
+15                 .withSchedule(scheduleBuilder)
+16                 .build();
+17     }
+18 }
+复制代码
+启动项目
