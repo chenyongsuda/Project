@@ -1,0 +1,4 @@
+1. sed -i 's/=enforcing/=disabled/' /etc/selinux/config
+
+
+重启
