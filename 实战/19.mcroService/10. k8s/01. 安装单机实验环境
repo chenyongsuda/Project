@@ -1,1 +1,18 @@
+1. 安装依赖环境
+yum install -y etcd kubernetes
 
+
+2. 启动集群
+按顺序启动所有的服务：
+//server side
+systemctl start etcd
+systemctl start docker
+systemctl start kube-apiserver
+systemctl start kube-controller-manager
+systemctl start kube-scheduler
+
+//client side
+systemctl start kubelet
+systemctl start kube-proxy
+
+3.
