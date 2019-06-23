@@ -15,4 +15,203 @@ systemctl start kube-scheduler
 systemctl start kubelet
 systemctl start kube-proxy
 
-3.
+3.配置api访问秘钥
+
+    1、首先生成密钥： 
+    openssl genrsa -out /etc/kubernetes/serviceaccount.key 2048
+
+    2、编辑/etc/kubenetes/apiserver 
+    添加以下内容： 
+    KUBE_API_ARGS="--service_account_key_file=/etc/kubernetes/serviceaccount.key"
+
+    3、再编辑/etc/kubernetes/controller-manager 
+    添加以下内容： 
+    KUBE_CONTROLLER_MANAGER_ARGS="--service_account_private_key_file=/etc/kubernetes/serviceaccount.key"
+
+    最后无论是哪种解决方式都需要再重启kubernetes服务： 
+    systemctl restart etcd kube-apiserver kube-controller-manager kube-scheduler
+
+
+4.下载镜像安装服务
+    镜像
+    下载地址
+    https://hub.docker.com/r/kubeguide/tomcat-app/
+
+    拉取
+    Tomcat镜像
+    docker pull kubeguide/tomcat-app:v2
+
+    Mysql镜像
+    docker pull daocloud.io/library/mysql:latest
+
+===创建mysql RC
+            mysql-rc.yaml
+
+            内容
+            apiVersion: v1
+            kind: ReplicationController
+            metadata:
+              name: mysql
+            spec:
+              replicas: 1
+              selector:
+                app: mysql
+              template:
+                metadata:
+                  labels:
+                    app: mysql
+                spec:
+                  containers:
+                  - name: mysql
+                    image: mysql
+                    ports:
+                    - containerPort: 3306
+                    env:
+                    - name: MYSQL_ROOT_PASSWORD
+                      value: "123456"
+
+  创建RC
+              kubectl create -f mysql-rc.yaml
+
+  查看RC
+              kubectl get rc
+
+  查看Pod
+              kubectl get pods
+
+  删除RC
+              kubectl delete -f mysql-rc.yaml
+
+  如果创建失败了查看状态
+              kubectl describe rc xxx
+
+=== 创建service
+      命名
+        mysql-svc.yaml
+
+      内容
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: mysql
+        spec:
+          ports:
+            - port: 3306
+          selector:
+            app: mysql
+  创建
+  kubectl create -f mysql-svc.yaml
+
+  查看SVC
+  kubectl get svc
+
+=================================================================================
+
+=== 创建tomcat
+myweb-rc.yaml
+
+内容
+kind: ReplicationController
+metadata:
+  name: myweb
+spec:
+# Pod的数量
+  replicas: 1
+# spec.selector与spec.template.metadata.labels，这两个字段必须相同，否则下一步创建RC会失败。
+  selector:
+    app: myweb
+  template:
+    metadata:
+      labels:
+        app: myweb
+#   容器组的定义
+    spec:
+      containers:
+#       容器名称
+        - name: myweb
+#         容器对应的镜像
+          image: kubeguide/tomcat-app:v1
+          ports:
+#         在8080端口上启动容器进程，PodIP与容器端口组成Endpoint，代表着一个服务进程对外通信的地址
+          - containerPort: 8080
+          env:
+#此处如果在未安装域名解析的情况下，会无法将mysql对应的IP解析到env环境变量中，因此先注释掉！
+#          - name: MYSQL_SERVICE_HOST
+#            value: 'mysql'
+          - name: MYSQL_SERVICE_PORT
+            value: '3306'
+
+创建RC
+kubectl create -f myweb-rc.yaml
+
+查看RC
+kubectl get rc
+
+查看Pod
+kubectl get pods
+
+
+=== 构建Tomcat Kubernetes Service定义文件
+myweb-svc.yaml
+
+内容
+apiVersion: v1
+kind: Service
+metadata: 
+  name: myweb
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      nodePort: 30001
+  selector:
+    app: myweb
+======================================================================
+[root@vm06 ~]# kubectl get pods
+NAME          READY     STATUS              RESTARTS   AGE
+mysql-st4sl   0/1       ContainerCreating   0          22m
+myweb-1n70f   0/1       ContainerCreating   0          10m
+
+发现一直是正在启动中
+看下pod的状态
+kubectl describe pod mysql-st4sl
+
+发现失败了
+FailedSync	Error syncing pod, skipping: failed to "StartContainer" for "POD" with ErrImagePull: "image pull failed for registry.access.redhat.com/rhel7/pod-infrastructure:latest, this may be because there are no credentials on this request.  details: (open /etc/docker/certs.d/registry.access.redhat.com/redhat-ca.crt: no such file or directory)"
+
+  19m	8s	83	{kubelet 127.0.0.1}		Warning	FailedSync	Error syncing pod, skipping: failed to "StartContainer" for "POD" with ImagePullBackOff: "Back-off pulling image \"registry.access.redhat.com/rhel7/pod-infrastructure:latest\""
+
+通过yaml创建了pod，检查的时候一直是ContainerCreating状态。
+
+
+修复方式:
+yum install *rhsm*
+
+wget http://mirror.centos.org/centos/7/os/x86_64/Packages/python-rhsm-certificates-1.19.10-1.el7_4.x86_64.rpm
+rpm2cpio python-rhsm-certificates-1.19.10-1.el7_4.x86_64.rpm | cpio -iv --to-stdout ./etc/rhsm/ca/redhat-uep.pem | tee /etc/rhsm/ca/redhat-uep.pem
+
+删掉svc 再创建svc
+
+测试 docker pull registry.access.redhat.com/rhel7/pod-infrastructure:latest 成功
+
+
+在启动myweb的时候发现没启动是因为找不到image,不知道为啥不是自动外部下载的么,改成本地镜像的名字就好了
+image: docker.io/kubeguide/tomcat-app:v2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
