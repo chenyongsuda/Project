@@ -104,3 +104,22 @@ alter table 表名称 change 字段原名称 字段新名称 字段类型 [是�
 
 4如果要删除某一字段，可用命令：ALTER TABLE mytable DROP 字段名;
 
+
+
+================================================================================
+mysqldump工具备份
+
+备份整个数据库
+$> mysqldump -u root -h host -p dbname > backdb.sql
+备份数据库中的某个表
+$> mysqldump -u root -h host -p dbname tbname1, tbname2 > backdb.sql
+备份多个数据库
+$> mysqldump -u root -h host -p --databases dbname1, dbname2 > backdb.sql
+备份系统中所有数据库
+$> mysqldump -u root -h host -p --all-databases > backdb.sql
+
+mysql命令导入sql文件还原
+$> mysql -u root -p [dbname] < backup.sql
+# 执行前需要先创建dbname数据库，如果backup.sql是mysqldump创建的备份文件则执行是不需要dbname。
+MYSQL> source backup.sql;
+# 执行source命令前需要先选择数据库。
