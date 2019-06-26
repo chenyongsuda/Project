@@ -120,7 +120,15 @@ https://www.cnblogs.com/shawWey/p/7116548.html
 
         graph.getStylesheet().putCellStyle('top', style);
         
-        
+3.4 拖拽连线操作
+　　     // 开启可以拖拽建立关系
+        graph.setConnectable(true);
+        // 开启方块上的文字编辑功能
+        graph.setCellsEditable(false);
+        // 启用对齐线帮助定位
+        mxGraphHandler.prototype.guidesEnabled = true;
+        // 选择基本元素开启
+        graph.setEnabled(true);        
         
         
         
