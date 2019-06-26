@@ -1,3 +1,12 @@
+绘图工具
+yfiles for html - yFiles for HTMLmxgraph - 
+mxGraph - JavaScript Diagramming and Graph Visualizationqunee for html5 - 
+Qunee(收费) - 开发清新、高效的图形组件yfiles是德国人搞的，很严谨，布局算法很厉害mxgraph是jgraph的html版本，支持低版本的IE是亮点Qunee国人研发，简洁、高效、用户体验好
+jTopo（Javascript Topology library)是一款完全基于HTML5 Canvas的关系、拓扑图形化界面开发工具包。jTopo关注于数据的图形展示，它是面向开发人员的，需要进行二次开发。
+
+
+
+
 一、Mxgraph介绍：
        mxGraph 是一个 JS 绘图组件适用于需要在网页中设计/编辑 Workflow/BPM流程图、图表、网络图和普通图形的 Web 应用程序。mxgraph 下载包中包括javescript 写的前端程序,也包括多个和后端程序(java/C#等等)集成的例子。
        git开源项目地址：https://github.com/jgraph/mxgraph
