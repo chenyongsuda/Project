@@ -1,0 +1,22 @@
+一、Mxgraph介绍：
+       mxGraph 是一个 JS 绘图组件适用于需要在网页中设计/编辑 Workflow/BPM流程图、图表、网络图和普通图形的 Web 应用程序。mxgraph 下载包中包括javescript 写的前端程序,也包括多个和后端程序(java/C#等等)集成的例子。
+       git开源项目地址：https://github.com/jgraph/mxgraph
+
+　　mxGraph资源包及其例子可下载地址：mxGraph下载
+　　解压并打开mxGraph\devel\source\src\js，视图如下所示：
+  
+二、mxgraph核心文件介绍：
+这个js库包含8大块。mxClient这个js包含并动态导入了所有文件。 当前版本信息存储在mxClient.VERSION。
+　　editor编辑器包提供实现图编辑器所需的类。这个包中的主要类是mxEditor。
+　　view视图和model模型包实现了由mxGraph表示的图形组件。它是一个mxGraphModel，包含mxcell，以及mxGraphView中缓存单元格的状态。
+          根据mxStylesheet.样式表中定义的外观，使用mxcell渲染器来绘制单元格。撤销历史在mxUndoManager中实现。
+          要在图上显示一个图标，可以使用mxCellOverlay。验证规则使用 mxMultiplicity进行定义。
+          
+　　handler处理程序、layout 布局和shape 形状包分别包含事件监听器、布局算法和形状。图形事件监听器包括mxRubberband进行框线选择、
+          mxTooltipHandler用于工具提示和mxGraphHandle用于基本单元格修改。mxCompactTreeLayout 实现了树布局算法，而shape 形状包提供了各种形状，
+          它们是mxShape的子类。
+          
+　　util包提供了实用程序类，包括用于复制粘贴的mxClipboard、mxDatatransfer用于拖放的操作、mxConstants 用于键的和样式表的值、
+          mxEvent和mxUtils用于跨浏览器事件处理和通用功能、用于国际化的mxResources和控制台输出的mxLog。
+          
+　　io包实现了一个通用的mxObjectCodec，用于将JavaScript对象转换为XML。最主要的类是mxCodec。mxCodecRegistry是定制codecs的全局注册表。
