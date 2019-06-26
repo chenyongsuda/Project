@@ -1,0 +1,129 @@
+参考
+https://www.cnblogs.com/shawWey/p/7116548.html
+
+1 新建画板，画板相关操作
+        var container = document.getElementById("main");
+        //设置背景样式
+        container.style.background = 'url(editors/images/grid.gif)';        
+　　     container.style.height = "300px";
+        container.style.padding = "20px";
+        //创建一个画板
+        var graph = new mxGraph(container);
+         //获取顶层，可以认为是父节点
+        var parent = graph.getDefaultParent();
+        
+        
+2. 插入两个txt 和连线的操作
+        // Disables the built-in context menu 禁用右键菜单
+				mxEvent.disableContextMenu(container);
+				
+				// Creates the graph inside the given container 创建画图板
+				var graph = new mxGraph(container);
+
+				// Enables rubberband selection 开启拖拽选择
+				new mxRubberband(graph);
+				
+				// Gets the default parent for inserting new cells. This
+				// is normally the first child of the root (ie. layer 0). 获取顶层对象
+				var parent = graph.getDefaultParent(); 
+								
+				// Adds cells to the model in a single step
+				graph.getModel().beginUpdate();
+				try
+				{
+					var v1 = graph.insertVertex(parent, null, 'Hello,', 20, 20, 80, 30);
+					var v2 = graph.insertVertex(parent, null, 'World!', 200, 150, 80, 30);
+					var e1 = graph.insertEdge(parent, null, '', v1, v2);
+				}
+				finally
+				{
+					// Updates the display
+					graph.getModel().endUpdate();
+				}
+=============================================================================================
+3、一些常用的方法
+3.1  insertVertex 绘制图形
+        //mxGraph.prototype.insertVertex = function(parent,id,value,x,y,width,height,style,relative)
+        //parent画板父层，value值，x，y为坐标起点，width宽，height高
+        //style样式  stylename;image=imageUrl
+        //relative相对位置
+        graph.insertVertex(parent, null, '第一个盒子', 50, 50, 80, 30,"style1");
+        
+        
+3.2 insertEdge 连线
+        //mxGraph.prototype.insertEdge = function(parent,id,value,source,target,style)
+        //parent画板父层，value连线值，source起点，target重点，style样式
+        graph.insertEdge(parent, null, 'box1 connect to box2', v1, v2 , "");
+
+3.3 style的使用，插入背景图
+        // 声明一个object
+        var style = {};
+        // 克隆一个object
+        style = mxUtils.clone(style);
+        style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_LABEL;  // 不设置这个属性 背景图片不出来
+        // 边框颜色
+        style[mxConstants.STYLE_STROKECOLOR] = '#999999';
+        // 边框大小
+        style[mxConstants.STYLE_STROKEWIDTH] = 10;
+        // 字体颜色
+        style[mxConstants.STYLE_FONTCOLOR] = '#FFFF00';
+        // 文字水平方式
+        style[mxConstants.STYLE_ALIGN] = mxConstants.ALIGN_CENTER;
+        // 文字垂直对齐
+        style[mxConstants.STYLE_VERTICAL_ALIGN] = mxConstants.ALIGN_BOTTOM;
+        // 字体大小
+        style[mxConstants.STYLE_FONTSIZE] = 30;
+        // 底图水平对齐
+        style[mxConstants.STYLE_IMAGE_ALIGN] = mxConstants.ALIGN_CENTER;
+        // 底图垂直对齐
+        style[mxConstants.STYLE_IMAGE_VERTICAL_ALIGN] = mxConstants.ALIGN_CENTER;
+        // 图片路径
+        //style[mxConstants.STYLE_IMAGE] = 'images/icons48/gear.png';
+        style[mxConstants.STYLE_IMAGE] = 'http://imgstatic.baidu.com/img/image/shouye/qizhi0822.jpg';
+        // 背景图片宽 
+        style[mxConstants.STYLE_IMAGE_WIDTH] = 150;
+        // 背景图片高
+        style[mxConstants.STYLE_IMAGE_HEIGHT] = 200;
+        // 上间距设置
+        // 即使下边定义了全局设置，但这里单独设置上边间距仍单独有效
+        style[mxConstants.STYLE_SPACING_TOP] = 30;
+        // 四边间距设置
+        style[mxConstants.STYLE_SPACING] = 10;
+        // 把定义好的样式object push到stylesheet
+        graph.getStylesheet().putCellStyle("style1", style);
+        //样式使用
+　　     var v1 = graph.insertVertex(parent, null, "text1", 50, 50, 200, 200, "style1"); 
+       --------------------------------------------------------------
+        存纯图片
+        var style = new Object();
+        style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_IMAGE;
+        style[mxConstants.STYLE_PERIMETER] = mxPerimeter.RectanglePerimeter;
+        style[mxConstants.STYLE_IMAGE] = 'images/icons48/keys.png';
+        style[mxConstants.STYLE_FONTCOLOR] = '#FFFFFF';
+        graph.getStylesheet().putCellStyle('image', style);
+        
+        图片文字防止例子
+        style = mxUtils.clone(style);
+        //设置图片的位置
+        style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_LABEL;
+        style[mxConstants.STYLE_IMAGE_VERTICAL_ALIGN] = mxConstants.ALIGN_BOTTOM;
+        style[mxConstants.STYLE_IMAGE_ALIGN] = mxConstants.ALIGN_CENTER;
+        style[mxConstants.STYLE_IMAGE] = 'images/icons48/server.png';
+        style[mxConstants.STYLE_IMAGE_WIDTH] = '48';
+        style[mxConstants.STYLE_IMAGE_HEIGHT] = '48';
+
+        //设置文字的位置
+        style[mxConstants.STYLE_ALIGN] = mxConstants.ALIGN_CENTER;
+        style[mxConstants.STYLE_VERTICAL_ALIGN] = mxConstants.ALIGN_TOP;
+        style[mxConstants.STYLE_SPACING_TOP] = '6';
+        style[mxConstants.STYLE_SPACING] = '3';
+
+        graph.getStylesheet().putCellStyle('top', style);
+        
+        
+        
+        
+        
+        
+        
+        
