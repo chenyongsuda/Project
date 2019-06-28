@@ -1,0 +1,4 @@
+Foreman是另一种用于取证分析的开源配置管理工具。Foreman提供了仪表板，我们可以通过仪表板来配置裸机服务器和虚拟机。
+默认情况下，无论我们何时安装Foreman，它都使用Puppet作为配置工具。不过借助插件，Foreman还支持与其他配置管理工具整合起来，
+比如Chef、Puppet、Ansible、Salt及其他众多工具。
+Foreman自动化工具还随带各种各样的接口，包括命令行接口、Web前端以及REST API
