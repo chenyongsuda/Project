@@ -1,0 +1,106 @@
+参考
+http://jgraph.github.io/mxgraph/docs/js-api/files/util/mxUtils-js.html#mxUtils.makeDraggable
+https://blog.csdn.net/iteye_17920/article/details/82478718
+
+创建基本的拖拽,比较容易理解的版本,多组件封装代码参照,同一目录实战菜单拖拽
+
+<!Doctype html>
+<html xmlns=http://www.w3.org/1999/xhtml>
+	<head>
+	<meta http-equiv=Content-Type content="text/html;charset=utf-8">
+	<title>工具栏</title>
+ 
+	<!-- 如果本文件的包与src不是在同一个目录,就要将basepath设置到src目录下 -->
+	<script type="text/javascript">
+		mxBasePath = '../src';
+	</script>
+ 
+	<!-- 引入支持库文件 -->
+	<script type="text/javascript" src="../src/js/mxClient.js"></script>
+	
+	<!-- 示例代码 -->
+	<script type="text/javascript">
+		//  程序在此方法中启动 
+		function main()
+		{
+			//定义新连接的图标
+			mxConnectionHandler.prototype.connectImage = new mxImage('images/connector.gif', 16, 16);
+		
+			// 检测浏览器兼容性
+			if (!mxClient.isBrowserSupported())
+			{
+				mxUtils.error('Browser is not supported!', 200, false);
+			}
+			else
+			{
+			//1. 创建工具栏
+				// 创建工具栏容器
+				var tbContainer = document.createElement('div');
+				tbContainer.style.position = 'absolute';
+				tbContainer.style.overflow = 'hidden';
+				tbContainer.style.padding = '2px';
+				tbContainer.style.left = '0px';
+				tbContainer.style.top = '0px';
+				tbContainer.style.width = '50px';
+				tbContainer.style.bottom = '0px';
+				document.body.appendChild(tbContainer);
+				// 包装成toolbar工具
+				var toolbar = new mxToolbar(tbContainer);
+			
+			//2. 创建画图地区
+				// 在图形中创建容器 
+				container = document.createElement('div');
+				container.style.position = 'absolute';
+				container.style.overflow = 'hidden';
+				container.style.left = '50px';
+				container.style.top = '0px';
+				container.style.right = '0px';
+				container.style.bottom = '0px';
+				container.style.background = 'url("editors/images/grid.gif")';
+				document.body.appendChild(container);
+				// 包装成graphic工具
+				var graph = new mxGraph(container)
+			
+			
+			//3. 增加工具栏图标	
+				// Create Real Item
+				var toolbar_iconimg = 'editors/images/rectangle.gif';
+				
+				var real_item = new mxCell(null, new mxGeometry(0, 0, 40, 40));
+				real_item.setVertex(true);
+				
+				// Create a new toolbar icon
+				var funct = function(graph, evt, cell)
+				{
+					graph.stopEditing(false);
+	 
+					var pt = graph.getPointForEvent(evt);
+					var vertex = graph.getModel().cloneCell(real_item);
+					vertex.geometry.x = pt.x;
+					vertex.geometry.y = pt.y;
+						
+					graph.addCell(vertex);
+					graph.setSelectionCell(vertex);
+				}
+				
+				// 创建拖动预览图标
+				var img = toolbar.addMode(null, toolbar_iconimg, funct,toolbar_iconimg);
+				mxUtils.makeDraggable(img, graph, funct);
+			
+			}
+		}
+		
+		
+ 
+	</script>
+</head>
+ 
+<!-- 页面载入后启动程序. -->
+<body onload="main();">
+</body>
+</html>
+
+
+
+
+
