@@ -1,0 +1,253 @@
+具体操作
+1.mxGraph中有三个主要的组件：mxGraph、mxGraphModel、mxCell。mxGraph是用户直接操作的图，图的所有状态都保存在mxGraphModel中，而图中的顶点和边都是用mxCell定义。
+2.当用户对mxGraph进行操作时，所有操作都映射到对mxGraphModel中保存的状态进行修改，而mxGraphModel中保存的状态也就是mxCell的状态。
+
+举个最简单的🌰
+<html>
+<head>
+    <title>Hello, World! example for mxGraph</title>
+    <!-- Sets the basepath for the library if not in same directory -->
+    <script type="text/javascript">
+        mxBasePath = '../src';
+    </script>
+    <!-- Loads and initializes the library -->
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <!-- Example code -->
+    <script type="text/javascript">
+        
+        function main(container)
+        {
+            // 判断浏览器是否支持
+            if (!mxClient.isBrowserSupported())
+            {
+                // mxUtils报错提示
+                mxUtils.error('Browser is not supported!', 200, false);
+            }
+            else
+            {
+                //去锯齿效果
+                mxRectangleShape.prototype.crisp = true;
+                // 显示导航线 
+                mxGraphHandler.prototype.guidesEnabled = true;
+                // Alt键禁用导航线
+                mxGuide.prototype.isEnabledForEvent = function (evt) {
+                  return !mxEvent.isAltDown(evt);
+                };
+                // 显示终点
+                mxEdgeHandler.prototype.snapToTerminals = false;
+                // 禁用浏览器默认的右键菜单栏
+                mxEvent.disableContextMenu(container);
+
+                // 在已有容器内构造一个graph
+                var graph = new mxGraph(container);
+                // 鼠标框选 
+                new mxRubberband(graph);
+                // 在图形中创建默认组件 
+                var parent = graph.getDefaultParent();
+                // 只可预览不可选中拖动连接
+                graph.setEnabled(false);  
+                // 容器大小自适应 
+                graph.setResizeContainer(true); 
+                // 动态改变样式 
+                graph.getView().updateStyle = true; 
+                // 可否重复连接 
+                graph.setMultigraph(false); 
+                // 禁止改变元素大小 
+                graph.setCellsResizable(false); 
+                // 允许连线的目标和源是同一元素 
+                graph.setAllowLoops(true); 
+
+                // 开始往module里添加cell
+                graph.getModel().beginUpdate();
+                try
+                {
+                    //new一个cell   以单元的形式创建一个节点
+                    var cell = new mxCell(null, new mxGeometry(100, 200, 100, 100), "一些样式配置");     
+                    cell.vertex = true;
+                    //插入这个cell
+                    graph.addCell(cell);
+                 
+                    var v1 = graph.insertVertex(parent, null, 'Hello,', 20, 20, 80, 30);
+                    var v2 = graph.insertVertex(parent, null, 'World!', 200, 150, 80, 30);
+                    //插入线条设置连接图形
+                    var e1 = graph.insertEdge(parent, null, '', v1, v2);
+
+                    //预览时鼠标悬浮到节点时，改变鼠标样式
+                    graph.getCursorForCell = function (cell) {
+                      if (cell != null && cell.value != null && cell.vertex == 1) {
+                         return 'pointer';
+                      }
+                    };
+                }
+                finally
+                {
+                    // 更新事务结束
+                    graph.getModel().endUpdate();
+                }
+            }
+        };
+    </script>
+</head>
+
+<!-- Page passes the container for the graph to the program -->
+<body onload="main(document.getElementById('graphContainer'))">
+
+    <!-- Creates a container for the graph with a grid wallpaper -->
+    <div id="graphContainer"
+        style="position:relative;overflow:hidden;width:321px;height:241px;background:url('editors/images/grid.gif');cursor:default;">
+    </div>
+</body>
+</html>
+
+
+
+1.事物的更新一定要放在 beginUpdate 和 endUpdate 里面。一次 beginUpdate 必须对应一次 endUpdate
+
+2.插入cell有两种方式：
+
+new mxCell(null, new mxGeometry(100, 200, 100, 100))和
+graph.insertVertex(parent, null, 'Hello,', 20, 20, 80, 30)
+insertVertex 做了三件事，先是设置几何信息，然后创建一个节点，最后将这个节点添加到画布。insertEdge 与 insertVertex 类似，中间过程会调用 vertex.setEdge(true) 将 Cell 标记为边。
+几何信息四个数字分别对应 X、 Y、 宽、 高   坐标是以graph的左上角为原点。
+
+3.最上面是针对图区域的一些设置
+4.对插入元素的样式配置跟在mxCell()最后面的参数里，样式可以有很多，库里也提供了一些。就不多说，说一下自定义样式。
+          var style1 = [];
+          style1[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_IMAGE;
+          style1[mxConstants.STYLE_IMAGE] = './demoimg/屏幕快照 2019-03-27 下午1.06.15.png';
+          style1[mxConstants.STYLE_IMAGE_WIDTH] = '48';
+          style1[mxConstants.STYLE_IMAGE_HEIGHT] = '48';
+          graph.getStylesheet().putCellStyle('img1', style1);
+          //插入节点时定义样式
+          var cell1 = new mxCell(null, new mxGeometry(100, 200, 100, 100), "img1");
+
+5.添加按钮
+document.body.appendChild(mxUtils.button('value', function(evt){}
+
+分装一个动态添加不同功能的按钮的方法
+
+        // 创建按钮
+  createButton = function (label, fun) {
+    document.getElementById("btn").appendChild(mxUtils.button(label, fun));
+  };
+
+  buttons = [{
+        label: "选择所有",
+        fun: function (graph) {
+          return function (evt) {
+            graph.selectAll();//graph提供了很多的不同方法的API
+          };
+        }
+      },
+      {
+         label: "删除",
+         fun: function (graph) {
+           return function (evt) {
+             var cells = graph.getSelectionCells();
+             graph.removeCells(cells);
+           };
+         }
+       },
+     ]
+
+//循环添加所有设置好功能的按钮
+(function () {
+  for (var i = 0; i < buttons.length; i++) {
+    createButton(buttons[i].label, buttons[i].fun(graph));
+  }
+})();
+
+6.读取Xml
+var xml ="<root><mxCell id='2' value='Hello,' vertex='1'><mxGeometry x='20' y='20' width='80' height='30' as='geometry'/></mxCell><mxCell id='3' value='World!' vertex='1'><mxGeometry x='200' y='150' width='80' height='30' as='geometry'/></mxCell><mxCell id='4' value='' edge='1' source='2' target='3'><mxGeometry relative='1' as='geometry'/></mxCell></root>";
+var doc = mxUtils.parseXml(xml);
+var codec = new mxCodec(doc);
+var elt = doc.documentElement.firstChild;
+var cells = [];
+while (elt != null) {
+  cells.push(codec.decode(elt));
+  elt = elt.nextSibling;
+}
+graph.addCells(cells);
+
+
+7.建立拖拽关系（选取拖动定点添加）
+
+// 检查图形中是否包含对应的elt节点
+        function containsElt(graph, elt) {
+          while (elt != null) {
+            if (elt == graph.container) {
+              return true;
+            }
+
+            elt = elt.parentNode;
+          }
+
+          return false;
+        };
+
+        // 返回鼠标选中的元素
+        var graphF = function (evt) {
+          var x = mxEvent.getClientX(evt);
+          var y = mxEvent.getClientY(evt);
+          var elt = document.elementFromPoint(x, y);
+
+          for (var i = 0; i < graphs.length; i++) {
+            if (containsElt(graphs[i], elt)) {
+              return graphs[i];
+            }
+          }
+
+          return null;
+        };
+
+        // 在给定的位置插入一个元素 
+        //mxCell是顶点和边的单元对象，mxCell从模型（mxGraph）那里复制了许多的方法
+        //它们的主要差别在于，使用模型的方法会创建相关的事件通知以及撤销方法，使用单元的方法可以发生改变但不记录它们
+        var funct = function (graph, evt, target, x, y) {
+          var cell = new mxCell('NewCELL', new mxGeometry(0, 0, 120, 40));
+          cell.vertex = true;
+          var cells = graph.importCells([cell], x, y, target); //插入元素、位置、大小
+
+          if (cells != null && cells > 0) {
+            graph.scrollCellToVisible(cells[0]);
+            graph.setSelectionCells(cells);
+          }
+        };
+
+        //创建一个DOM节点，作为拖动源
+        var img = mxUtils.createImage('images/icons48/gear.png');
+        img.style.width = '48px';
+        img.style.height = '48px';
+        img.style.margin = '10px';
+        document.getElementById("left").appendChild(img);
+
+        // 禁用IE浏览器中的DnD功能（这是为了跨浏览器平台而设计的，见下文） 
+        if (mxClient.IS_IE) {
+          mxEvent.addListener(img, 'dragstart', function (evt) {
+            evt.returnValue = false;
+          });
+        }
+
+        // 创建拖动源的预览
+        var dragElt = document.createElement('div');
+        dragElt.style.border = 'dashed black 1px';
+        dragElt.style.width = '120px';
+        dragElt.style.height = '40px';
+
+        // 在点击拖动源图标时提供预览。 预览是提供的仅仅是拖动源的图片
+        // 只有拖动源到容器内时才会显示元素的坐标预览
+
+        var ds = mxUtils.makeDraggable(img, graphF, funct, dragElt, null, null, graph.autoscroll, true);
+
+        //从拖动源拖动时显示导航线。
+        //注意，对图形中已存在的元素拖动时显示导航线不在本方法约束范围。
+        ds.isGuidesEnabled = function () {
+          return graph.graphHandler.guidesEnabled;
+        };
+
+        //从拖动源拖动元素到图形以外的区域时，显示拖动源图片预览
+        ds.createDragElement = mxDragSource.prototype.createDragElement;
+
+
+var ds = mxUtils.makeDraggable(img, graphF, funct, dragElt, null, null, graph.autoscroll, true);
+makeDraggable的参数makeDraggable( element,     graphF, funct, dragElement, dx, dy, autoscroll, scalePreview, highlightDropTargets, getDropTarget)
