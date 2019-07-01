@@ -2,7 +2,7 @@
 http://jgraph.github.io/mxgraph/docs/js-api/files/util/mxUtils-js.html#mxUtils.makeDraggable
 https://blog.csdn.net/iteye_17920/article/details/82478718
 
-创建基本的拖拽,比较容易理解的版本,多组件封装代码参照,同一目录实战菜单拖拽
+创建基本的拖拽,比较容易理解的版本,多组件封装代码参照,同一目录实战00. toolbar实例
 
 <!Doctype html>
 <html xmlns=http://www.w3.org/1999/xhtml>
