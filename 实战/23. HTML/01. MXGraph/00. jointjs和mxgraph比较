@@ -1,0 +1,47 @@
+Jointjs 是javascript图表可视化库，依赖于backbone.js,lodash,jquery，
+
+可以创建完全交互式应用程序，也可以用做绘制静态图的绘制工具，如工作流编辑，流程管理等。
+
+主要功能点罗列如下：
+1.多种图形（矩形，圆，椭圆，文本，图形，路径,ERD,组织结构图，FSA,UML,BPMN,PN .etc）
+2.自定义图形，通过SVG编程方式呈现。
+3.元素和链接的交互
+4.链接图元素，即为图元素建立链接关系。
+5.可定制化的操作，如链接，箭头样式和为元素设置标签。
+6.链接操作平滑顺畅
+7.元素上的端口（inport/outport）可自定义位置。
+8.层级图绘制
+9.JSON格式的序列化/反序列化
+ （即生成数据model为json格式，也可从model格式解析为图形）
+10.可以捕捉到画布中发生的任意事件，做出反应。
+11.支持2D space操作的大量数学函数。
+12.提供操作SVG的库。
+13.放大和缩小
+14.触摸支持，移动端支持。
+15.动画
+16.过滤器和梯度
+17.Nodejs支持
+18.快速的渲染能力。
+19.MVC架构，代码结构清晰，易上手。
+
+mxgraph是一个开源客户端Javascript图表库，
+使用SVG和html渲染。
+后台服务端还提供在java,donet,php后端语言操作图表功能。
+mxgraph从2005年开始就出现的，之前一直收费，近两年才开源的。
+官网https://www.jgraph.com/
+
+mxgraph对浏览器的兼容支持的也比较好，甚至支持ie6，也支持移动端。
+功能很全面，可以在editor的基础上进行二次开发，
+https://jgraph.github.io/mxgraph/javascript/examples/grapheditor/www/index.html
+editor作为js库可以嵌入到任意Html页面，感觉像一个网页版的visio studio编辑器一样，使用很流畅。
+左侧的素材库可以自定义，也可以上传图片作为素材。
+
+jointjs近两年的人气要比mxgraph高，基于backbonejs的开发理念更符合现在前端的趋势。
+mxgraph给我的感觉是功能比较全面但是成本也是比较高，纯js的代码需要研究成本的。
+
+两者各有千秋，选择使用哪个技术还需要看具体需求和个人喜好。
+
+另外顺便提一下jointjs的rappid中也有editor,
+rappid是基于jointjs库开发的插件，支持一些高级功能，但目前是收费的。
+而上述罗列的功能也是可以满足需求的，感兴趣的小伙伴可查看官网。
+https://www.jointjs.com/
