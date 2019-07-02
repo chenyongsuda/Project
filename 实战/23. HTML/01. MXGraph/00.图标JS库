@@ -1,0 +1,27 @@
+由于目前工作用到GoJS，所有也关注一下图表工具JS库。
+10 JavaScript libraries to draw your own diagrams一文给出了10个JS库的功能分析和比较图表。
+
+库				
+JointJS			MPL
+
+Rappid			商业
+
+Mxgraph			免费
+
+GoJS			商业
+
+Raphael			MIT
+
+Draw2D			商业
+
+D3				BSD
+
+FabricJS		MIT
+
+paperJS			MIT
+
+JsPlumb         MIT
+
+这里面D3在数据科学领域成绩比计突出，是数据可视化的一个重要工具。此外我在接触过的开源项目有几个用到了Raphael（包括Activiti）。其他库还没有接触过。
+我为什么选择 D3.js一文中将D3和Raphael进行了对比。Raphael是一个矢量图的API，专注于对矢量图形的操作。D3是一个数据可视化展示的API，通过数据与图形进行绑定。
+图表工具JS库除了上面帖子提及的外，还有很多。如果有机会的话，我会在GoJS之外更多关注D3和Raphael。
