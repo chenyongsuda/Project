@@ -1,0 +1,125 @@
+所有节点安装
+以下都要在所有节点上执行
+docker安装
+kubeadm部署
+docker安装
+yum 安装docker
+
+yum -y install docker-ce
+编辑docker的环境变量
+
+如果有HTTP代理，可以添加自己的代理，没有就忽略
+
+vim /usr/lib/systemd/system/docker.service
+添加https代理环境变量
+
+Environment="HTTPS_PROXY=http://192.168.1.157:8888"
+Environment="NO_PROXY=127.0.0.0/8"
+
+docker国内加速
+
+mkdir -p /etc/docker
+vim /etc/docker/daemon.json
+
+{
+ "registry-mirrors": ["https://registry.docker-cn.com"]
+}
+
+加载环境变量
+
+systemctl daemon-reload
+1
+启动docker并设置开机启动
+
+systemctl start docker
+systemctl enable docker
+
+kubeadm部署
+yum 安装 kubeadm
+
+yum -y install kubeadm-1.15.0-0.x86_64
+
+swap没关的话就忽略swap参数
+
+vim /etc/sysconfig/kubelet
+
+KUBELET_EXTRA_ARGS="--fail-swap-on=false"
+
+开机启动kubelet
+
+systemctl enable kubelet
+
+镜像加载
+kubeadm镜像安装
+先提前下载镜像k8s-1.15.0.tar.gz
+
+链接: https://pan.baidu.com/s/1AhDsQHUIMd0CQufGteFSXw 提取码: vshs
+
+上传到各节点
+各节点都要加载镜像
+docker load  -i k8s-1.15.0.tar.gz
+
+flannel镜像安装
+先提前下载镜像flannel-v0.11.0.tar.gz
+链接: https://pan.baidu.com/s/1QEssOf2yX1taupQT4lTxQg 提取码: x42r
+
+各节点都要加载镜像
+docker load  -i flannel-v0.11.0.tar.gz
+kubectl命令自动补全
+yum install bash-completion*
+
+##写入环境变量
+source <(kubectl completion bash)
+echo "source <(kubectl completion bash)" >> ~/.bashrc
+
+部署k8s
+master节点部署
+kubeadm 初始化
+kubeadm init  --kubernetes-version=v1.15.0 --pod-network-cidr=10.244.0.0/16  --service-cidr=10.96.0.0/12 --ignore-preflight-errors=all
+初始化完成后
+
+记住节点要加入的token
+kubeadm join 192.168.48.101:6443 --token fo0kd9.ocdrd0obki28g76i  --discovery-token-ca-cert-hash sha256:9a5b3ec15c16926e667281cda008b0b550ed5404628453929b0c2a551cbb0bfd
+
+按照要求执行三个步骤
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+检查集群健康状态
+[root@master01 ~]# kubectl get cs
+NAME                 STATUS    MESSAGE             ERROR
+controller-manager   Healthy   ok                  
+scheduler            Healthy   ok                  
+etcd-0               Healthy   {"health":"true"}  
+
+master部署网络插件flannel
+[root@master01 ~]# kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+node节点部署
+各节点利用token部署
+kubeadm join 192.168.48.101:6443 --token fo0kd9.ocdrd0obki28g76i  --discovery-token-ca-cert-hash sha256:9a5b3ec15c16926e667281cda008b0b550ed5404628453929b0c2a551cbb0bfd --ignore-preflight-errors=all
+默认token的有效期为24小时，当过期之后，该token就不可用了，以后加入节点需要新token
+
+master重新生成新的token
+[root@master01 ~]# kubeadm token create
+905hgq.1akgmga715dzooxo
+
+[root@master01 ~]# kubeadm token list
+TOKEN                     TTL       EXPIRES                     USAGES                   DESCRIPTION   EXTRA GROUPS
+905hgq.1akgmga715dzooxo   23h       2019-06-23T15:18:24+08:00   authentication,signing   <none>        system:bootstrappers:kubeadm:default-node-token
+获取ca证书sha256编码hash值
+
+[root@master01 ~]# openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+2db0df25f40a3376e35dc847d575a2a7def59604b8196f031663efccbc8290c2
+
+利用新token加入集群
+kubeadm join 192.168.48.101:6443 --token 905hgq.1akgmga715dzooxo \
+   --discovery-token-ca-cert-hash sha256:2db0df25f40a3376e35dc847d575a2a7def59604b8196f031663efccbc8290c2 \
+--ignore-preflight-errors=all
+
+最后查看各节点是否就绪
+[root@master01 ~]# kubectl get node
+NAME       STATUS   ROLES    AGE    VERSION
+master01   Ready    master   3m1s   v1.15.0
+node01     Ready    <none>   72s    v1.15.0
+node02     Ready    <none>   54s    v1.15.0
