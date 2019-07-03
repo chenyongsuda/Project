@@ -1,0 +1,9 @@
+1. rpm查看rpm包安装的内容
+[root@k8smaster ~]# rpm -ql kubeadm
+/usr/bin/kubeadm
+/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+
+
+
+
