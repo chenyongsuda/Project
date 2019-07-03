@@ -1,0 +1,62 @@
+1. 关闭防火墙、selinux和swap
+关闭防火墙和selinux是必须的, 安装会要求不设置swap,如果有也可以设置参数忽略swap的检测,也可以,这几直接禁用
+
+systemctl stop firewalld
+systemctl disable firewalld
+setenforce 0
+sed -i "s/^SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
+swapoff -a
+sed -i 's/.*swap.*/#&/' /etc/fstab
+
+2.设置主机名hostname，管理节点设置主机名为 master 。
+
+hostnamectl set-hostname master
+需要设置其他主机名称时，可将 master 替换为正确的主机名node1、node2即可。
+
+3.编辑 /etc/hosts 文件，添加域名解析。
+cat << EOF >>/etc/hosts
+10.10.10.10 master
+10.10.10.11 node1
+10.10.10.12 node2
+EOF
+
+4.制作秘钥文件
+[root@k8s-master01 ~]# ssh-keygen -t rsa
+Generating public/private rsa key pair.
+Enter file in which to save the key (/root/.ssh/id_rsa): 
+Created directory '/root/.ssh'.
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /root/.ssh/id_rsa.
+Your public key has been saved in /root/.ssh/id_rsa.pub.
+The key fingerprint is:
+SHA256:TE0eRfhGNRXL3btmmMRq+awUTkR4RnWrMf6Q5oJaTn0 root@k8s-master01
+The key's randomart image is:
++---[RSA 2048]----+
+|          =*+oo+o|
+|         =o+. o.=|
+|        . =+ o +o|
+|       o  . = = .|
+|        S  + O . |
+|          = B = .|
+|         + O E = |
+|        = o = o  |
+|       . . ..o   |
++----[SHA256]-----+
+
+5.拷贝推送文件
+for i in k8s-master01 k8s-master02 k8s-master03 k8s-node01 k8s-node02;do ssh-copy-id -i .ssh/id_rsa.pub $i;done
+
+
+=========测试环境可做可不做
+所有节点同步时间
+ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+echo 'Asia/Shanghai' >/etc/timezone
+ntpdate time2.aliyun.com
+
+# 加入到crontab
+所有节点limit配置
+ulimit -SHn 65535
+
+
+
