@@ -456,3 +456,30 @@ kubeadm join 10.132.250.213:6443 --token iz1sq0.z9eqs7whyi5h7wkb     --discovery
 
 成功
 
+
+====================================================================
+可视化安装参考
+七、部署Dashboard
+注：在master节点上进行如下操作
+1.创建Dashboard的yaml文件
+wget https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
+sed -i 's/k8s.gcr.io/loveone/g' kubernetes-dashboard.yaml
+sed -i '/targetPort:/a\ \ \ \ \ \ nodePort: 30001\n\ \ type: NodePort' kubernetes-dashboard.yaml
+
+2.部署Dashboard
+kubectl create -f kubernetes-dashboard.yaml
+
+3.创建完成后，检查相关服务运行状态
+kubectl get deployment kubernetes-dashboard -n kube-system
+kubectl get pods -n kube-system -o wide
+kubectl get services -n kube-system
+netstat -ntlp|grep 30001
+
+4.在Firefox浏览器输入Dashboard访问地址：https://10.10.10.10:30001
+
+5.查看访问Dashboard的认证令牌
+kubectl create serviceaccount  dashboard-admin -n kube-system
+kubectl create clusterrolebinding  dashboard-admin --clusterrole=cluster-admin --serviceaccount=kube-system:dashboard-admin
+kubectl describe secrets -n kube-system $(kubectl -n kube-system get secret | awk '/dashboard-admin/{print $1}')
+
+6.使用输出的token登录Dashboard。
