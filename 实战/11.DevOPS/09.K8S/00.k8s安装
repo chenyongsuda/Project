@@ -58,5 +58,401 @@ ntpdate time2.aliyun.com
 所有节点limit配置
 ulimit -SHn 65535
 
+6. 配置国内yum源
+yum install -y wget
+mkdir /etc/yum.repos.d/bak && mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/bak
+wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.cloud.tencent.com/repo/centos7_base.repo
+wget -O /etc/yum.repos.d/epel.repo http://mirrors.cloud.tencent.com/repo/epel-7.repo
 
+yum clean all && yum makecache
+
+配置国内Kubernetes源
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+EOF
+
+配置 docker 源
+wget https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -O /etc/yum.repos.d/docker-ce.repo
+
+============================================
+可做可不做
+调整docker部分参数：
+mkdir -p /etc/docker
+tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": ["https://5twf62k1.mirror.aliyuncs.com"],　　　// 改为阿里镜像
+  "exec-opts": ["native.cgroupdriver=systemd"]　　// 默认cgroupfs，k8s官方推荐systemd，否则初始化出现Warning
+}
+EOF
+systemctl daemon-reload
+systemctl restart docker
+复制代码
+检查确认docker的Cgroup Driver信息：
+
+[root@k8s-master ~]# docker info |grep Cgroup
+Cgroup Driver: systemd
+============================================
+
+
+===========================================不需要做参考
+7.检测iptables转发 ===========我这边centos这边都没设置没问题 这步忽略
+[root@k8smaster ~]# cat /proc/sys/net/bridge/bridge-nf-call-iptables 
+1
+[root@k8smaster ~]# cat /proc/sys/net/bridge/bridge-nf-call-ip6tables 
+1
+如果不是1的话
+配置内核参数，将桥接的IPv4流量传递到iptables的链
+cat > /etc/sysctl.d/k8s.conf <<EOF
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sysctl --system
+============================================
+
+
+8. 安装
+在所有节点上进行如下操作
+1.安装docker
+yum install -y docker-ce-18.06.1.ce-3.el7
+systemctl enable docker && systemctl start docker
+docker –version
+Docker version 18.06.1-ce, build e68fc7a
+docker服务为容器运行提供计算资源，是所有容器运行的基本平台。
+
+2.安装kubeadm、kubelet、kubectl
+yum install -y kubelet kubeadm kubectl
+systemctl enable kubelet
+
+Kubelet负责与其他节点集群通信，并进行本节点Pod和容器生命周期的管理。Kubeadm是Kubernetes的自动化部署工具，降低了部署难度，提高效率。Kubectl是Kubernetes集群管理工具。
+
+
+8、部署master 节点
+
+注：在master节点上进行如下操作
+1.在master进行Kubernetes集群初始化。
+kubeadm init --kubernetes-version=1.14.2 \
+--apiserver-advertise-address=10.10.10.10 \
+--image-repository registry.aliyuncs.com/google_containers \
+--service-cidr=10.1.0.0/16 \
+--pod-network-cidr=10.244.0.0/16
+定义POD的网段为: 10.244.0.0/16， api server地址就是master本机IP地址。
+这一步很关键，由于kubeadm 默认从官网k8s.grc.io下载所需镜像，国内无法访问，因此需要通过–image-repository指定阿里云镜像仓库地址，
+很多新手初次部署都卡在此环节无法进行后续配置。
+
+如果是内网的话好像有点问题,
+方法一: 能访问外网,不能访问google的镜像的话解决方式如下:
+
+先看下需要哪些镜像
+[root@k8smaster ~]# kubeadm config images list --kubernetes-version=1.15.0
+k8s.gcr.io/kube-apiserver:v1.15.0
+k8s.gcr.io/kube-controller-manager:v1.15.0
+k8s.gcr.io/kube-scheduler:v1.15.0
+k8s.gcr.io/kube-proxy:v1.15.0
+k8s.gcr.io/pause:3.1
+k8s.gcr.io/etcd:3.3.10
+k8s.gcr.io/coredns:1.3.1
+
+也可以单独拉使用kubeadm config images pull
+
+从内部镜像源拖拽过来以下为举例
+然后拉取我们自己的镜像
+docker pull luutqf/etcd:3.2.24    
+docker pull luutqf/coredns:1.2.6    
+docker pull luutqf/pause:3.1   
+docker pull luutqf/kube-proxy:1.13.1   
+docker pull luutqf/kube-scheduler:1.13.1   
+docker pull luutqf/kube-controller-manager:1.13.1    
+docker pull luutqf/kube-apiserver:1.13.1   
+
+再把它们打成官方tag
+docker tag luutqf/etcd:3.2.24    k8s.gcr.io/etcd:3.2.24
+docker tag luutqf/coredns:1.2.6    k8s.gcr.io/coredns:1.2.6
+docker tag luutqf/pause:3.1    k8s.gcr.io/pause:3.1
+docker tag luutqf/kube-proxy:1.13.1    k8s.gcr.io/kube-proxy:v1.13.1
+docker tag luutqf/kube-scheduler:1.13.1    k8s.gcr.io/kube-scheduler:v1.13.1
+docker tag luutqf/kube-controller-manager:1.13.1    k8s.gcr.io/kube-controller-manager:v1.13.1
+docker tag luutqf/kube-apiserver:1.13.1    k8s.gcr.io/kube-apiserver:v1.13.1
+
+或者使用脚本
+#!/bin/bash
+
+set -e
+
+KUBE_VERSION=v1.14.1
+KUBE_PAUSE_VERSION=3.1
+ETCD_VERSION=3.3.10
+CORE_DNS_VERSION=1.3.1
+
+GCR_URL=k8s.gcr.io
+ALIYUN_URL=registry.cn-hangzhou.aliyuncs.com/google_containers
+
+images=(kube-proxy:${KUBE_VERSION}
+kube-scheduler:${KUBE_VERSION}
+kube-controller-manager:${KUBE_VERSION}
+kube-apiserver:${KUBE_VERSION}
+pause:${KUBE_PAUSE_VERSION}
+etcd:${ETCD_VERSION}
+coredns:${CORE_DNS_VERSION})
+
+
+for imageName in ${images[@]} ; do
+  docker pull $ALIYUN_URL/$imageName
+  docker tag  $ALIYUN_URL/$imageName $GCR_URL/$imageName
+  docker rmi $ALIYUN_URL/$imageName
+done
+
+
+最后在运行init
+
+集群初始化成功后返回如下信息：
+记录生成的最后部分内容，此内容需要在其它节点加入Kubernetes集群时执行。
+kubeadm join 10.10.10.10:6443 --token kekvgu.nw1n76h84f4camj6 \
+--discovery-token-ca-cert-hash sha256:4ee74205227c78ca62f2d641635afa4d50e6634acfaa8291f28582c7e3b0e30e
+
+========================================================
+由于我们无法访问外网要通过代理,这样的话设置docker代理
+cat /usr/lib/systemd/system/docker.service   在这里面增加Environment="HTTP_PROXY=http://xxxxxxxx:8080/" "HTTPS_PROXY=http://xxxxxxxx:8080/" "NO_PROXY=localhost,127.0.0.0/8,172.17.0.0/16,192.168.0.0/16,10.1.0.0/16,10.244.0.0/16"(具体根据自己环境)
+
+[Unit]
+Description=Docker Application Container Engine
+Documentation=https://docs.docker.com
+BindsTo=containerd.service
+After=network-online.target firewalld.service containerd.service
+Wants=network-online.target
+Requires=docker.socket
+
+[Service]
+Type=notify
+# the default is not to use systemd for cgroups because the delegate issues still
+# exists and systemd currently does not support the cgroup feature set required
+# for containers run by docker
+Environment="HTTP_PROXY=proxy.com:8080" "HTTPS_PROXY=proxy.com:8080" "NO_PROXY=XXXX/16,XXXXX/8"
+ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+ExecReload=/bin/kill -s HUP $MAINPID
+TimeoutSec=0
+RestartSec=2
+Restart=always
+
+systemctl daemon-reload
+systemctl restart docker
+
+这是一种或者
+# 1) 创建目录
+mkdir -p /etc/systemd/system/docker.service.d
+
+# 2) 创建http-proxy.conf配置文件
+touch /etc/systemd/system/docker.service.d/http-proxy.conf
+vim   /etc/systemd/system/docker.service.d/http-proxy.conf
+
+## 在http-proxy.conf文件中添加如下内容 （根据自家的代理情况填写，参考资料有HTTPS的说明）
+[Service]
+Environment="HTTP_PROXY=http://192.168.1.3:80/" "NO_PROXY=localhost,127.0.0.1"
+
+# 3) Flush变更
+systemctl daemon-reload
+
+# 4) 重启Docker
+systemctl restart docker
+
+# 5) 验证配置是否已加载
+systemctl show --property=Environment docker
+## 当有如下输出
+Environment=HTTP_PROXY=http://192.168.1.3:80/ NO_PROXY=localhost,127.0.0.1
+
+# 6) 拉取测试，如下
+[root@localhost docker]# docker pull hello-world:latest
+latest: Pulling from library/hello-world
+1b930d010525: Pull complete 
+Digest: sha256:2557e3c07ed1e38f26e389462d03ed943586f744621577a99efb77324b0fe535
+Status: Downloaded newer image for hello-world:latest
+
+===================================================================
+
+9.接下来就是等
+最后会出来一串数字类似
+kubeadm join 10.10.10.10:6443 --token kekvgu.nw1n76h84f4camj6 \
+--discovery-token-ca-cert-hash sha256:4ee74205227c78ca62f2d641635afa4d50e6634acfaa8291f28582c7e3b0e30e
+
+配置kubectl工具
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+kubectl get nodes
+kubectl get cs
+
+
+依照 kubeadm init 输出的最后提示，推荐用 Linux 普通用户执行 kubectl。
+创建普通用户centos
+#创建普通用户并设置密码123456
+useradd centos && echo "centos:123456" | chpasswd centos
+#追加sudo权限,并配置sudo免密
+sed -i '/^root/a\centos  ALL=(ALL)       NOPASSWD:ALL' /etc/sudoers
+#保存集群安全配置文件到当前用户.kube目录
+su - centos
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+#启用 kubectl 命令自动补全功能（注销重新登录生效）
+echo "source <(kubectl completion bash)" >> ~/.bashrc
+
+确认各个组件都处于healthy状态。
+查看节点状态
+
+[centos@k8s-master ~]$ kubectl get nodes 
+NAME         STATUS     ROLES    AGE   VERSION
+k8s-master   NotReady   master   36m   v1.13.1
+[centos@k8s-master ~]$ 
+可以看到，当前只存在1个master节点，并且这个节点的状态是 NotReady。
+使用 kubectl describe 命令来查看这个节点（Node）对象的详细信息、状态和事件（Event）：
+
+[centos@k8s-master ~]$ kubectl describe node k8s-master 
+......
+Events:
+  Type    Reason                   Age                From                    Message
+  ----    ------                   ----               ----                    -------
+  Normal  Starting                 33m                kubelet, k8s-master     Starting kubelet.
+  Normal  NodeHasSufficientMemory  33m (x8 over 33m)  kubelet, k8s-master     Node k8s-master status is now: NodeHasSufficientMemory
+  Normal  NodeHasNoDiskPressure    33m (x8 over 33m)  kubelet, k8s-master     Node k8s-master status is now: NodeHasNoDiskPressure
+  Normal  NodeHasSufficientPID     33m (x7 over 33m)  kubelet, k8s-master     Node k8s-master status is now: NodeHasSufficientPID
+  Normal  NodeAllocatableEnforced  33m                kubelet, k8s-master     Updated Node Allocatable limit across pods
+  Normal  Starting                 33m                kube-proxy, k8s-master  Starting kube-proxy.
+通过 kubectl describe 指令的输出，我们可以看到 NodeNotReady 的原因在于，我们尚未部署任何网络插件，kube-proxy等组件还处于starting状态。
+另外，我们还可以通过 kubectl 检查这个节点上各个系统 Pod 的状态，其中，kube-system 是 Kubernetes 项目预留的系统 Pod 的工作空间（Namepsace，注意它并不是 Linux Namespace，它只是 Kubernetes 划分不同工作空间的单位）：
+
+[centos@k8s-master ~]$ kubectl get pod -n kube-system -o wide
+NAME                                 READY   STATUS    RESTARTS   AGE   IP              NODE         NOMINATED NODE   READINESS GATES
+coredns-78d4cf999f-7jdx7             0/1     Pending   0          29m   <none>          <none>       <none>           <none>
+coredns-78d4cf999f-s6mhk             0/1     Pending   0          29m   <none>          <none>       <none>           <none>
+etcd-k8s-master                      1/1     Running   0          34m   192.168.92.56   k8s-master   <none>           <none>
+kube-apiserver-k8s-master            1/1     Running   0          34m   192.168.92.56   k8s-master   <none>           <none>
+kube-controller-manager-k8s-master   1/1     Running   0          34m   192.168.92.56   k8s-master   <none>           <none>
+kube-proxy-przwf                     1/1     Running   0          34m   192.168.92.56   k8s-master   <none>           <none>
+kube-scheduler-k8s-master            1/1     Running   0          34m   192.168.92.56   k8s-master   <none>           <none>
+[centos@k8s-master ~]$ 
+可以看到，CoreDNS依赖于网络的 Pod 都处于 Pending 状态，即调度失败。这当然是符合预期的：因为这个 Master 节点的网络尚未就绪。
+集群初始化如果遇到问题，可以使用kubeadm reset命令进行清理然后重新执行初始化。
+执行如下命令部署 flannel：
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+[centos@k8s-master ~]$ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+clusterrole.rbac.authorization.k8s.io/flannel created
+clusterrolebinding.rbac.authorization.k8s.io/flannel created
+serviceaccount/flannel created
+configmap/kube-flannel-cfg created
+daemonset.extensions/kube-flannel-ds-amd64 created
+daemonset.extensions/kube-flannel-ds-arm64 created
+daemonset.extensions/kube-flannel-ds-arm created
+daemonset.extensions/kube-flannel-ds-ppc64le created
+daemonset.extensions/kube-flannel-ds-s390x created
+[centos@k8s-master ~]$ 
+部署完成后，我们可以通过 kubectl get 重新检查 Pod 的状态：
+
+[centos@k8s-master ~]$ kubectl get pod -n kube-system -o wide
+NAME                                 READY   STATUS    RESTARTS   AGE   IP              NODE         NOMINATED NODE   READINESS GATES
+coredns-78d4cf999f-7jdx7             1/1     Running   0          11h   10.244.0.3      k8s-master   <none>           <none>
+coredns-78d4cf999f-s6mhk             1/1     Running   0          11h   10.244.0.2      k8s-master   <none>           <none>
+etcd-k8s-master                      1/1     Running   1          11h   192.168.92.56   k8s-master   <none>           <none>
+kube-apiserver-k8s-master            1/1     Running   1          11h   192.168.92.56   k8s-master   <none>           <none>
+kube-controller-manager-k8s-master   1/1     Running   1          11h   192.168.92.56   k8s-master   <none>           <none>
+kube-flannel-ds-amd64-lkf2f          1/1     Running   0          10h   192.168.92.56   k8s-master   <none>           <none>
+kube-proxy-przwf                     1/1     Running   1          11h   192.168.92.56   k8s-master   <none>           <none>
+kube-scheduler-k8s-master            1/1     Running   1          11h   192.168.92.56   k8s-master   <none>           <none>
+[centos@k8s-master ~]$ 
+可以看到，所有的系统 Pod 都成功启动了，而刚刚部署的flannel网络插件则在 kube-system 下面新建了一个名叫kube-flannel-ds-amd64-lkf2f的 Pod，一般来说，这些 Pod 就是容器网络插件在每个节点上的控制组件。
+Kubernetes 支持容器网络插件，使用的是一个名叫 CNI 的通用接口，它也是当前容器网络的事实标准，市面上的所有容器网络开源项目都可以通过 CNI 接入 Kubernetes，比如 Flannel、Calico、Canal、Romana 等等，它们的部署方式也都是类似的“一键部署”。
+再次查看master节点状态已经为ready状态：
+
+[centos@k8s-master ~]$ kubectl get nodes 
+NAME         STATUS   ROLES    AGE   VERSION
+k8s-master   Ready    master   11h   v1.13.1
+[centos@k8s-master ~]$ 
+至此，Kubernetes 的 Master 节点就部署完成了。如果你只需要一个单节点的 Kubernetes，现在你就可以使用了。不过，在默认情况下，Kubernetes 的 Master 节点是不能运行用户 Pod 的。
+
+
+===================其他网路插件的参考
+部署flannel网络
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/a70459be0084506e4ec919aa1c114638878db11b/Documentation/kube-flannel.yml
+====================================================
+注意部署网路插件
+添加网络插件
+上面安装成功后如果通过查询kube-system下Pod的运行情况，会放下和网络相关的Pod都处于Pending的状态，这是因为缺少相关的网络插件，而网络插件有很多个（以下任选一个），可以选择自己需要的。
+
+安装参考： https://kubernetes.feisky.xyz/bu-shu-pei-zhi/cluster/kubeadm#pei-zhi-network-plugin
+CNI bridge
+mkdir -p /etc/cni/net.d
+cat >/etc/cni/net.d/10-mynet.conf <<-EOF
+{
+    "cniVersion": "0.3.0",
+    "name": "mynet",
+    "type": "bridge",
+    "bridge": "cni0",
+    "isGateway": true,
+    "ipMasq": true,
+    "ipam": {
+        "type": "host-local",
+        "subnet": "10.244.0.0/16",
+        "routes": [
+            {"dst": "0.0.0.0/0"}
+        ]
+    }
+}
+EOF
+cat >/etc/cni/net.d/99-loopback.conf <<-EOF
+{
+    "cniVersion": "0.3.0",
+    "type": "loopback"
+}
+EOF
+
+flannel
+需要在kubeadm init 时设置 --pod-network-cidr=10.244.0.0/16
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml
+
+weave
+sysctl net.bridge.bridge-nf-call-iptables=1
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+
+calico
+需要 kubeadm init 时设置 --pod-network-cidr=192.168.0.0/16
+kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
+kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml
+
+=================================================
+
+查看是否安装成功
+kubectl get pods -n kube-system
+
+
+=======================================================
+如果安装失败的话使用使用kubeadm reset
+或者
+systemctl stop kubelet;
+docker rm -f -v $(docker ps -q);
+find /var/lib/kubelet | xargs -n 1 findmnt -n -t tmpfs -o TARGET -T | uniq | xargs -r umount -v;
+rm -r -f /etc/kubernetes /var/lib/kubelet /var/lib/etcd;
+
+
+
+===================================================================
+安装客户端
+1. 拷贝host文件到两台机器
+ansible k8snodes -m copy -a 'src=/etc/profile dest=/etc/profile'
+source /etc/profile
+
+2. 拷贝docker文件到两台机器
+ansible k8snodes -m copy -a 'src=/usr/lib/systemd/system/docker.service dest=/usr/lib/systemd/system/docker.service'
+systemctl daemon-reload
+systemctl restart docker
+
+3.加入节点
+kubeadm join 10.132.250.213:6443 --token iz1sq0.z9eqs7whyi5h7wkb     --discovery-token-ca-cert-hash sha256:35c40d1abb7f3e050ccd43e3540a0fcbd495594763f042dedaeaae30f90a56e7
+
+成功
 
