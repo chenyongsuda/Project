@@ -251,6 +251,30 @@ sqlalchemy.text
 sqlalchemy.text('select xxxx from xxx xxx xxxx')
 
 
+================================================================================
+最简单使用方式
+        user = 'xxx'
+        passwd = 'xxx'
+        db = 'xxx'
+        store_ip = "xxx" % store_code
+        engine = create_engine('postgresql://'+user+':'+passwd+'@'+store_ip+'/'+db)
+        df = None
+        with engine.connect() as con:
+            rs = con.execute(text(sql))
+            rows = rs.fetchall()
+            if len(rows) > 0 :
+                df = pd.DataFrame(rows)
+                df.columns = rs.keys()
+                df['store_code'] = store_code
+                print(df)
 
+拿到结果最简单方式是用pandas
+
+
+Here's the shortest code that will do the job:
+from pandas import DataFrame
+df = DataFrame(resoverall.fetchall())
+df.columns = resoverall.keys()
+You can go fancier and parse the types as in Paul's answer.
 
 
