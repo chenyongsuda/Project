@@ -68,3 +68,19 @@ kubectl create -f mysql-svc.yaml
 
 
 
+
+
+======================================================================
+在运行期间动态扩展pods的个数
+kubectl scale rc myweb --replicas=3
+这个是相同版本副本数量的增减
+
+===========
+1.使用kubectl apply命令来发起资源对象的更新
+新建一个yaml文件，改成最新的IMAGES
+kubectl apply -f new-request.yaml
+可以更新,但是会有警告Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply apply为创建的时候用
+
+2.通过edit命令在线修改deployment：
+kubectl edit deployment nginx-deployment
+
