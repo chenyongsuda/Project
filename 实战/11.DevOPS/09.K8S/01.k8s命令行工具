@@ -1,0 +1,6 @@
+kubectl [CMD] [TYPE] [NAME] [FLAGS]
+
+比如对POD操作：
+kubectl get/describe/delete pods xxx 
+
+
