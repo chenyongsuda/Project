@@ -4,3 +4,67 @@ kubectl [CMD] [TYPE] [NAME] [FLAGS]
 kubectl get/describe/delete pods xxx 
 
 
+执行命令
+kubectl exec <pod-name> date 默认pod的第一个容器执行
+
+指定容器执行命令
+kubectl exec <pod-name> -c <container-name> date 
+
+查看容器日志相当于 tail -f
+kubelet logs -f <pod-name> -c <container-name>
+
+=======================================================================
+创建一个mysql实例
+[root@k8smaster k8sfiles]# cat mysql-rc.yaml 
+apiVersion: v1
+kind: ReplicationController
+metadata:
+        name: mysql    			 #RC的名称，全局唯一
+spec:
+        replicas: 1    			 #pod副本的期待数量
+        selector:
+                app: mysql			#符合目标的Pod拥有此标签
+        template:       			#根据此模板创建Pod的副本（实例）
+                metadata:
+                        labels:
+                                app: mysql      #pod副本拥有的标签,对应的RC的Selector
+                spec:
+                        containers:     	#pod内容器的定义部分
+                        - name: mysql  	 #容器的名称
+                          image: mysql:5.7  #容器对应的Docker Image
+                          imagePullPolicy: IfNotPresent
+                          ports:
+                          - containerPort: 3306 #容器应用监听的端口号
+                          env:
+                          - name: MYSQL_ROOT_PASSWORD
+                            value: "123456"
+
+创建RC
+kubectl create -f mysql-rc.yaml
+
+
+
+=====================================================================
+创建一个service
+我们创建一个与之关联的Kubernetes Service-MySQL的定义文件：mysql-svc.yaml
+
+apiVersion: v1
+kind: Service           #类型是service
+metadata:
+        name: mysql     #service的全局唯一名称
+spec:
+        ports:
+                - port: 3306 #service提供服务的端口号
+        selector:               #service 对应的Pod拥有这里定义的标签
+                app: mysql
+                
+kubectl create -f mysql-svc.yaml 
+
+======================================================================
+测试成功,在物理机器的30001端口访问成功
+举例 http://10.132.250.213:30001/demo/
+测试显示成功
+
+
+
+
