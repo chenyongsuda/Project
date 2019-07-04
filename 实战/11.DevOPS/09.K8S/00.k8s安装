@@ -537,8 +537,8 @@ cd ../../
 ln -s  node-v8.0.0-linux-x64/bin/node /usr/local/bin/node  
 ln -s  node-v8.0.0-linux-x64/bin/npm /usr/local/bin/npm
 
-5、mysql 安装（略）
-6、rabbitmq(未安装)
+5、mysql 安装（略）不需要安装
+6、rabbitmq(未安装) 不需要安装
 7、启动Start Wayne
 Start server by docker-compose at Wayne project.
 $ docker-compose -f ./hack/docker-compose/docker-compose.yaml up
