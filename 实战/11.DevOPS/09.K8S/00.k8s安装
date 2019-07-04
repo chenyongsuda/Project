@@ -501,8 +501,8 @@ cd /home
 mkdir Go
 cd Go
 # https://studygolang.com/dl  找到go对应的安装包
-wget https://studygolang.com/dl/golang/go1.11.linux-amd64.tar.gz
-tar -zxvf go1.11.linux-amd64.tar.gz
+wget https://dl.google.com/go/go1.12.6.linux-amd64.tar.gz
+tar -zxvf go1.12.6.linux-amd64.tar.gz
 # 设置环境变量到 ~/.bashrc 中
 vi ~/.bashrc
 # 文件末尾添加以下4行后保存
