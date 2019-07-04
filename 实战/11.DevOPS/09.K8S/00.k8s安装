@@ -539,20 +539,9 @@ ln -s  node-v8.0.0-linux-x64/bin/npm /usr/local/bin/npm
 
 5、mysql 安装（略）
 6、rabbitmq(未安装)
-7、启动后端
-go get github.com/Qihoo360/wayne
-cd /home/Go/go-project/src/github.com/Qihoo360/wayne
-git submodule update --init --recursive
-vim src/backend/conf/dev.conf
- # 参考app.conf ，主要修改数据库连接地址，
- make run-backend
-
-8、启动前段
- cd src/frontend && npm install
-  # 如果出现 permission denied,mkdir'......node-sass/****’的错误，尝试加上 --unsafe-perm
-  # npm install node-sass --unsafe-perm
- cd ../../  && make run-frontend
- # 如果出现缺少node-sass模块的错误，尝试上面的方法安装 node-sass
+7、启动Start Wayne
+Start server by docker-compose at Wayne project.
+$ docker-compose -f ./hack/docker-compose/docker-compose.yaml up
 
 9、访问http://$ip:4200
 10、配置k8s 集群
