@@ -1,3 +1,7 @@
+中文文档
+https://github.com/kubernetes/website/blob/master/content/zh/docs/concepts/cluster-administration/cluster-administration-overview.md
+
+
 create创建
 kubectl命令用于根据文件或输入创建集群resource。如果已经定义了相应resource的yaml或son文件，直接kubectl create -f filename即可创建文件内定义的resource。
 也可以直接只用子命令[namespace/secret/configmap/serviceaccount]等直接创建相应的resource。从追踪和维护的角度出发，建议使用json或yaml的方式定义资源。
