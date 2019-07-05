@@ -277,4 +277,67 @@ df = DataFrame(resoverall.fetchall())
 df.columns = resoverall.keys()
 You can go fancier and parse the types as in Paul's answer.
 
+=========================================================================================
+Here's the code I use. Hope this helps.
 
+import pandas as pd
+from sqlalchemy import create_engine
+
+def getData():
+  # Parameters
+  ServerName = "my_server"
+  Database = "my_db"
+  UserPwd = "user:pwd"
+  Driver = "driver=SQL Server Native Client 11.0"
+
+  # Create the connection
+  engine = create_engine('mssql+pyodbc://' + UserPwd + '@' + ServerName + '/' + Database + "?" + Driver)
+
+  sql = "select * from mytable"
+  df = pd.read_sql(sql, engine)
+  return df
+
+df2 = getData()
+print(df2)
+
+==================================================================
+MySQL Connector
+
+import pandas as pd
+import mysql.connector
+
+# Setup MySQL connection
+db = mysql.connector.connect(
+    host="<IP>",              # your host, usually localhost
+    user="<USER>",            # your username
+    password="<PASS>",        # your password
+    database="<DATABASE>"     # name of the data base
+)   
+
+# You must create a Cursor object. It will let you execute all the queries you need
+cur = db.cursor()
+
+# Use all the SQL you like
+cur.execute("SELECT * FROM <TABLE>")
+
+# Put it all to a data frame
+sql_data = pd.DataFrame(cur.fetchall())
+sql_data.columns = cur.column_names
+
+# Close the session
+db.close()
+
+# Show the data
+print(sql_data.head())
+
+========================================================================
+import pyodbc
+import pandas.io.sql as psql
+
+cnxn = pyodbc.connect(connection_info) 
+cursor = cnxn.cursor()
+sql = "SELECT * FROM TABLE"
+
+df = psql.frame_query(sql, cnxn)
+cnxn.close()
+=========================================================================
