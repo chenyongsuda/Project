@@ -117,6 +117,59 @@ kubectl label nodes k8snode01 zone=a
 如上操作也可以使用kubectl replace -f xxx.yml实现
 
 
+NodeSelector经过试验好像对于rc不起作用,deployment有作用,kublet edit/apply/patch都有用
+
+=============================================
+如何使用patch如下示例
+Example
+Here's a simple deployment of nginx I used, which will be created on node-1:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+      nodeSelector:
+        kubernetes.io/hostname: node-1
+JSON patch
+You can patch the deployment to change the desired node as follows:
+kubectl patch deployments nginx-deployment -p '{"spec": {"template": {"spec": {"nodeSelector": {"kubernetes.io/hostname": "node-2"}}}}}'
+
+YAML patch
+By running kubectl patch deployment nginx-deployment --patch "$(cat patch.yaml)", where patch.yaml is prepared as follows:
+
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: node-2
+Both will result in scheduler scheduling new pod on requested node, and terminating the old one as soon as the new one is ready.
+
+
+
+
+
+
+
+
+
+
 
 
 
