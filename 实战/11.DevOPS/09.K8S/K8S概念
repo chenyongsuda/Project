@@ -1,19 +1,50 @@
-由Master和node组成
-Master: 主要由三个进程 APIServer（接收客户端请求）, Scheduler（容器调度）,Controller-manager（容器销毁等管理） 组成
-Node：主要由kubelet 和docker组成
+create创建
+kubectl命令用于根据文件或输入创建集群resource。如果已经定义了相应resource的yaml或son文件，直接kubectl create -f filename即可创建文件内定义的resource。
+也可以直接只用子命令[namespace/secret/configmap/serviceaccount]等直接创建相应的resource。从追踪和维护的角度出发，建议使用json或yaml的方式定义资源。
+kubectl create -f 文件名 
 
-Pod：元数据如Label, Label Selector   Pod是K8S调度的最小单元
-Label:key=value 用于打标签
-
-
-Pod 分为两类
-1. 自主式Pod 
-2. 控制管理的Pod
-    ReplicationController 由副本管理器管理管理副本控制,滚动更新,滚动回退等.
-
-还有一类是Pod控制器
-
-
-
+replace更新替换资源
+replace命令用于对已有资源进行更新、替换。如前面create中创建的nginx，当我们需要更新resource的一些属性的时候，如果修改副本数量，增加、修改label，更改image版本，修改端口等。都可以直接修改原yaml文件，然后执行replace命令。
+注：名字不能被更更新。另外，如果是更新label，原有标签的pod将会与更新label后的rc断开联系，有新label的rc将会创建指定副本数的新的pod，但是默认并不会删除原来的pod。所以此时如果使用get po将会发现pod数翻倍，进一步check会发现原来的pod已经不会被新rc控制，此处只介绍命令不详谈此问题，好奇者可自行实验。
+kubectl replace -f rc-nginx.yaml
     
+patch
+如果一个容器已经在运行，这时需要对一些容器属性进行修改，又不想删除容器，或不方便通过replace的方式进行更新。kubernetes还提供了一种在容器运行时，直接对容器进行修改的方式，就是patch命令。
+如前面创建pod的label是app=nginx-2，如果在运行过程中，需要把其label改为app=nginx-3。
+这patch命令如下：
+kubectl patch pod rc-nginx-2-kpiqt -p '{"metadata":{"labels":{"app":"nginx-3"}}}'
+
+edit
+edit提供了另一种更新resource源的操作，通过edit能够灵活的在一个common的resource基础上，发展出更过的significant resource。
+例如，使用edit直接更新前面创建的pod的命令为：
+kubectl edit po rc-nginx-btv4j
+上面命令的效果等效于：
+kubectl get po rc-nginx-btv4j -o yaml >> /tmp/nginx-tmp.yaml
+vim /tmp/nginx-tmp.yaml
+/*do some changes here */
+kubectl replace -f /tmp/nginx-tmp.yaml
+
+apply
+apply命令提供了比patch，edit等更严格的更新resource的方式。通过apply，用户可以将resource的configuration使用source control的方式维护在版本库中。每次有更新时，将配置文件push到server，然后使用kubectl apply将更新应用到resource。kubernetes会在引用更新前将当前配置文件中的配置同已经应用的配置做比较，并只更新更改的部分，而不会主动更改任何用户未指定的部分。
+apply命令的使用方式同replace相同，不同的是，apply不会删除原有resource，然后创建新的。apply直接在原有resource的基础上进行更新。同时kubectl apply还会resource中添加一条注释，标记当前的apply。类似于git操作。
+ 
+ 
+replace和edit类似
+
+replace和apply的差别为
+The difference is that replace first deletes the resources, then creates it from the file you give it; whereas apply attempts to directly update, in the current live resource, 
+only the attributes you give it in the file. See In-place updates and disruptive updates.
+A consequence of that is that the file you use in an apply can be an incomplete spec, 
+ie only what you want to change; whereas with replace, the spec must be complete.
+So you could apply a file that changes only an annotation, without specifying any other properties of the resource; 
+but if you tried to use the same file with a replace command, the command would fail, due to missing information.
+Also, apply only works on some properties of resources; 
+if you need to update properties for which apply doesn't apply (sorry for the pun!), you have to use replace instead.
+
+
+
+
+
+
+
 
