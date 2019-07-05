@@ -1,3 +1,5 @@
+参考文档 http://docs.kubernetes.org.cn/317.html#_Deployment
+
 kubectl [CMD] [TYPE] [NAME] [FLAGS]
 
 比如对POD操作：
@@ -118,6 +120,134 @@ kubectl label nodes k8snode01 zone=a
 
 
 NodeSelector经过试验好像对于rc不起作用,deployment有作用,kublet edit/apply/patch都有用
+
+在创建deployment的时候加上参数可以保存详细每次的更新
+创建 Deployment 的时候使用了--recored参数可以记录命令，我们可以很方便的查看每次 revision 的变化。
+
+查看单个revision 的详细信息：
+$ kubectl rollout history deployment/nginx-deployment --revision=2
+
+我们可以决定回退当前的 rollout 到之前的版本：
+$ kubectl rollout undo deployment/nginx-deployment
+deployment "nginx-deployment" rolled back
+
+也可以使用 --revision参数指定某个历史版本：
+$ kubectl rollout undo deployment/nginx-deployment --to-revision=2
+
+检查 Deployment 升级的历史记录
+首先，检查下 Deployment 的 revision：
+$ kubectl rollout history deployment/nginx-deployment
+deployments "nginx-deployment":
+REVISION    CHANGE-CAUSE
+1           kubectl create -f https://kubernetes.io/docs/user-guide/nginx-deployment.yaml--record
+2           kubectl set image deployment/nginx-deployment nginx=nginx:1.9.1
+3           kubectl set image deployment/nginx-deployment nginx=nginx:1.91
+创建 Deployment 的时候使用了--recored参数可以记录命令，我们可以很方便的查看每次 revision 的变化。
+
+=================Deployment 扩容
+您可以使用以下命令扩容 Deployment：
+
+$ kubectl scale deployment nginx-deployment --replicas 10
+deployment "nginx-deployment" scaled
+假设您的集群中启用了horizontal pod autoscaling，您可以给 Deployment 设置一个 autoscaler，基于当前 Pod的 CPU 利用率选择最少和最多的 Pod 数。
+
+$ kubectl autoscale deployment nginx-deployment --min=10 --max=15 --cpu-percent=80
+deployment "nginx-deployment" autoscaled
+
+比例扩容
+RollingUpdate Deployment 支持同时运行一个应用的多个版本。或者 autoscaler 扩 容 RollingUpdate Deployment 的时候，正在中途的 rollout（进行中或者已经暂停的），为了降低风险，Deployment controller 将会平衡已存在的活动中的 ReplicaSet（有 Pod 的 ReplicaSet）和新加入的 replica。这被称为比例扩容。
+
+例如，您正在运行中含有10个 replica 的 Deployment。maxSurge=3，maxUnavailable=2。
+
+$ kubectl get deploy
+NAME                 DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment     10        10        10           10          50s
+您更新了一个镜像，而在集群内部无法解析。
+
+$ kubectl set image deploy/nginx-deployment nginx=nginx:sometag
+deployment "nginx-deployment" image updated
+镜像更新启动了一个包含ReplicaSet nginx-deployment-1989198191的新的rollout，但是它被阻塞了，因为我们上面提到的maxUnavailable。
+
+$ kubectl get rs
+NAME                          DESIRED   CURRENT   READY     AGE
+nginx-deployment-1989198191   5         5         0         9s
+nginx-deployment-618515232    8         8         8         1m
+然后发起了一个新的Deployment扩容请求。autoscaler将Deployment的repllica数目增加到了15个。Deployment controller需要判断在哪里增加这5个新的replica。如果我们没有谁用比例扩容，所有的5个replica都会加到一个新的ReplicaSet中。如果使用比例扩容，新添加的replica将传播到所有的ReplicaSet中。大的部分加入replica数最多的ReplicaSet中，小的部分加入到replica数少的ReplciaSet中。0个replica的ReplicaSet不会被扩容。
+
+在我们上面的例子中，3个replica将添加到旧的ReplicaSet中，2个replica将添加到新的ReplicaSet中。rollout进程最终会将所有的replica移动到新的ReplicaSet中，假设新的replica成为健康状态。
+
+$ kubectl get deploy
+NAME                 DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment     15        18        7            8           7m
+$ kubectl get rs
+NAME                          DESIRED   CURRENT   READY     AGE
+nginx-deployment-1989198191   7         7         0         7m
+nginx-deployment-618515232    11        11        11        7m
+
+=================暂停容器
+暂停和恢复Deployment
+您可以在发出一次或多次更新前暂停一个 Deployment，然后再恢复它。这样您就能多次暂停和恢复 Deployment，在此期间进行一些修复工作，而不会发出不必要的 rollout。
+
+例如使用刚刚创建 Deployment：
+
+$ kubectl get deploy
+NAME      DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx     3         3         3            3           1m
+[mkargaki@dhcp129-211 kubernetes]$ kubectl get rs
+NAME               DESIRED   CURRENT   READY     AGE
+nginx-2142116321   3         3         3         1m
+使用以下命令暂停 Deployment：
+
+$ kubectl rollout pause deployment/nginx-deployment
+deployment "nginx-deployment" paused
+然后更新 Deplyment中的镜像：
+
+$ kubectl set image deploy/nginx nginx=nginx:1.9.1
+deployment "nginx-deployment" image updated
+注意新的 rollout 启动了：
+
+$ kubectl rollout history deploy/nginx
+deployments "nginx"
+REVISION  CHANGE-CAUSE
+1   <none>
+
+$ kubectl get rs
+NAME               DESIRED   CURRENT   READY     AGE
+nginx-2142116321   3         3         3         2m
+您可以进行任意多次更新，例如更新使用的资源：
+
+$ kubectl set resources deployment nginx -c=nginx --limits=cpu=200m,memory=512Mi
+deployment "nginx" resource requirements updated
+Deployment 暂停前的初始状态将继续它的功能，而不会对 Deployment 的更新产生任何影响，只要 Deployment是暂停的。
+
+最后，恢复这个 Deployment，观察完成更新的 ReplicaSet 已经创建出来了：
+
+$ kubectl rollout resume deploy nginx
+deployment "nginx" resumed
+$ KUBECTL get rs -w
+NAME               DESIRED   CURRENT   READY     AGE
+nginx-2142116321   2         2         2         2m
+nginx-3926361531   2         2         0         6s
+nginx-3926361531   2         2         1         18s
+nginx-2142116321   1         2         2         2m
+nginx-2142116321   1         2         2         2m
+nginx-3926361531   3         2         1         18s
+nginx-3926361531   3         2         1         18s
+nginx-2142116321   1         1         1         2m
+nginx-3926361531   3         3         1         18s
+nginx-3926361531   3         3         2         19s
+nginx-2142116321   0         1         1         2m
+nginx-2142116321   0         1         1         2m
+nginx-2142116321   0         0         0         2m
+nginx-3926361531   3         3         3         20s
+^C
+$ KUBECTL get rs
+NAME               DESIRED   CURRENT   READY     AGE
+nginx-2142116321   0         0         0         2m
+nginx-3926361531   3         3         3         28s
+注意： 在恢复 Deployment 之前您无法回退一个已经暂停的 Deployment。
+
+
 
 =============================================
 如何使用patch如下示例
