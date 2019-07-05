@@ -112,7 +112,9 @@ kubectl get deployment -w
 查看pod的详细情况
 kubectl get pods -o wide
 
-
+给node打标签
+kubectl label nodes k8snode01 zone=a
+如上操作也可以使用kubectl replace -f xxx.yml实现
 
 
 
