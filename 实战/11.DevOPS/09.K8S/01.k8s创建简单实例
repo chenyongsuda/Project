@@ -84,3 +84,17 @@ kubectl apply -f new-request.yaml
 2.通过edit命令在线修改deployment：
 kubectl edit deployment nginx-deployment
 
+========================================================================
+朴素的命令行操作
+创建deployment
+
+
+
+
+
+
+
+
+
+
+
