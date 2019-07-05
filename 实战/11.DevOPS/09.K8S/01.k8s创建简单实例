@@ -87,6 +87,40 @@ kubectl edit deployment nginx-deployment
 ========================================================================
 朴素的命令行操作
 创建deployment
+kubectl run myapp-d --image=kubeguide/tomcat-app:v1 --replicas=2
+kubectl run 之后会被废弃要使用kubectl create
+提示内容为：kubectl run --generator=deployment/apps.v1 is DEPRECATED and will be removed in a future version. Use kubectl run --generator=run-pod/v1 or kubectl create instead.
+
+扩容缩容
+kubectl scale deployment rc-nginx-3  myapp-d --replicas=1
+
+更新镜像等
+kubectl set image deployment myapp-d myapp-d=kubeguide/tomcat-app:v2
+
+查看更新状态
+kubectl rollout status deployment myapp-d
+
+回滚
+kubectl rollout undo deployment/myapp-d
+
+发布service
+kubectl expose deployment myapp-d --name=myapp-d --port=80
+
+查看动态部署情况(持续刷新)
+kubectl get deployment -w
+
+查看pod的详细情况
+kubectl get pods -o wide
+
+
+
+
+
+
+
+
+
+
 
 
 
