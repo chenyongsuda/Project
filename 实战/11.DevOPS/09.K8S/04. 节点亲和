@@ -1,0 +1,65 @@
+K8S调度之节点亲和性
+Node Affinity
+Affinity 翻译成中文是“亲和性”，它对应的是 Anti-Affinity，我们翻译成“互斥”。这两个词比较形象，可以把 pod 选择 node 的过程类比成磁铁的吸引和互斥，不同的是除了简单的正负极之外，pod 和 node 的吸引和互斥是可以灵活配置的。
+
+Affinity的优点：
+
+匹配有更多的逻辑组合，不只是字符串的完全相等
+调度分成软策略(soft)和硬策略(hard)，在软策略下，如果没有满足调度条件的节点，pod会忽略这条规则，继续完成调度。
+目前主要的node affinity：
+
+requiredDuringSchedulingIgnoredDuringExecution
+表示pod必须部署到满足条件的节点上，如果没有满足条件的节点，就不停重试。其中IgnoreDuringExecution表示pod部署之后运行的时候，如果节点标签发生了变化，不再满足pod指定的条件，pod也会继续运行。
+
+requiredDuringSchedulingRequiredDuringExecution
+表示pod必须部署到满足条件的节点上，如果没有满足条件的节点，就不停重试。其中RequiredDuringExecution表示pod部署之后运行的时候，如果节点标签发生了变化，不再满足pod指定的条件，则重新选择符合要求的节点。
+
+preferredDuringSchedulingIgnoredDuringExecution
+表示优先部署到满足条件的节点上，如果没有满足条件的节点，就忽略这些条件，按照正常逻辑部署。
+
+preferredDuringSchedulingRequiredDuringExecution
+表示优先部署到满足条件的节点上，如果没有满足条件的节点，就忽略这些条件，按照正常逻辑部署。其中RequiredDuringExecution表示如果后面节点标签发生了变化，满足了条件，则重新调度到满足条件的节点。
+
+软策略和硬策略的区分是有用处的，硬策略适用于 pod 必须运行在某种节点，否则会出现问题的情况，比如集群中节点的架构不同，而运行的服务必须依赖某种架构提供的功能；软策略不同，它适用于满不满足条件都能工作，但是满足条件更好的情况，比如服务最好运行在某个区域，减少网络传输等。这种区分是用户的具体需求决定的，并没有绝对的技术依赖。
+
+下面是一个官方的示例：
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: with-node-affinity
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/e2e-az-name
+            operator: In
+            values:
+            - e2e-az1
+            - e2e-az2
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: another-node-label-key
+            operator: In
+            values:
+            - another-node-label-value
+  containers:
+  - name: with-node-affinity
+    image: gcr.io/google_containers/pause:2.0
+这个 pod 同时定义了 requiredDuringSchedulingIgnoredDuringExecution 和 preferredDuringSchedulingIgnoredDuringExecution 两种 nodeAffinity。第一个要求 pod 运行在特定 AZ 的节点上，第二个希望节点最好有对应的 another-node-label-key:another-node-label-value 标签。
+
+这里的匹配逻辑是label在某个列表中，可选的操作符有：
+
+In: label的值在某个列表中
+NotIn：label的值不在某个列表中
+Exists：某个label存在
+DoesNotExist：某个label不存在
+Gt：label的值大于某个值（字符串比较）
+Lt：label的值小于某个值（字符串比较）
+如果nodeAffinity中nodeSelector有多个选项，节点满足任何一个条件即可；如果matchExpressions有多个选项，则节点必须同时满足这些选项才能运行pod 。
+
+需要说明的是，node并没有anti-affinity这种东西，因为NotIn和DoesNotExist能提供类似的功能。
