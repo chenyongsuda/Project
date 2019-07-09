@@ -1,0 +1,13 @@
+nameStr=`sftp userID@sftp.domain.com <<EOF
+-cd the_folder_name
+-ls
+bye
+EOF`
+echo $nameStr > remoteString.txt   ----------这一步返回一个字符串，里面包含了所有的文件名，下一步就是如何取得这些文件名。
+
+ 
+nameList=$(cat remoteString.txt)
+for i in $nameList
+do
+    echo $i | grep /.txt$ >> remoteNameList.txt
+done
