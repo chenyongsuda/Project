@@ -1,1 +1,92 @@
+1. 插入一个元素方法有两种
+new mxCell(id, new mxGeometry(100, 200, 100, 100),'value')和
+mxGraph.prototype.insertVertex = function(parent,
+                                                  id,
+                                                  value,
+                                                  x,
+                                                  y,
+                                                  width,
+                                                  height,
+                                                  style,
+                                                  relative)
+
+sample:
+graph.insertVertex(parent, null, 'Hello,', 20, 20, 80, 30)
+
+实例
+    // 相对画布定位
+    graph.insertVertex(parent, null, 'A', 50, 20, 80, 30);
+    
+    // 相对父级定位
+    const v_1 = graph.insertVertex(parent, null, 'B', 170, 20, 100, 200);
+    const v_2 = graph.insertVertex(v_1, null, 'C', 0.5, 1, 80, 30, '', true);
+    
+    // 线条label定位
+    const v1 = graph.insertVertex(parent, null, 'Hello,', 320, 20, 80, 30);
+    const v2 = graph.insertVertex(parent, null, 'World!', 500, 150, 80, 30);
+    const e1 = graph.insertEdge(parent, null, '30%', v1, v2);
+    // relative position，以线条中点为中心
+    e1.geometry.x = 1; // [-1,1] 调整 label 沿连接线的位置
+    e1.geometry.y = 100; // 调整label 在正交线上的距离
+    
+    const v3 = graph.insertVertex(parent, null, 'Hello,', 320, 320, 80, 30);
+    const v4 = graph.insertVertex(parent, null, 'World!', 500, 450, 80, 30);
+    const e2 = graph.insertEdge(parent, null, '30%', v3, v4);
+    // relative 必须为 true，false 无效
+    e2.geometry.relative = false;
+    e2.geometry.x = 1;
+    e2.geometry.y = 400;
+    
+    插入前定义样式
+    var style1 = [];
+    style1[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_IMAGE;
+    style1[mxConstants.STYLE_IMAGE] = './demoimg/屏幕快照 2019-03-27 下午1.06.15.png';
+    style1[mxConstants.STYLE_IMAGE_WIDTH] = '48';
+    style1[mxConstants.STYLE_IMAGE_HEIGHT] = '48';
+    graph.getStylesheet().putCellStyle('img1', style1);
+    //插入节点时定义样式
+    var cell1 = new mxCell(null, new mxGeometry(100, 200, 100, 100), "img1");
+
+=========================================================================================
+2. 全局样式修改
+mxStylesheet 类用于管理图形样式，通过 graph.getStylesheet() 可以获取当前图形的 mxStylesheet 对象。mxStylesheet 对象的 styles 属性也是一个对象，
+该对象默认情况下包含两个对象defaultVertexStyle、defaultEdgeStyle，修改这两个对象里的样式属性对所有线条/节点都生效
+
+例子中设置折线有一个需要注意的地方。
+
+// 设置拖拽边的过程出现折线，默认为直线
+graph.connectionHandler.createEdgeState = function () {
+  const edge = this.createEdge();
+  return new mxCellState(graph.view, edge, graph.getCellStyle(edge));
+};
+虽然调用 insertEdge 方法时已经设置了线条为折线，但是在拖拽边过程中依然是直线。上面这段代码重写了 createEdgeState 方法，将拖动中的边样式设置成与静态时的边样式一致，都是折线。
+
+
+全局样式设置
+// 全局样式
+const setDefaultEdgeStyle = (graph) => {
+  const style = graph.getStylesheet().getDefaultEdgeStyle();
+  Object.assign(style, {
+    [mxConstants.STYLE_ROUNDED]: true, // 设置线条拐弯处为圆角
+    [mxConstants.STYLE_STROKEWIDTH]: '3',
+    [mxConstants.STYLE_STROKECOLOR]: '#333333',
+    [mxConstants.STYLE_EDGE]: mxConstants.EDGESTYLE_ORTHOGONAL,// 设置折线
+    [mxConstants.STYLE_FONTCOLOR]: '#33333',
+    [mxConstants.STYLE_LABEL_BACKGROUNDCOLOR]: '#ffa94d',
+  });
+  graph.connectionHandler.createEdgeState = function () {
+    const edge = this.createEdge();
+    return new mxCellState(graph.view, edge, graph.getCellStyle(edge));
+  };
+};
+
+
+// 自定义命名样式
+const putVertexStyle = (graph) => {
+  const myVertexStyle = {
+    [mxConstants.STYLE_STROKECOLOR]: 'none',
+    [mxConstants.STYLE_ROUNDED]: true,
+  };
+  graph.getStylesheet().putCellStyle('myVertex', myVertexStyle);
+};
 
