@@ -1,0 +1,44 @@
+1.首先，神马是mxcell：根据mxgraph的js部分的API，我们得知，mxCell就是在图中那些顶点和边的组合，也就是流程图中的图标和连线之类的。这些mxcell需要画在一个面板中，这个面板叫做mxgraph： 
+<div id = "lala"></div>  
+**********************上面是html文档，下面是js文档*******************  
+container = document.getElementById('lala');   
+var model = new mxGraphModel();   
+var graph = new mxGraph(container, model);  
+
+2.如何创建mxcell： 
+var cell = new mxCell(value, geometry, style );  
+graph.addCell(cell);  
+
+value：cell的值（可显示在cell上） 
+geometry：可选几何形状（new mxGeometry(0, 0, w, h)） 
+style：风格样式 
+
+3.更改mxcell的样式（style）： 
+style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_IMAGE;  
+        style[mxConstants.STYLE_PERIMETER] = mxPerimeter.RectanglePerimeter;  
+        style[mxConstants.STYLE_IMAGE] = 'editors/images/bigicon/start_event_empty.png';  
+        style[mxConstants.STYLE_IMAGE_WIDTH] = '48';  
+        style[mxConstants.STYLE_IMAGE_HEIGHT] = '48';  
+        style[mxConstants.STYLE_FONTCOLOR] = '#000000';  
+        style[mxConstants.STYLE_VERTICAL_LABEL_POSITION] = mxConstants.ALIGN_CENTER;  
+        graph.getStylesheet().putCellStyle('start', style);  
+
+start即为样式名称，填入new mxCell(null,new mxGeometry(0, 0, w, h),"start");其中若不想修改样式，mxgraph提供了默认的几种样式，有style=triangle、style=cloud 等 
+
+4.选择mxcell 
+var cell = graph.getSelectionCell();  
+
+5.删除mxcell 
+cell.removeFromParent();//删除了此cell  
+graph.refresh(cell);//刷新面板graph，必须写，否则不会看到cell的删除效果  
+
+6.几种形式的mxcell 
+1>根据API得知，一个XML的节点就是一个cell 
+var doc = mxUtils.createXmlDocument(); 
+var node = doc.createElement('MyNode'); 
+2>new mxCell(value, geometry, style ); 
+3> 
+var parent = graph.getDefaultParent(); 
+var v1 = graph.insertVertex(parent, null, 'Hello', 20, 80, 80, 30); 
+var e1 = graph.insertEdge(parent, null, '', v12, v3); 
+一个顶点或一条边也是一个mxcell。 
