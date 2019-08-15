@@ -73,3 +73,14 @@ United States   1052.0  1195.0  2088.0
 Soviet Union     584.0   627.0   838.0
 United Kingdom   505.0   591.0   498.0
 
+3.numpy的方法
+
+numpy类型合并
+np.hstack([b,a])                    横向合并
+np.concatenate([b,a],axis=1)        横向合并
+
+np.vstack([a,c])                    纵向合并
+np.concatenate([b,a],axis=0)        纵向合并
+
+可以通过np.array(dataframe)转换dataframe到nparray
+
