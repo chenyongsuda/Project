@@ -23,3 +23,53 @@ idx = pd.IndexSlice
 # Print all the data on medals won by the United Kingdom
 print(medals_sorted.loc[idx[:,'United Kingdom'],:])
 
+2.拼接方向
+row方向拼接index会重复,需要使用reset_index或者concat需要使用参数
+columns方向拼接index相同会合并如下
+In [1]: bronze.head()
+Out[1]: 
+                 Total
+Country               
+United States   1052.0
+Soviet Union     584.0
+United Kingdom   505.0
+France           475.0
+Germany          454.0
+
+In [2]: silver.head()
+Out[2]: 
+                 Total
+Country               
+United States   1195.0
+Soviet Union     627.0
+United Kingdom   591.0
+France           461.0
+Italy            394.0
+
+# Concatenate medal_list horizontally using an inner join: medals
+        medals = pd.concat(medal_list,keys=['bronze', 'silver', 'gold'],axis=1)
+        
+        # Print medals
+        print(medals)
+                bronze  silver    gold
+                 Total   Total   Total
+France           475.0   461.0     NaN
+Germany          454.0     NaN   407.0
+Italy              NaN   394.0   460.0
+Soviet Union     584.0   627.0   838.0
+United Kingdom   505.0   591.0   498.0
+United States   1052.0  1195.0  2088.0
+
+默认是外连接
+如果使用内连接得到如下结果,必须index都存在在三个DF中才留下
+medals = pd.concat(medal_list,keys=['bronze', 'silver', 'gold'],axis=1,join='inner')
+        
+        # Print medals
+        print(medals)
+                bronze  silver    gold
+                 Total   Total   Total
+Country                               
+United States   1052.0  1195.0  2088.0
+Soviet Union     584.0   627.0   838.0
+United Kingdom   505.0   591.0   498.0
+
