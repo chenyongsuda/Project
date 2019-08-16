@@ -1,0 +1,13 @@
+Camel使用场景
+
+Apache Camel是一个基于Enterprise Integration Pattern(企业整合模式，简称EIP)的开源框架。EIP定义了一些不同应用系统之间的消息传输模型，包括常见的Point-to-Point，Pub/Sub模型。
+
+ 
+
+Apache Camel主要提供了以下功能：
+
+1，实现了EIP的大部分模式，如果你要在不同的应用系统之间以不同的方式传递消息，那么你可以从Apache Camel中找到解决方案。
+
+2，提供了大量Component(组件)，每个组件都是一种消息中间件(或消息服务)的具体实现，每个消息中间件所用的协议都是不同的，因此，你可以通过多种不同的协议来完成消息传输。
+
+3，允许用户定义灵活的路由规则，从这个角度来说，Apache Camel时一个规则引擎。
