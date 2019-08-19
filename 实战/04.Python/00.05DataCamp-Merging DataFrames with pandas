@@ -84,3 +84,13 @@ np.concatenate([b,a],axis=0)        纵向合并
 
 可以通过np.array(dataframe)转换dataframe到nparray
 
+4.总结常用的函数
+append
+concat
+merge
+join
+merge_ordered
+merge_asof
+
+
+
