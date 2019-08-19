@@ -93,4 +93,14 @@ merge_ordered
 merge_asof
 
 
+pandas.merge_asof(left, right, on=None, left_on=None, right_on=None, left_index=False, right_index=False, by=None, left_by=None, right_by=None, suffixes=('_x', '_y'), tolerance=None, allow_exact_matches=True, direction='backward') [source]
+执行一个合并。 这与左连接类似，除了我们匹配最近的键而不是相等的键。
 
+这两个DataFrames必须按键排序。
+对于左侧DataFrame中的每一行：
+
+“向后”搜索选择右侧数据框中'开'键小于或等于左侧键的最后一行。
+“向前”搜索选择右侧数据框中'开'键大于或等于左侧键的第一行。
+“最近的”搜索选择右侧DataFrame中其'on'键与绝对距离最接近的行。
+默认值为“反向”，并且在低于0.20.0的版本中兼容。 方向参数在版本0.20.0中添加，并引入“前进”和“最近”。
+在搜索'on'之前，可选择匹配'by'的等效键。
