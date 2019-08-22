@@ -8,7 +8,64 @@ Series.cov(other, min_periods=None)
 数据框DataFrame对象的cov方法
 DataFrame.cov(min_periods=None)
 
+滚动加法
 df.rolling(window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None)
 # 用途：滚动窗口计算 按指定周期计算，如2周期求和
 df.expanding(min_periods=1, center=False, axis=0)
 # 用途：提供扩展转换。累计计算，如累加求和
+
+排名（Series.rank(method='average', ascending=True)）的作用与排序的不同之处在于，他会把对象的 values 替换成名次（从 1 到 n）。这时唯一的问题在于如何处理平级项，方法里的 method 参数就是起这个作用的，他有四个值可选：average, min, max, first。
+>>> ser=Series([3,2,0,3],index=list('abcd'))
+>>> ser
+a    3
+b    2
+c    0
+d    3
+dtype: int64
+>>> ser.rank()
+a    3.5
+b    2.0
+c    1.0
+d    3.5
+dtype: float64
+>>> ser.rank(method='min')
+a    3
+b    2
+c    1
+d    3
+dtype: float64
+>>> ser.rank(method='max')
+a    4
+b    2
+c    1
+d    4
+dtype: float64
+>>> ser.rank(method='first')
+a    3
+b    2
+c    1
+d    4
+dtype: float64
+
+其他常用的统计方法有：
+
+########################	******************************************
+count	非 NA 值的数量
+describe	针对 Series 或 DF 的列计算汇总统计
+min , max	最小值和最大值
+argmin , argmax	最小值和最大值的索引位置（整数）
+idxmin , idxmax	最小值和最大值的索引值
+quantile	样本分位数（0 到 1）
+sum	求和
+mean	均值
+median	中位数
+mad	根据均值计算平均绝对离差
+var	方差
+std	标准差
+skew	样本值的偏度（三阶矩）
+kurt	样本值的峰度（四阶矩）
+cumsum	样本值的累计和
+cummin , cummax	样本值的累计最大值和累计最小值
+cumprod	样本值的累计积
+diff	计算一阶差分（对时间序列很有用）
+pct_change	计算百分数变化
