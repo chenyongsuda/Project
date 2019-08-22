@@ -1,0 +1,14 @@
+增长率pct_change
+序列（Series）、数据框（DataFrame）和Panel（面板）都有pct_change方法来计算增长率（需要先使用fill_method来填充空值）
+Series.pct_change(periods=1, fill_method=’pad’, limit=None, freq=None, **kwargs)
+
+协方差covariance
+序列Series对象有cov方法来计算协方差
+Series.cov(other, min_periods=None)
+数据框DataFrame对象的cov方法
+DataFrame.cov(min_periods=None)
+
+df.rolling(window, min_periods=None, center=False, win_type=None, on=None, axis=0, closed=None)
+# 用途：滚动窗口计算 按指定周期计算，如2周期求和
+df.expanding(min_periods=1, center=False, axis=0)
+# 用途：提供扩展转换。累计计算，如累加求和
