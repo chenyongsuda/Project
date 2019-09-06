@@ -1,0 +1,187 @@
+1. 使用JDK11中修复的版本
+2. 增加ghostscript的服务器补丁
+
+package com.xxx.printertest;
+
+import java.util.HashMap;
+
+import javax.print.DocFlavor;
+import javax.print.PrintService;
+import javax.print.PrintServiceLookup;
+import javax.print.attribute.HashPrintRequestAttributeSet;
+import javax.print.attribute.HashPrintServiceAttributeSet;
+import javax.print.attribute.PrintRequestAttributeSet;
+import javax.print.attribute.PrintServiceAttributeSet;
+import javax.print.attribute.standard.Media;
+import javax.print.attribute.standard.MediaSizeName;
+import javax.print.attribute.standard.PrinterName;
+
+import net.sf.jasperreports.engine.JREmptyDataSource;
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JasperFillManager;
+import net.sf.jasperreports.engine.JasperPrint;
+import net.sf.jasperreports.engine.export.JRPrintServiceExporter;
+import net.sf.jasperreports.export.SimpleExporterInput;
+import net.sf.jasperreports.export.SimplePrintServiceExporterConfiguration;
+import sun.print.*;
+
+/**
+ * Hello world!
+ *
+ */
+public class App {
+	public static void main(String args[]) throws Exception {
+		print();
+	}
+
+	public static void print() throws JRException {
+		long start = System.currentTimeMillis();
+
+		JasperPrint jasperPrint = JasperFillManager.fillReport("/home/xxx/Desktop/xxx.jasper",
+				new HashMap<String, Object>(), new JREmptyDataSource());
+
+		PrintRequestAttributeSet printRequestAttributeSet = new HashPrintRequestAttributeSet();
+		printRequestAttributeSet.add(MediaSizeName.ISO_A4);
+
+		DocFlavor docFlavor = DocFlavor.INPUT_STREAM.AUTOSENSE;
+		PrintService[] printServices = (PrintService[]) PrintServiceLookup.lookupPrintServices(docFlavor, null);
+		System.out.println(printServices.length);
+		IPPPrintService printService = (IPPPrintService) (printServices[0]);
+		System.out.println(printService.getName());
+		Media[] medias = (Media[]) printService.getSupportedAttributeValues(Media.class, null, null);
+		for (int i = 0; i < medias.length; i++) {
+			if (medias[i].getClass().getName().contains("CustomMediaTray") && medias[i].getValue() == 1) {
+				printRequestAttributeSet.add(medias[i]);
+				System.out.println(String.format("%s,category: %s; name: %s; value: %s", medias[i].getClass(),
+						medias[i].getCategory(), medias[i].getName(), medias[i].getValue()));
+			}
+		}
+
+		JRPrintServiceExporter exporter = new JRPrintServiceExporter();
+
+		exporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+		
+//		PrintServiceAttributeSet printServiceAttributeSet=new HashPrintServiceAttributeSet();
+//		printServiceAttributeSet.add(new PrinterName("Lexmark", null));
+		
+		SimplePrintServiceExporterConfiguration configuration = new SimplePrintServiceExporterConfiguration();
+		configuration.setPrintRequestAttributeSet(printRequestAttributeSet);
+//		configuration.setPrintServiceAttributeSet(printServiceAttributeSet);
+		//configuration.setPrintService(printService);
+		configuration.setDisplayPageDialog(false);
+		configuration.setPrintService(printService);
+		configuration.setDisplayPrintDialog(false);
+		exporter.setConfiguration(configuration);
+		exporter.exportReport();
+		System.err.println("Printing time : " + (System.currentTimeMillis() - start));
+	}
+}
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.c4</groupId>
+    <artifactId>TestPrint</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <dependencies>
+    <dependency>
+        <groupId>org.cups4j</groupId>
+        <artifactId>cups4j</artifactId>
+        <version>0.7.6</version>
+    </dependency>
+    <dependency>
+        <groupId>net.sf.jasperreports</groupId>
+        <artifactId>jasperreports</artifactId>
+        <version>6.2.0</version>
+    </dependency>
+
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>2.4.7</version>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.7</version>
+        </dependency>
+        <dependency>
+            <groupId>net.sourceforge.barbecue</groupId>
+            <artifactId>barbecue</artifactId>
+            <version>1.5-beta1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.3.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.3.3</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.12</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.6.1</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <!-- 指定项目编译时的java版本和编码方式 -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.7.0</version>
+                <configuration>
+                    <target>1.8</target>
+                    <source>1.8</source>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>Main</mainClass> <!-- 指定入口类路径 -->
+                        </manifest>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef> <!-- jar包后缀，生成的jar包形式为：project-1.0-SNAPSHOT-jar-with-dependencies.jar -->
+                    </descriptorRefs>
+                </configuration>
+                <!-- 添加此项后，可直接使用mvn package | mvn install -->
+                <!-- 不添加此项，需直接使用mvn package assembly:single -->
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
