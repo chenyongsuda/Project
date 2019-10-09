@@ -1,0 +1,4 @@
+#JAVA 转千分位
+将一个数字转换为有千分位的格式：
+NumberFormat numberFormat1 = NumberFormat.getNumberInstance();
+System.out.println(numberFormat1.format(11122.33)); //结果是11,122.33
