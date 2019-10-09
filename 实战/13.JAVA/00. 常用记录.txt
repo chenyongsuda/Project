@@ -2,3 +2,12 @@
 将一个数字转换为有千分位的格式：
 NumberFormat numberFormat1 = NumberFormat.getNumberInstance();
 System.out.println(numberFormat1.format(11122.33)); //结果是11,122.33
+
+NumberFormat numberFormat2 = NumberFormat.getNumberInstance();
+numberFormat2.setGroupingUsed(false); //设置了以后不会有千分位，如果不设置，默认是有的
+System.out.println(numberFormat2.format(11122.33)); //结果是11122.33 
+ 
+将一个可能包含千分位的数字转换为不含千分位的形式：
+String amount1 = "13,000.00";
+double d1 = new DecimalFormat().parse(amount1).doubleValue(); //这里使用的是parse，不是format
+System.out.println(String.valueOf(d1)); //结果是13000.00
