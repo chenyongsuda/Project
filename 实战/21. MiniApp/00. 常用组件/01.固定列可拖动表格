@@ -1,0 +1,95 @@
+样式：
+<view class="horizontal-scroll">
+  <view class="fixed-content">
+    <view class="th" bindtap="showAll">课程代码及名称</view>
+    <view class="td" bindtap="showAll">00597英语写作</view>
+    <view class="td" bindtap="showAll">04729大学语文</view>
+    <view class="td" bindtap="showAll">00831英语语法</view>
+    <view class="td" bindtap="showAll">01232毛泽东与马克思主义思想概论</view>
+  </view>
+  <view class="scroll-content">
+    <scroll-view class="scroll-view_w" scroll-x style="width:100%">
+      <view class="item">
+        <view class="th">成绩</view>
+        <view class="td">98</view>
+        <view class="td">69</view>
+        <view class="td">64</view>
+        <view class="td">98</view>
+      </view>
+      <view class="item">
+        <view class="th">考试年月</view>
+        <view class="td">201804</view>
+        <view class="td">201804</view>
+        <view class="td">201804</view>
+        <view class="td">201804</view>
+      </view>
+      <view class="item">
+        <view class="th">考试时间</view>
+        <view class="td">7日09：00-11：00</view>
+        <view class="td">7日14：00-16：00</view>
+        <view class="td">8日09：00-11：00</view>
+        <view class="td">8日14：00-16：00</view>
+      </view>
+      <view class="item">
+        <view class="th">课程代码及名称</view>
+        <view class="td">00597英语写作</view>
+        <view class="td">04729大学语文</view>
+        <view class="td">00831英语语法</view>
+        <view class="td">01232毛泽东与马克思主义思想概论</view>
+      </view>
+    </scroll-view>
+  </view>
+</view>
+————————————————
+.horizontal-scroll {
+  overflow: hidden;
+}
+
+.fixed-content {
+  float: left;
+  width: 35%;
+}
+
+.scroll-content {
+  float: left;
+  width: 65%;
+}
+
+.scroll-view_w {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.scroll-view_w .item {
+  width: 100px;
+  display: inline-block;
+}
+
+.horizontal-scroll .th {
+  background: #f5f5f5;
+  height: 40px;
+  padding:0 10px;
+  line-height: 40px;
+  text-align: center;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.horizontal-scroll .td {
+  background: #fff;
+  padding:0 10px;
+  font-size: 15px;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom:1rpx solid #eee;
+}
+.horizontal-scroll .td:nth-last-child(2n+1){
+  background: #fafafa;
+}
+————————————————
