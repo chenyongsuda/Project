@@ -1,0 +1,62 @@
+应用场景
+审批页面的内容应该是不可编辑的，swiper应该固定在一张图片上，不能滑动。
+
+一、方案
+在swiper-item节点上增加一个事件
+
+<swiper-item item-id="{{item.id}}" catchtouchmove="stopTouchMove">
+    ...
+</swiper-item>
+然后在写上对应的方法，阻止滑动
+
+stopTouchMove: function() {
+  return false;
+}
+
+
+-----------------------------------------------2019-01-10补充---------------------------------------------------
+
+原先的方案会导致触碰到swiper组件滑动时，页面不能上下滚动。为了解决这个问题，采用了另外一套CSS方案
+
+大致思路是，创建一个遮罩层，挡在swiper组件前面，使得swiper组件不能滑动，但不影响整体页面的滚动。
+.swiper-disabled{
+position: relative;
+}
+.swiper-disabled::after{
+content: '';
+position: absolute;
+top:0;
+left:0;
+/*长宽根据需要调整*/
+width:330px;
+height:260px;
+}
+
+<swiper class="swiper-disabled">
+...
+</swiper>
+
+
+
+----------------------------------------------------------------------------------------------------------------
+swiper 组件高度被限制为150px了，所以内容无法撑开。
+
+解决办法
+给这组件重新设置个高度，然后在把里面的图片设置为自动适应容器大小。图片模式设置为 宽度不变 自动适应高度
+
+<swiper class="test" .....>
+ <swiper-item>
+  <image mode='widthFix' ...... />
+ </swiper-item>
+</swiper>
+
+<style>
+.text{
+　　height:200px;
+}
+
+image{
+ width:100%;
+ height:auto;
+}
+</style>
