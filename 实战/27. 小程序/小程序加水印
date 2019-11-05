@@ -1,0 +1,56 @@
+ 领导说在小程序页面添加水印，如果业务员截屏发给别人的话就会留下他的名字，这样的作用是方便追责，领导还说要给小程序全屏覆盖水印，还要实现无痕水印（就是肉眼看不出来，拿截屏的图片来分析出这个人是谁，这样可以找到是哪个业务员截屏的），经过几个小时的百度和研究，发现全屏覆盖做水印的话，水印下的按钮等触发方法没办法进行执行，传说中 的无痕水印是对图片的处理，而不是应用在页面上，最终给出一个解决方案，就是在没有按钮触发和点击的位置进行水印覆盖，别的地方则不进行处理，具体代码如下：
+
+通过画布进行水印绘制
+<!-- 水印 -->
+<view class='water_top'> 
+  <canvas canvas-id='myCanvas1' style='width:100%;height:280rpx;'></canvas>
+</view>
+  
+css样式：
+.water_top {
+  position: absolute;
+  z-index: 999;
+  opacity: 0.9;
+  top: 0rpx;
+  width: 100%;
+}
+
+js代码：
+drowsyUserinfo: function () {
+    var userInfo = wx.getStorageSync('userInfo');
+    var name_xx = userInfo.username || userInfo.nickName;
+    var ctx = wx.createCanvasContext("myCanvas1");
+ 
+    ctx.rotate(45 * Math.PI / 180);//设置文字的旋转角度，角度为45°；
+ 
+    //对斜对角线以左部分进行文字的填充
+    for (let j = 1; j < 10; j++) { //用for循环达到重复输出文字的效果，这个for循环代表纵向循环
+      ctx.beginPath();
+      ctx.setFontSize(20);
+      ctx.setFillStyle("rgba(169,169,169,.2)");
+ 
+      ctx.fillText(name_xx, 0, 50 * j);
+      for (let i = 1; i < 10; i++) {//这个for循环代表横向循环，
+        ctx.beginPath();
+        ctx.setFontSize(20);
+        ctx.setFillStyle("rgba(169,169,169,.2)");
+        ctx.fillText(name_xx, 80 * i, 50 * j);
+      }
+    }//两个for循环的配合，使得文字充满斜对角线的左下部分
+ 
+    //对斜对角线以右部分进行文字的填充逻辑同上
+    for (let j = 0; j < 10; j++) {
+      ctx.beginPath();
+      ctx.setFontSize(20);
+      ctx.setFillStyle("rgba(169,169,169,.2)");
+ 
+      ctx.fillText(name_xx, 0, -50 * j);
+      for (let i = 1; i < 10; i++) {
+        ctx.beginPath();
+        ctx.setFontSize(20);
+        ctx.setFillStyle("rgba(169,169,169,.2)");
+        ctx.fillText(name_xx, 80 * i, -50 * j);
+      }
+    }
+    ctx.draw();
+  },
