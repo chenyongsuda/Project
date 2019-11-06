@@ -1,0 +1,43 @@
+-------------------------------------------------------------JAVA项目--------------------------------------------------------
+!.gitignore
+target/
+target/**
+*.class
+*.jar
+*.bak
+*.zip
+*.log
+*.war
+*.*~
+~*.*
+.DS_Store
+Thumbs.db
+.idea
+.idea/
+.idea/**
+*.iml
+.metadata
+.settings
+.svn
+.classpath
+.project
+bin/
+classes/
+
+-----------------------------------------------------------小程序项目--------------------------------------------------------
+# Windows
+[Dd]esktop.ini
+Thumbs.db
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+
+# Node.js
+node_modules/
+
+
