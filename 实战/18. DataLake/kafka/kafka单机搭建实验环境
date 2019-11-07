@@ -1,0 +1,79 @@
+Linux 安装单机版 Kafka
+
+校验一下java是否安装
+[root@localhost Desktop]$ java -version
+# 如果有以下信息证明 java 环境正常
+java version "1.8.0_171"
+Java(TM) SE Runtime Environment (build 1.8.0_171-b11)
+Java HotSpot(TM) 64-Bit Server VM (build 25.171-b11, mixed mode)
+# 如果没有安装，请先安装java环境
+
+上传kafka文件到虚拟机中kafka_2.12-2.2.0
+可以用 xftp 软件上传
+解压安装kafka到/usr/local中
+[root@localhost Desktop]$ tar -zxvf kafka_2.12-2.2.0.tgz -C /usr/local/
+
+重命名kafka的文件 ：
+[root@localhost local]$ mv kafka_2.12-2.2.0/ kafka/
+
+切换到kafka的配置文件目录
+[root@localhost config]$ cd /usr/local/kafka/config
+
+kafka安装目录下的config文件夹为其配置文件，我们需要修改的有 server.properties和zookeeper.properties。
+[root@localhost config]$ vim server.properties
+		server.properties：kafka的配置文件
+                  log.dirs=/tmp/kafka-logs
+              修改为
+                  log.dirs=/usr/local/kafka/kafka-0-logs
+[root@localhost config]$ vim zookeeper.properties
+         zookeeper.properties: kafka自带的zookeeper的配置
+              	dataDir=/tmp/zookeeper
+          	 修改为
+             	dataDir=dataDir=/usr/local/my_zookeeper
+
+启动zookeeper
+[root@localhost kafka]$ bin/zookeeper-server-start.sh  config/zookeeper.properties
+
+启动kafka
+[root@localhost kafka]$ bin/kafka-server-start.sh  config/server.properties
+创建主题 (让我们创建一个名为“test”的主题，它只包含一个分区，只有一个副本)
+bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic test
+
+查看主题: 如果我们运行list topic命令，我们现在可以看到该主题
+bin/kafka-topics.sh --list --zookeeper localhost:2181
+
+开启生产者（发送一些消息）
+[root@localhost kafka]$ bin/kafka-console-producer.sh  --broker-list localhost:9092 --topic test
+
+备注：Kafka附带一个命令行客户端，它将从文件或标准输入中获取输入，并将其作为消息发送到Kafka集群。默认情况下，每行将作为单独的消息发送。运行生产者，然后在控制台中键入一些消息以发送到服务器。
+启动消费者
+[root@localhost kafka]$ bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic test --from-beginning  #从第一条开始接受
+[root@localhost kafka]$ bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic test  #从现在生产者发送开始接受
+
+
+
+broker-list------------------------------------------------------------------------------------------------------------------------
+broker-list指定集群中的一个或者多个服务器，一般我们再使用console producer的时候，这个参数是必备参数，另外一个必备的参数是topic，如下示例：
+
+C:\kafka\kafka_2.12-1.1.1
+λ .\bin\windows\kafka-console-producer.bat --broker-list localhost:9092 --topic test20190713
+>this is a test
+>
+本地主机如果要模拟多个broker，方法是复制多个server.properties，然后修改里面的端口， broker.id等配置模拟多个broker集群。
+
+
+zookeeper vs bootstrap-servers --------------------------------------------------------------------------------------------------------
+bootstrap-servers指的是目标集群的服务器地址，这个和broker-list功能是一样的，只不过我们在console producer要求用后者。
+以前我们使用console consumer测试消息收发时会这样写：
+
+C:\kafka\kafka_2.12-1.1.1
+λ .\bin\windows\kafka-console-consumer.bat --zookeeper localhost:2181 --topic test20190713
+Using the ConsoleConsumer with old consumer is deprecated and will be removed in a future major release. Consider using the new consumer by passing [bootstrap-server] instead of [zookeeper].
+这样可以接收到生产者控制台发送的消息。
+
+现在我们也可以这样写，
+
+C:\kafka\kafka_2.12-1.1.1
+λ .\bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic test20190713
+你可以自己测试下，也是可以收到消息的。
+前者是老版本的用法，0.8以前的kafka，消费的进度(offset)是写在zk中的，所以consumer需要知道zk的地址。后来的版本都统一由broker管理，所以就用bootstrap-server了
