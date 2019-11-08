@@ -1,0 +1,34 @@
+Flume上传本地文件到hdfs保留文件名
+
+Woople
+0.181
+2016.10.31 18:46:09
+字数 101
+阅读 3,217
+将flume的source配置为spooldir，sink配置为hdfs就可以实现将本地文件上传到hdfs。但是如果要使文件名不变，需要为source添加a1.sources.r1.basenameHeader = true和a1.sources.r1.basenameHeaderKey = fileName，然后在sink中添加a1.sinks.k1.hdfs.filePrefix = %{fileName}，这样在hdfs中生成的文件名就保留了原始的名字。
+
+完整配置
+# Name the components on this agent
+a1.sources = r1
+a1.sinks = k1
+a1.channels = c1
+
+# Describe/configure the source
+a1.sources.r1.type = spooldir
+a1.sources.r1.spoolDir = /home/flume
+a1.sources.r1.basenameHeader = true
+a1.sources.r1.basenameHeaderKey = fileName
+
+# Describe the sink
+a1.sinks.k1.type = hdfs
+a1.sinks.k1.hdfs.path = /flume/events
+a1.sinks.k1.hdfs.filePrefix = %{fileName}
+
+# Use a channel which buffers events in memory
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+# Bind the source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
