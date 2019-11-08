@@ -1,0 +1,56 @@
+source 是如何产生数据的
+source 分为两大类：PollableSource 和 EventDrivenSource，不过笔者倒是没怎么弄清楚，这两大类区分的目的何在？如果你有什么想法，欢迎留言指教。
+
+PollableSource
+public interface PollableSource extends Source {
+
+  public Status process() throws EventDeliveryException;
+  public static enum Status {READY, BACKOFF}
+}
+当一个agent 启动之后，就会不断循环调用 process 以获取数据
+当 process 返回 READY，表示数据产生正常，如果是 BACKOFF 则表示异常，当产生异常时候，agent 会等待一段时间再来调用 process，异常次数越多，间隔时间越长，最长不超过 5s。
+自带一个线程，工作都是在自己的独立线程之内的
+
+例子代码如下:
+package com.tt.flume;
+
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
+
+import org.apache.flume.Context;
+import org.apache.flume.Event;
+import org.apache.flume.EventDeliveryException;
+import org.apache.flume.PollableSource;
+import org.apache.flume.conf.Configurable;
+import org.apache.flume.event.EventBuilder;
+import org.apache.flume.source.AbstractSource;
+
+public class MyFileSource extends AbstractSource implements Configurable, PollableSource{
+
+	public long getBackOffSleepIncrement() {
+		return 0;
+	}
+
+	public long getMaxBackOffSleepInterval() {
+		return 0;
+	}
+
+	public Status process() throws EventDeliveryException {
+		Random random = new Random();
+        int randomNum = random.nextInt(100);
+        String text = "Hello World :" + random.nextInt(100);  //实际需要传的内容
+        HashMap<String, String> header = new HashMap<String, String>();
+        header.put("id", Integer.toString(randomNum));   //将id--value放入到header中
+        this.getChannelProcessor()
+                .processEvent(EventBuilder.withBody(text, Charset.forName("UTF-8"), header)); //prcessEvent()将数据传上去
+        return Status.READY;
+	}
+
+	public void configure(Context arg0) {
+		
+	}
+}
+
+
