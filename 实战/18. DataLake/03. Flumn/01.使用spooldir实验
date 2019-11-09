@@ -33,6 +33,7 @@ a1.sinks.k1.kafka.flumeBatchSize = 20
 a1.sinks.k1.kafka.producer.acks = 1
 a1.sinks.k1.kafka.producer.linger.ms = 1
 a1.sinks.k1.kafka.producer.compression.type = snappy
+a1.sinks.k1.kafka.producer.max.request.size = 1077198	#修改消息体过大问题.
 
 # Use a channel which buffers events in memory
 a1.channels.c1.type = memory
@@ -148,3 +149,255 @@ public class App
         }
     }
 }
+
+
+=============================================================================================================================
+解决传输文件超过1M问题,
+传输文件过大导致消息体超过1M后kafka sink会报错.
+2019-11-09 23:48:20,824 (SinkRunner-PollingRunner-DefaultSinkProcessor) [ERROR - org.apache.flume.SinkRunner$PollingRunner.run(SinkRunner.java:158)] Unable to deliver event. Exception follows.
+org.apache.flume.EventDeliveryException: Failed to publish events
+        at org.apache.flume.sink.kafka.KafkaSink.process(KafkaSink.java:268)
+        at org.apache.flume.sink.DefaultSinkProcessor.process(DefaultSinkProcessor.java:67)
+        at org.apache.flume.SinkRunner$PollingRunner.run(SinkRunner.java:145)
+        at java.lang.Thread.run(Thread.java:748)
+Caused by: java.util.concurrent.ExecutionException: org.apache.kafka.common.errors.RecordTooLargeException: The message is 3866297 bytes when serialized which is larger than the maximum request size you have configured with the max.request.size configuration.
+        at org.apache.kafka.clients.producer.KafkaProducer$FutureFailure.<init>(KafkaProducer.java:1186)
+        at org.apache.kafka.clients.producer.KafkaProducer.doSend(KafkaProducer.java:880)
+        at org.apache.kafka.clients.producer.KafkaProducer.send(KafkaProducer.java:803)
+        at org.apache.flume.sink.kafka.KafkaSink.process(KafkaSink.java:227)
+修改flumn kafka插件参数
+a1.sinks.k1.kafka.producer.max.request.size = 1077198
+
+
+调整完后发现大的文件还出错
+Caused by: org.apache.kafka.common.errors.RecordTooLargeException: The request included a message larger than the max message size the server will accept.
+2019-11-09 23:50:13,423 (SinkRunner-PollingRunner-DefaultSinkProcessor) [ERROR - org.apache.flume.SinkRunner$PollingRunner.run(SinkRunner.java:158)] Unable to deliver event. Exception follows.
+org.apache.flume.EventDeliveryException: Failed to publish events
+        at org.apache.flume.sink.kafka.KafkaSink.process(KafkaSink.java:268)
+        at org.apache.flume.sink.DefaultSinkProcessor.process(DefaultSinkProcessor.java:67)
+        at org.apache.flume.SinkRunner$PollingRunner.run(SinkRunner.java:145)
+        at java.lang.Thread.run(Thread.java:748)
+Caused by: java.util.concurrent.ExecutionException: org.apache.kafka.common.errors.RecordTooLargeException: The request included a message larger than the max message size the server will accept.
+        at org.apache.kafka.clients.producer.internals.FutureRecordMetadata.valueOrError(FutureRecordMetadata.java:94)
+        at org.apache.kafka.clients.producer.internals.FutureRecordMetadata.get(FutureRecordMetadata.java:64)
+        at org.apache.kafka.clients.producer.internals.FutureRecordMetadata.get(FutureRecordMetadata.java:29)
+        at org.apache.flume.sink.kafka.KafkaSink.process(KafkaSink.java:244)
+        ... 3 more
+	
+其实消息生产者已经修改了,Kafka消息也得修改
+在server.properties增加如下配置
+message.max.bytes=107719800
+
+其实在消费端也得修改,这里也可以不修改暂时,
+max.partition.fetch.bytes: xxxxxxxxxx
+
+
+=================================================================================================================
+总结：
+Kafka消息体大小设置的一些细节
+查看相关资料后，发现 Broker 端对 Producer 发送过来的消息也有一定的大小限制，这个参数叫 message.max.bytes，这个参数决定了 Broker 能够接收到的最大消息的大小，它的默认值为 977 KB，而 max.request.size 的值已经设置成 2M 大小了，很显然已经比 message.max.bytes 大了很多，因此消息大于 997KB 时，就会抛出如上异常。
+值得一提的是，主题配置也有一个参数，叫 max.message.bytes，它只针对某个主题生效，可动态配置，可覆盖全局的 message.max.bytes，好处就是可以针对不同主题去设置 Broker 接收消息的大小，而且不用重启 Broker。
+这还没完，消费端拉取消息数据的大小也需要更改，这个参数叫 fetch.max.bytes，这个参数决定消费者单次从 Broker 获取消息的最大字节数，那么问题来了，如果该参数值比 max.request.size 小，那么会导致消费者很可能消费不了比 fetch.max.bytes 大的消息。
+
+所以综合起来，需要这么设置：
+producer端：
+max.request.size=5242880（5M）
+broker：
+message.max.bytes=6291456（6M）
+consumer：
+fetch.max.bytes=7340032（7M）
+
+max.request.size < message.max.bytes < fetch.max.bytes
+另外补充一点，还记得之前说过的 batch.size 参数的作用吗，从源码可看出，Producer 每次发送的消息封装成 ProducerRecord，然后利用消息累加器 RecordAccumulator 添加到 ProducerBatch 中，由于每次创建 ProducerBatch 都需要分配一个 batch.size 大小的内存空间，频繁创建和关闭会导致性能极大开销，所以 RecordAccumulator 内部有个 BufferPool，它实现了缓存的复用，只不过只针对 batch.size 大小的 BufferByte 进行复用，如果大于 batch.size 的 ProducerBatch，它并不会加入 BufferPool 中，也就不会复用。
+之前有个疑问就是：假如 max.request.size 大于 batch.size，那么该条消息会不会分多个 batch 发送到 broker？
+答案显然是不会，根据上述所说，如果一个 ProducerRecord 就已经超出了 batch.size 的大小，那么 ProducerBatch 仅包含一个 ProducerRecord，并且该 ProducerBatch 并不会加入到 BufferPool 中。
+所以，在 Kafka Producer 调优过程中，根据业务需求，需要特别注意 batch.size 与 max.request.size 之间的大小值的设定，避免内存空间频繁地创建和关闭。
+
+================================================================================================================
+消息生产者一些常用参数讲解
+Properties props = new Properties();
+props.put("bootstrap.servers", "localhost:9092");
+props.put("acks", "all");
+props.put("retries", 0);
+props.put("batch.size", 16384);
+props.put("linger.ms", 1);
+props.put("buffer.memory", 33554432);
+props.put("compresstion.type","snappy");
+props.put("partitioner.class", "org.apache.kafka.clients.producer.internals.DefaultPartitioner");
+props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+	
+producer端ack应答机制,本demo中ack设置为all,表示生产者会等待所有副本成功写入该消息，这种方式是最安全的，能够保证消息不丢失，但是延迟也是最大的;
+retries设置标示消息发送失败,生产者可以自动重试,但是此刻设置为0标示不重试;这个参数需要结合retry.backoff.ms(重试等待间隔)来使用,建议总的重试时间比集群重新选举群首的时间长,这样可以避免生产者过早结束重试导致失败;
+batch.size参数标示生产者为每个分区维护了一个未发送记录的缓冲区,这个缓冲区的大小由batch.size配置指定,配置的很大可能会导致更多的批处理，也需要更多的内存(但是对于每个活动分区，我们通常都有一个这样的缓冲区),默认是16384Bytes;
+linger.ms 指定生产者在发送批量消息前等待的时间,当设置此参数后,即便没有达到批量消息的指定大小,到达时间后生产者也会发送批量消息到broker.默认情况下,生产者的发送消息线程只要空闲了就会发送消息,即便只有一条消息.设置这个参数后,发送线程会等待一定的时间,这样可以批量发送消息增加吞吐量,但同时也会增加延迟;
+buffer.memory控制生产者可用于缓冲的内存总量;消息的发送速度超过了它们可以传输到服务器的速度,那么这个缓冲空间将被耗尽.
+当缓冲区空间耗尽时,额外的发送调用将阻塞.阻止时间的阈值由max.block.ms确定，在此之后它将引发TimeoutException.这个缓存是针对每个producerThread,不应设置高以免影响内存;
+生产者如果每发送一条消息都直接通过网络发送到服务端，势必会造成过多 的网络请求。如果我们能够将多条消息按照分区进行分组，并采用批量的方式一次发送一个消息集，并且对消息集进行压缩，就可以减少网络传输的带宽，进一步提高数据的传输效率。
+
+key.serializer和value.serializer指定了如何将key和value序列化成二进制码流的方式,也就是上图中的序列化方式;
+compresstion.type:默认情况下消息是不压缩的，这个参数可以指定使用消息压缩，参数可以取值为snappy、gzip或者lz4;
+接下来,我们需要创建一个ProducerRecord，这个对象需要包含消息的topic和值value，可以选择性指定一个键值key或者分区partition。
+发送消息时，生产者会根据配置的key.serializer和value.serializer对键值和值序列化成字节数组，然后发送到分配器partitioner。
+如果我们指定了分区，那么分配器返回该分区即可;否则,分配器将会基于键值来选择一个分区并返回。
+选择完分区后，生产者知道了消息所属的主题和分区，它将这条记录添加到相同主题和分区的批量消息中，另一个线程负责发送这些批量消息到对应的Kafka broker。
+当broker接收到消息后，如果成功写入则返回一个包含消息的主题、分区及位移的RecordMetadata对象，否则返回异常.
+生产者接收到结果后，对于异常可能会进行重试,根据参数reties的配置决定.
+	
+=================================================================================================================
+kafka的server.properties配置文件参考示范
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# see kafka.server.KafkaConfig for additional details and defaults
+
+############################# Server Basics #############################
+
+# The id of the broker. This must be set to a unique integer for each broker.
+broker.id=0
+
+############################# Socket Server Settings #############################
+
+listeners=PLAINTEXT://:9092
+
+# The port the socket server listens on
+port=9092
+
+# Hostname the broker will bind to. If not set, the server will bind to all interfaces
+host.name=master
+
+# Hostname the broker will advertise to producers and consumers. If not set, it uses the
+# value for "host.name" if configured.  Otherwise, it will use the value returned from
+# java.net.InetAddress.getCanonicalHostName().
+#advertised.host.name=<hostname routable by clients>
+
+# The port to publish to ZooKeeper for clients to use. If this is not set,
+# it will publish the same port that the broker binds to.
+#advertised.port=<port accessible by clients>
+
+# The number of threads handling network requests
+#num.network.threads=10
+
+# The number of threads doing disk I/O
+#num.io.threads=12
+
+# The send buffer (SO_SNDBUF) used by the socket server
+#socket.send.buffer.bytes=204800
+
+# The receive buffer (SO_RCVBUF) used by the socket server
+#socket.receive.buffer.bytes=204800
+
+# The maximum size of a request that the socket server will accept (protection against OOM)
+#socket.request.max.bytes=104857600
+
+# 是否允许自动创建topic ，若是false，就需要通过命令创建topic
+auto.create.topics.enable =false
+
+############################# Log Basics #############################
+
+# A comma seperated list of directories under which to store log files
+log.dirs=/data/kafka-log/log/9092
+
+# The default number of log partitions per topic. More partitions allow greater
+# parallelism for consumption, but this will also result in more files across
+# the brokers.
+num.partitions=2
+
+# The number of threads per data directory to be used for log recovery at startup and flushing at shutdown.
+# This value is recommended to be increased for installations with data dirs located in RAID array.
+num.recovery.threads.per.data.dir=1
+
+############################# Log Flush Policy #############################
+
+# Messages are immediately written to the filesystem but by default we only fsync() to sync
+# the OS cache lazily. The following configurations control the flush of data to disk.
+# There are a few important trade-offs here:
+#    1. Durability: Unflushed data may be lost if you are not using replication.
+#    2. Latency: Very large flush intervals may lead to latency spikes when the flush does occur as there will be 
+a lot of data to flush
+#    3. Throughput: The flush is generally the most expensive operation, and a small flush interval may lead to ex
+ceessive seeks.
+# The settings below allow one to configure the flush policy to flush data after a period of time or
+# every N messages (or both). This can be done globally and overridden on a per-topic basis.
+
+# The number of messages to accept before forcing a flush of data to disk
+log.flush.interval.messages=10000
+
+# The maximum amount of time a message can sit in a log before we force a flush
+log.flush.interval.ms=1000
+############################# Log Retention Policy #############################
+
+# The following configurations control the disposal of log segments. The policy can
+# be set to delete segments after a period of time, or after a given size has accumulated.
+# A segment will be deleted whenever *either* of these criteria are met. Deletion always happens
+# from the end of the log.
+
+# The minimum age of a log file to be eligible for deletion
+log.retention.hours=72
+
+# A size-based retention policy for logs. Segments are pruned from the log as long as the remaining
+# segments don't drop below log.retention.bytes.
+log.retention.bytes=4294967296
+# The maximum size of a log segment file. When this size is reached a new log segment will be created.
+log.segment.bytes=536870912
+
+# The interval at which log segments are checked to see if they can be deleted according
+# to the retention policies
+log.retention.check.interval.ms=600000
+
+log.cleaner.enable=false
+############################# Zookeeper #############################
+
+# Zookeeper connection string (see zookeeper docs for details).
+# This is a comma separated host:port pairs, each corresponding to a zk
+# server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002".
+# You can also append an optional chroot string to the urls to specify the
+# root directory for all kafka znodes.
+zookeeper.connect=master:2181,slave1:2181,slave2:2181
+
+# Timeout in ms for connecting to zookeeper
+offsets.commit.timeout.ms=500000
+request.timeout.ms=500000
+zookeeper.connection.timeout.ms=300000
+
+export HBASE_MANAGES_ZK=false
+
+
+
+
+############################# zhouls add #############################
+num.replica.fetchers=4
+replica.fetch.max.bytes=1048576
+replica.fetch.wait.max.ms=1000
+replica.high.watermark.checkpoint.interval.ms=5000
+replica.socket.timeout.ms=50000
+replica.socket.receive.buffer.bytes=65536
+replica.lag.time.max.ms=300000
+
+controller.socket.timeout.ms=300000
+controller.message.queue.size=50
+
+message.max.bytes=1000000
+
+num.io.threads=8
+num.network.threads=8
+socket.request.max.bytes=104857600
+socket.receive.buffer.bytes=1048576
+socket.send.buffer.bytes=1048576
+queued.max.requests=16
+fetch.purgatory.purge.interval.requests=100
+producer.purgatory.purge.interval.requests=100
+
+group.max.session.timeout.ms=500000
