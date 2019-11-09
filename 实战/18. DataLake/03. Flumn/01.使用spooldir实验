@@ -1,0 +1,150 @@
+1. spooldir同步到kafka然后再消费后放入文件或者放入sftp
+
+
+客户端启动命令行如下：
+zookeeper-server-start.bat ..\..\config\zookeeper.properties
+kafka-server-start.bat ..\..\config\server.properties
+flume-ng agent --conf ../conf --conf-file ../conf/flume-file.conf --name a1 -property flume.root.logger=INFO,console
+kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic test --from-beginning
+
+
+采用flume的配置文件
+# define all the source channel sink
+a1.sources = r1
+a1.sinks = k1
+a1.channels = c1
+
+# define sources
+a1.sources.r1.type = spooldir
+a1.sources.r1.spoolDir = C:/xxx/appl/TEST/in
+a1.sources.r1.fileHeader = true
+a1.sources.r1.fileHeaderKey = filepath
+a1.sources.r1.basenameHeader = true
+a1.sources.r1.basenameHeaderKey = filename
+a1.sources.r1.deserializer = org.apache.flume.sink.solr.morphline.BlobDeserializer$Builder #采用整体一个消息的发送策略
+a1.sources.r1.deserializer.maxBlobLength = 100000000
+
+# Describe the sink
+a1.sinks.k1.type = org.apache.flume.sink.kafka.KafkaSink
+a1.sinks.k1.useFlumeEventFormat = true    #注意采用这个选项的话会将Flume event的header字段和body字段合并后放入kafka. 需要在消费kafka的是自己解密默认使用avro
+a1.sinks.k1.kafka.topic = test
+a1.sinks.k1.kafka.bootstrap.servers = localhost:9092
+a1.sinks.k1.kafka.flumeBatchSize = 20
+a1.sinks.k1.kafka.producer.acks = 1
+a1.sinks.k1.kafka.producer.linger.ms = 1
+a1.sinks.k1.kafka.producer.compression.type = snappy
+
+# Use a channel which buffers events in memory
+a1.channels.c1.type = memory
+#a1.channels.c1.checkpointDir = C:/xxx/appl/TEST/channel
+#a1.channels.c1.dataDirs = C:/xxx/appl/TEST/data
+
+# bind the source to channel 
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+消费端：
+package com.tt.flume1;
+
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Random;
+
+import org.apache.avro.io.BinaryDecoder;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.specific.SpecificDatumReader;
+import org.apache.flume.source.avro.AvroFlumeEvent;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+
+/**
+ * Hello world!
+ *
+ */
+public class App 
+{
+    public static void main( String[] args )
+    {
+    	KafkaConsumer<String, byte[]> consumer;
+        String TOPIC = "test";
+        
+        Properties props = new Properties();
+        props.put("bootstrap.servers", "localhost:9092");
+        //每个消费者分配独立的组号
+        props.put("group.id", "test2");
+        //如果value合法，则自动提交偏移量
+        props.put("enable.auto.commit", "true");
+        //设置多久一次更新被消费消息的偏移量
+        props.put("auto.commit.interval.ms", "1000");
+        //设置会话响应的时间，超过这个时间kafka可以选择放弃消费或者消费下一条消息
+        props.put("session.timeout.ms", "30000");
+        //自动重置offset
+        props.put("auto.offset.reset","earliest");
+//        props.put("key.deserializer",
+//                "org.apache.kafka.common.serialization.StringDeserializer");
+//        props.put("value.deserializer",
+//                "org.apache.kafka.common.serialization.StringDeserializer");
+        
+        props.put("key.deserializer",
+              "org.apache.kafka.common.serialization.ByteArrayDeserializer");
+      props.put("value.deserializer",
+              "org.apache.kafka.common.serialization.ByteArrayDeserializer");
+        consumer = new KafkaConsumer<String, byte[]>(props);
+        
+        
+        consumer.subscribe(Arrays.asList(TOPIC));
+        while (true) {
+            ConsumerRecords<String, byte[]> records = consumer.poll(100);
+            for (ConsumerRecord<String, byte[]> record : records){
+            	System.out.printf(record.headers().toString());
+//                System.out.printf("offset = %d, key = %s, value = %s",record.offset(), record.key(), record.value());
+//                System.out.println();
+                BufferedWriter writer;
+                Random r = new Random(); 
+                
+                AvroFlumeEvent result = null;
+                Map<CharSequence, CharSequence> map = null;
+                ByteBuffer data = null;
+                
+                SpecificDatumReader<AvroFlumeEvent> reader = new SpecificDatumReader<AvroFlumeEvent>(AvroFlumeEvent.class);
+                BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(record.value(), null);
+                try{
+                    result = reader.read(null, decoder);
+                    map = result.getHeaders();
+                    data = result.getBody();
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+                String name = "";
+                System.out.println("header: ");
+                for (Map.Entry<CharSequence, CharSequence>entry: map.entrySet()){
+                	String key = entry.getKey().toString();
+                	if(key.equals("filename")){
+                		name = entry.getValue().toString();
+                	}
+                    System.out.println(entry.getKey() + " : " + entry.getValue());
+                }
+                
+				try {
+//					FileOutputStream fos = new FileOutputStream("C:\\Tony\\appl\\TEST\\out\\"+r.nextInt(100000));
+					FileOutputStream fos = new FileOutputStream("C:\\Tony\\appl\\TEST\\out\\"+name);
+					fos.write(data.array());
+					fos.close();
+//					writer = new BufferedWriter(new FileWriter("C:\\Tony\\appl\\TEST\\out\\"+r.nextInt(100000),false));
+//					writer.append(record.value());
+//	                writer.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+                
+            }
+        }
+    }
+}
