@@ -425,3 +425,45 @@ group.max.session.timeout.ms=500000
 优化flume启动内存
 提升flume中channel的内存：修改flume-env.sh文件，调整flume-env.sh文件中agent默认初始化的内存：默认是20M，现改成2G
 export JAVA_OPTS="-Xms1024m -Xmx2048m -Xss256k -Xmn1024m -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:-UseGCOverheadLimit -Xloggc:/work/app/flume/logs/server-gc.log.$(date +%F) -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=1 -XX:GCLogFileSize=200M"
+
+
+
+===================================================================================================
+消费者端消息测试结论
+设置Broker端接收消息大小
+修改broker端的可以接收的消息大小,需要在broker端server.properties文件中添加message.max.bytes=100000. 数值可以修改成自己想要的,单位是byte.
+
+生产端消息大于broker会发生什么
+如果生产者设置的消息发送大小为1MB,而broker端设置的消息大小为512KB会发生什么?
+答案就是broker会拒绝该消息,生产者会返回一个RecordTooLargeException. 该消息是不会被消费者消费.提示的信息为: org.apache.kafka.common.errors.RecordTooLargeException: The request included a message larger than the max message size the server will accept.
+
+消费者消息的限制
+消费者也会进行消息限制,这里介绍有关三个限制消费的参数
+
+fetch.max.bytes 服务端消息合集(多条)能返回的大小
+fetch.min.bytes 服务端最小返回消息的大小
+fetch.max.wait.ms 最多等待时间
+如果fetch.max.wait.ms设置的时间到达,即使可以返回的消息总大小没有满足fetch.min.bytes设置的值,也会进行返回.
+
+fetch.max.bytes设置过小
+如果fetch.max.bytes设置过小会发生什么? 会是不满足条件的数据一条都不返回吗? 我们可以根据文档来查看一下.
+
+The maximum amount of data the server should return for a fetch request. Records are fetched in batches by the consumer, and if the first record batch in the first non-empty partition of the fetch is larger than this value, the record batch will still be returned to ensure that the consumer can make progress.
+
+英文的大意就是: fetch.max.bytes 表示服务端能返回消息的总大小. 消息是通过分批次返回给消费者. 如果在分区中的第一个消息批次大于这个值,那么该消息批次依然会返回给消费者,保证流程运行.
+
+可以得出结论: 消费端的参数只会影响消息读取的大小.
+
+实践fetch.max.bytes设置过小
+properties.put(ConsumerConfig.FETCH_MAX_BYTES_CONFIG, 1024);
+properties.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1024);
+properties.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 1);
+...
+while (true) {
+    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofSeconds(Integer.MAX_VALUE));
+    System.out.println(records.count());
+}
+
+启动消费者,添加上面三个参数. 指定消息批次最小最大返回的大小以及允许抓取最长的等待时间. 最后将返回的消息总数输出到标准输出.
+
+实验结果: 因为每次发送的消息都要大于1024B,所以消费者每个批次只能返回一条数据. 最终会输出1…
