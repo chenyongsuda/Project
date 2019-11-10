@@ -1,0 +1,84 @@
+自动提交位移
+     Properties props = new Properties();
+     props.put("bootstrap.servers", "localhost:9092");
+     props.put("group.id", "test");
+     props.put("enable.auto.commit", "true");
+     props.put("auto.commit.interval.ms", "1000");
+     props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+     props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+     KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+     consumer.subscribe(Arrays.asList("foo", "bar"));
+     while (true) {
+         ConsumerRecords<String, String> records = consumer.poll(100);
+         for (ConsumerRecord<String, String> record : records)
+             System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
+     }
+
+手动提交位移
+Properties props = new Properties();
+     props.put("bootstrap.servers", "localhost:9092");
+     props.put("group.id", "test");
+     props.put("enable.auto.commit", "false");
+     props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+     props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+     KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+     consumer.subscribe(Arrays.asList("foo", "bar"));
+     final int minBatchSize = 200;
+     List<ConsumerRecord<String, String>> buffer = new ArrayList<>();
+     while (true) {
+         ConsumerRecords<String, String> records = consumer.poll(100);
+         for (ConsumerRecord<String, String> record : records) {
+             buffer.add(record);
+         }
+         if (buffer.size() >= minBatchSize) {
+             insertIntoDb(buffer);
+             consumer.commitSync();
+             buffer.clear();
+         }
+     }
+
+enable.auto.commit
+指定了消费者是否自动提交偏移量，默认值是true，为了尽量避免重复数据和数据丢失，可以把它设置为false，有自己控制合适提交偏移量，如果设置为true，
+可以通过设置 auto.commit.interval.ms属性来控制提交的频率。
+
+consumer.poll(1000) 重要参数
+新版本的Consumer的Poll方法使用了类似于Select I/O机制，因此所有相关事件（包括reblance，消息获取等）都发生在一个事件循环之中。
+1000是一个超时时间，一旦拿到足够多的数据（参数设置），consumer.poll(1000)会立即返回 ConsumerRecords<String, String> records。
+如果没有拿到足够多的数据，会阻塞1000ms，但不会超过1000ms就会返回。
+
+max.poll.interval.ms：
+该属性意思为kafka消费者在每一轮poll()调用之间的最大延迟,消费者在获取更多记录之前可以空闲的时间量的上限。如果此超时时间期满之前poll()没有被再次调用，
+则消费者被视为失败，并且分组将重新平衡，以便将分区重新分配给别的成员。
+组管理协调器通过心跳来检测消费者是否存活的最长时间,一般心跳实在poll调用时候才连带发出的.
+
+常见问题：max.poll.interval.ms过小导致,不断rebalance.发生问题时候可以调大改值或者调小每次poll的条数
+max.poll. interval.ms 过小导致。发生的原因就是 poll（）的循环调用时间过长，出现了处理超时。此时只用调大max.poll. interval.ms ，
+调小max.poll.records即可
+
+
+session.timeout.ms，
+默认是10000ms，会话超时时间。当我们使用consumer_group的模式进行消费时，kafka如果检测到某个consumer挂掉，
+就会记性rebalance。consumer每隔一段时间(heartbeat.interval.ms)给broker发送心跳消息，如果超过这个时间没有发送，
+broker就会认为这个consumer挂了。这个参数的有效取值范围是broker端的设置group.min.session.timeout.ms(6000)和
+group.max.session.timeout.ms(300000)之间。
+
+max.poll.interval.ms,
+默认是300000ms，也是检测consumer失效的timeout，这个timeout针对地是consumer连续2次从broker消费消息的时间间隔。
+为什么有了session.timeout.ms又要引入max.poll.interval.ms？ 
+在kafka 0.10.0 之前，consumer消费消息和发送心跳信息这两个功能是在一个线程中进行的。这样就会引发一个问题，
+如果某条数据process的时间较长，那么consumer就无法给broker发送心跳信息，broker就会认为consumer死了。所以不得不提升session.timeout.ms来解决这个问题。
+但是这又引入了另外一个问题，如果session.timeout.ms设置得很大，那么检测一个consumer挂掉的时间就会很长，如果业务是实时的，那这就是不能忍受的。
+所以在 0.10.0 之后，发送心跳信息这个功能被拎出来在单独的线程中做，session.timeout.ms就是针对这个线程到底能不能按时发送心跳的。但是如果这个线程运行正常
+，但是消费线程挂了呢？这就无法检测了啊。所以就引进了max.poll.interval.ms，用来解决这个问题。所以如果使用比较新的producer库，
+恰好有些数据处理时间比较长，就可以适当增加这个参数的值。
+
+auto.offset.reset
+该属性指定了消费者在读取一个没有偏移量后者偏移量无效（消费者长时间失效当前的偏移量已经过时并且被删除了）的分区的情况下，
+应该作何处理，默认值是latest，也就是从最新记录读取数据（消费者启动之后生成的记录），
+另一个值是earliest，意思是在偏移量无效的情况下，消费者从起始位置开始读取数据。
+
+max.poll.records
+控制单次调用call方法能够返回的记录数量，帮助控制在轮询里需要处理的数据量。
+
+
+
