@@ -1,0 +1,163 @@
+1. SQL查询方式
+要实现管理数据的如下SQL形式：
+
+关系数据库：select * from where（state1=11 and state2=22） or value >300
+
+首先使用MongoDB的方式查询：
+
+分为以下几个步骤实现：
+
+步骤一：实现 （state1=11 and state2=22）
+
+db.getCollection('testOrAnd').find(
+
+{$and:[{"state1":11},{"state2":22}]}
+
+)
+
+步骤二：使用or形式实现 value >300
+
+db.getCollection('testOrAnd'). find(
+
+{ $or:[{"value":{$gte:300}}] }
+
+)
+
+步骤三：将步骤一参数拼接到步骤二or条件
+
+db.getCollection('testOrAnd').
+
+find({$or:
+
+[
+
+{$and:[{"state1":11},{"state2":22}]},{"value":{$gte:300}}
+
+]
+
+})
+
+2.JAVA 查询方式
+使用spring-mongotemplate的方式查询(Criteria.where是静态方法)：
+
+分析查询方式，类似使用client的分析方式，分为以下几个步骤实现：
+
+步骤一：实现 （state1=11 and state2=22）
+
+query.addCriteria(
+
+new Criteria().andOperator(
+
+Criteria.where("state1").is(11),
+
+Criteria.where("state2").is(22)
+
+)
+
+);
+
+步骤二：使用or形式实现 value >300
+
+query.addCriteria(
+
+new Criteria().orOperator(
+
+Criteria.where("value").gte(300)
+
+)
+
+);
+
+步骤三：将步骤一参数拼接到步骤二or条件
+
+query.addCriteria(
+
+new Criteria().orOperator(
+
+Criteria.where("value").gte(300),
+
+new Criteria().andOperator(
+
+Criteria.where("state1").is(11),
+
+Criteria.where("state2").is(22)
+
+)
+
+)
+
+);
+
+ 
+
+升级查询，实际场景中要根据传输的参数是否为空，拼接查询条件：
+
+(1)如果最外层是and关系(query.add多个creterria默认为and关系)
+
+if(条件){
+
+query.addCriteria(Criteria.where);
+
+}
+
+if(条件){
+
+query.addCriteria(Criteria.where);
+
+}
+
+if(条件){
+
+query.addCriteria(Criteria.where);
+
+}
+
+默认拼接的query条件为and形式。
+
+(1)如果最外层是or关系(目前只想到此笨方法)
+
+//1.拼接参数
+
+Criteria operator1=null;
+
+Criteria operator2=null;
+
+if(1==1){//模拟判断条件
+
+operator1 = new Criteria().andOperator(
+
+Criteria.where("state1").is(11),
+
+Criteria.where("state2").is(22)
+
+);
+
+}
+
+if(1==1){//模拟判断条件
+
+operator2 = Criteria.where("value").gte(300);
+
+}
+
+//2.判断参数
+
+if(operator1!=null && operator2!=null){
+
+query.addCriteria(new Criteria().orOperator(operator1,operator2));
+
+}else if(operator1!=null){
+
+query.addCriteria(operator1);
+
+}else if(operator2!=null){
+
+query.addCriteria(operator2);
+
+}
+
+ 
+
+补充：多个条件直接查询，默认是and形式
+
+db.getCollection('testOrAnd').find({"state1":11,"state2":22})
