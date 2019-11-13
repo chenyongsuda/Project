@@ -1,0 +1,226 @@
+自定义sink从kafka获取数据流并且同步到文件或者SFTP
+
+模板如下:
+=====================================================================================================
+package com.tt.flume1;
+
+import java.io.IOException;
+import java.nio.file.Path;
+
+import org.apache.flume.Channel;
+import org.apache.flume.Context;
+import org.apache.flume.Event;
+import org.apache.flume.EventDeliveryException;
+import org.apache.flume.Transaction;
+import org.apache.flume.conf.Configurable;
+import org.apache.flume.sink.AbstractSink;
+
+public class MyFileSink extends AbstractSink implements Configurable{
+
+	public Status process() throws EventDeliveryException {
+		Channel channel = getChannel();
+        Transaction ts = channel.getTransaction();
+        
+		    Event event;
+        ts.begin();
+        
+        while (true)
+        {
+            event = channel.take();
+            if(event != null)
+            {
+                break;
+            }
+        }
+
+        try {
+        	  event.getBody();
+            
+            ts.commit();
+            return Status.READY;
+        }catch (Throwable th){
+            ts.rollback();
+
+            if (th instanceof Error) {
+                throw (Error) th;
+            } else {
+                throw new EventDeliveryException(th);
+            }
+        }finally {
+            ts.close();
+            
+        }
+	}
+
+	public void configure(Context arg0) {
+		
+	}
+}
+
+=======================================================================================
+自定义文件拷贝方式 
+1. 从本地用spool拿到文件传到kafka
+2. 从kafka拿到消息写到本地文件
+
+配置文件:从本地用spool拿到文件传到kafka
+# define all the source channel sink
+a1.sources = r1
+a1.sinks = k1
+a1.channels = c1
+
+# define sources
+a1.sources.r1.type = spooldir
+a1.sources.r1.spoolDir = C:/Tony/appl/TEST/in
+a1.sources.r1.fileHeader = true
+a1.sources.r1.fileHeaderKey = filepath
+a1.sources.r1.basenameHeader = true
+a1.sources.r1.basenameHeaderKey = filename
+a1.sources.r1.deserializer = org.apache.flume.sink.solr.morphline.BlobDeserializer$Builder
+a1.sources.r1.deserializer.maxBlobLength = 100000000
+
+# Describe the sink
+a1.sinks.k1.type = org.apache.flume.sink.kafka.KafkaSink
+a1.sinks.k1.useFlumeEventFormat = true
+a1.sinks.k1.kafka.topic = test111
+a1.sinks.k1.kafka.bootstrap.servers = localhost:9092
+a1.sinks.k1.kafka.flumeBatchSize = 20
+a1.sinks.k1.kafka.producer.acks = 1
+a1.sinks.k1.kafka.producer.linger.ms = 1
+a1.sinks.k1.kafka.producer.compression.type = snappy
+a1.sinks.k1.kafka.producer.max.request.size = 107719800
+a1.sinks.k1.kafka.producer.buffer.memory = 107719800
+
+# Use a channel which buffers events in memory
+a1.channels.c1.type = memory
+#a1.channels.c1.checkpointDir = C:/Tony/appl/TEST/channel
+#a1.channels.c1.dataDirs = C:/Tony/appl/TEST/data
+
+# bind the source to channel 
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+配置文件：从kafka拿到消息写到本地文件
+# define all the source channel sink
+a2.sources = r1
+a2.sinks = k1
+a2.channels = c1
+
+# define sources
+a2.sources.r1.type = org.apache.flume.source.kafka.KafkaSource
+a2.sources.r1.batchSize = 1
+a2.sources.r1.batchDurationMillis = 20000
+a2.sources.r1.kafka.bootstrap.servers = localhost:9092
+a2.sources.r1.kafka.topics = test111
+a2.sources.r1.kafka.consumer.group.id = custom.g.id
+
+# Describe the sink
+a2.sinks.k1.type = com.tt.flume1.MyFileSink
+
+# Use a channel which buffers events in memory
+a2.channels.c1.type = memory
+
+# bind the source to channel 
+a2.sources.r1.channels = c1
+a2.sinks.k1.channel = c1
+
+自定义sink代码
+com.tt.flume1.MyFileSink
+package com.tt.flume1;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Map;
+
+import org.apache.avro.io.BinaryDecoder;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.specific.SpecificDatumReader;
+import org.apache.flume.Channel;
+import org.apache.flume.Context;
+import org.apache.flume.Event;
+import org.apache.flume.EventDeliveryException;
+import org.apache.flume.Transaction;
+import org.apache.flume.conf.Configurable;
+import org.apache.flume.sink.AbstractSink;
+import org.apache.flume.source.avro.AvroFlumeEvent;
+
+public class MyFileSink extends AbstractSink implements Configurable{
+
+	public Status process() throws EventDeliveryException {
+		Channel channel = getChannel();
+        Transaction ts = channel.getTransaction();
+        
+		Event event;
+        ts.begin();
+        
+        while (true)
+        {
+            event = channel.take();
+            if(event != null)
+            {
+                break;
+            }
+        }
+
+        try {
+        	//************************Business Logic Start        	
+        	AvroFlumeEvent result = null;
+            Map<CharSequence, CharSequence> map = null;
+            ByteBuffer data = null;
+            
+            SpecificDatumReader<AvroFlumeEvent> reader = new SpecificDatumReader<AvroFlumeEvent>(AvroFlumeEvent.class);
+            BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(event.getBody(), null);
+            try{
+                result = reader.read(null, decoder);
+                map = result.getHeaders();
+                data = result.getBody();
+            }catch (IOException e){
+                e.printStackTrace();
+            }
+            String name = "";
+            System.out.println("header: ");
+            for (Map.Entry<CharSequence, CharSequence>entry: map.entrySet()){
+            	String key = entry.getKey().toString();
+            	if(key.equals("filename")){
+            		name = entry.getValue().toString();
+            	}
+                System.out.println(entry.getKey() + " : " + entry.getValue());
+            }
+			try {
+				FileOutputStream fos = new FileOutputStream("C:\\Tony\\appl\\TEST\\out\\"+name);
+				fos.write(data.array());
+				fos.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			//************************Business Logic End
+			
+            ts.commit();
+            return Status.READY;
+        } catch (Throwable th){
+        	
+            ts.rollback();
+            if (th instanceof Error) {
+                throw (Error) th;
+            } else {
+                throw new EventDeliveryException(th);
+            }
+        } finally {
+            ts.close();
+            
+        }
+	}
+
+	public void configure(Context arg0) {
+		
+	}
+	
+}
+
+
+
+
+
+
+
+
