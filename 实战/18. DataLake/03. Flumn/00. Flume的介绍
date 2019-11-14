@@ -1,3 +1,184 @@
 1. Flume 的Source 和 Sink 不需要多讲
 
-Source
+Source一般有selector作用为
+1.数据源复制和多路复用
+2.路由选择
+
+==========================================================================================================
+模拟Source selector
+Channel选择器是决定Source接收的一个特定事件写入哪些Channel的组件，它们告知Channel处理器，然后由其将事件写入到每个Channel。
+Flume内置两种选择器：replicating和multiplexing。如果source的配置中没有指定选择器，那么会自动使用复制Channel选择器。
+Multiplexing类型的ChannelSelector会根据Event中Header中的某个属性决定分发到哪个Channel。
+
+multiplexing类型的ChannelSelector例子如下：
+1 a1.sources = r1
+2 
+3 a1.sources.source1.selector.type = multiplexing
+4 a1.sources.source1.selector.header = validation # 以header中的validation对应的值作为条件
+5 a1.sources.source1.selector.mapping.SUCCESS = c2 # 如果header中validation的值为SUCCESS，使用c2这个channel
+6 a1.sources.source1.selector.mapping.FAIL = c1 # 如果header中validation的值为FAIL，使用c1这个channel
+7 a1.sources.source1.selector.default = c1 # 默认使用c1这个channel
+
+
+Replicating Channel Selector---复制选择器例子
+a1.sources = r1
+
+a1.channels = c1 c2 c3
+a1.sources.r1.selector.type = replicating
+a1.sources.r1.channels = c1 c2 c3
+a1.sources.r1.selector.optional = c3
+
+Custom Channel Selector---自定义选择器例子
+自定义selector,需要实现ChannelSelector接口
+a1.sources = r1
+a1.channels = c1
+a1.sources.r1.selector.type = org.example.MyChannelSelector
+
+
+
+==========================================================================================================
+sink一般有sinkgroup
+1. 故障转移
+2. 负载均衡
+
+==========================================================================================================
+模拟sinkgroup故障转移
+
+====1.flume-netcat-flume.conf
+# Name the components on this agent
+a1.sources = r1
+a1.channels = c1
+a1.sinkgroups = g1
+a1.sinks = k1 k2
+
+# Describe/configure the source
+a1.sources.r1.type = netcat
+a1.sources.r1.bind = 127.0.0.1
+a1.sources.r1.port = 4444
+
+# Sink Group
+a1.sinkgroups.g1.processor.type = failover
+a1.sinkgroups.g1.processor.priority.k1 = 5
+a1.sinkgroups.g1.processor.priority.k2 = 10
+a1.sinkgroups.g1.processor.maxpenalty = 10000
+
+# Describe the sink
+a1.sinks.k1.type = avro
+a1.sinks.k1.hostname = h136
+a1.sinks.k1.port = 4141
+a1.sinks.k2.type = avro
+a1.sinks.k2.hostname = h136
+a1.sinks.k2.port = 4142
+
+# Describe the channel
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+# Bind the source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sinkgroups.g1.sinks = k1 k2
+a1.sinks.k1.channel = c1
+a1.sinks.k2.channel = c1
+
+
+====2.flume-flume-console1.conf
+# Name the components on this agent
+a2.sources = r1
+a2.sinks = k1
+a2.channels = c1
+
+# Describe/configure the source
+a2.sources.r1.type = avro
+a2.sources.r1.bind = h136
+a2.sources.r1.port = 4141
+
+# Describe the sink
+a2.sinks.k1.type = logger
+
+# Describe the channel
+a2.channels.c1.type = memory
+a2.channels.c1.capacity = 1000
+a2.channels.c1.transactionCapacity = 100
+
+# Bind the source and sink to the channel
+a2.sources.r1.channels = c1
+a2.sinks.k1.channel = c1
+
+====3.flume-flume-console2.conf
+# Name the components on this agent
+a3.sources = r1
+a3.sinks = k1
+a3.channels = c2
+
+# Describe/configure the source
+a3.sources.r1.type = avro
+a3.sources.r1.bind = h136
+a3.sources.r1.port = 4142
+
+# Describe the sink
+a3.sinks.k1.type = logger
+
+# Describe the channel
+a3.channels.c2.type = memory
+a3.channels.c2.capacity = 1000
+a3.channels.c2.transactionCapacity = 100
+
+# Bind the source and sink to the channel
+a3.sources.r1.channels = c2
+a3.sinks.k1.channel = c2
+
+1.故障转移
+由于 flume-netcat-flume.conf 向另外两个发送数据，即 flume-flume-console1.conf 和 flume-flume-console2.conf 为服务端接收数据，需要在 flume-netcat-flume.conf 之前启动。
+
+cd /opt/apache-flume-1.9.0-bin
+
+bin/flume-ng agent --conf conf/ --name a3 --conf-file /tmp/flume-job/group2/flume-flume-console2.conf -Dflume.root.logger=INFO,console
+bin/flume-ng agent --conf conf/ --name a2 --conf-file /tmp/flume-job/group2/flume-flume-console1.conf -Dflume.root.logger=INFO,console
+bin/flume-ng agent --conf conf/ --name a1 --conf-file /tmp/flume-job/group2/flume-netcat-flume.conf -Dflume.root.logger=INFO,console
+启动后，由于 flume-netcat-flume.conf 配置中 console1 的优先级高于 console2，所以会优先连接 console1。
+
+
+
+==========================================================================================================
+模拟sinkgroup负载均衡
+
+要修改 flume-netcat-flume.conf 的配置
+# Name the components on this agent
+a1.sources = r1
+a1.channels = c1
+a1.sinkgroups = g1
+a1.sinks = k1 k2
+
+# Describe/configure the source
+a1.sources.r1.type = netcat
+a1.sources.r1.bind = 127.0.0.1
+a1.sources.r1.port = 4444
+
+# Sink Group
+a1.sinkgroups.g1.sinks = k1 k2
+a1.sinkgroups.g1.processor.type = load_balance
+a1.sinkgroups.g1.processor.backoff = true
+a1.sinkgroups.g1.processor.selector = random
+
+# Describe the sink
+a1.sinks.k1.type = avro
+a1.sinks.k1.hostname = h136
+a1.sinks.k1.port = 4141
+a1.sinks.k2.type = avro
+a1.sinks.k2.hostname = h136
+a1.sinks.k2.port = 4142
+
+# Describe the channel
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+# Bind the source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sinkgroups.g1.sinks = k1 k2
+a1.sinks.k1.channel = c1
+a1.sinks.k2.channel = c1
+
+测试和故障转移一样，只是在用 nc 发送消息时会随机发送到 console1 和 console2 其中的一个，不在固定。
+
