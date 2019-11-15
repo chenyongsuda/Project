@@ -1,0 +1,70 @@
+在MySQL中，不存在类似于SQL Server或Orcal等中的rank()函数来得到排名；所以我们需要手动地写这个rank功能。
+
+基本知识：
+sql语句中，使用@来定义一个变量。如：@abc
+sql语句中，使用:=来给变量赋值,：@abc:=123,则变量abc的值为123
+sql语句中，if(A,B,C)表示，如果A条件成立，那么执行B，否则执行C，如:
+@abc := if(2>1,100,200)的结果是，abc的值为100。
+◎case...when...then语句
+case...when...then语句有两种情况：
+case情况一（CASE 后面不带表达式）:
+CASE WHEN expression THEN 操作1
+
+           WHEN expression THEN 操作2
+
+            .......
+
+           ELSE 操作n
+
+END
+
+注：自上而下，凡是走了其中一个when或者是走了else了，其他的都不再走了。
+
+        case情况二（CASE 后面带表达式，此时WHEN 后面的则是该表达式可能的值）:
+
+CASE expression
+
+WHEN  expression的值1 THEN  操作1
+
+WHEN  expression的值2 THEN  操作2
+
+     .......
+
+    ELSE 操作n
+
+END 
+
+注：自上而下，凡是走了其中一个when或者是走了else了，其他的都不再走了。
+
+————————————————
+分组排序
+SELECT 
+    empid, deptid, salary, rk 
+FROM ( 
+    SELECT 
+        tmp.empid, tmp.deptid, tmp.salary, @rownum:=@rownum+1, 
+        IF(@pdept=tmp.deptid, @rank:=@rank+1, @rank:=1) AS rk, 
+        @pdept:=tmp.deptid
+    FROM (
+        SELECT empid, deptid, salary FROM row_number_test 
+        ORDER BY deptid ASC, salary DESC
+    ) tmp, (SELECT @rownum:=0, @pdept:=null, @rank:=0) a
+) result; 
+
+结果
++-------+--------+----------+------+
+| empid | deptid | salary   | rk   |
++-------+--------+----------+------+
+|     1 |     10 |  5500.00 |    1 |
+|     2 |     10 |  4500.00 |    2 |
+|     4 |     20 |  4800.00 |    1 |
+|     3 |     20 |  1900.00 |    2 |
+|     7 |     40 | 44500.00 |    1 |
+|     6 |     40 | 14500.00 |    2 |
+|     5 |     40 |  6500.00 |    3 |
+|     9 |     50 |  7500.00 |    1 |
+|     8 |     50 |  6500.00 |    2 |
++-------+--------+----------+------+
+9 rows in set, 7 warnings (0.01 sec)
+
+
