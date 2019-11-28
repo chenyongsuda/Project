@@ -1,0 +1,27 @@
+generalCode(barvalue) {
+    var showString = "";
+    var sum = 0;
+    var sum1 = 0;
+    var barvalueCal = "";
+
+    var arr1 = barvalue.split("").reverse(); //拆分为数组,并反转
+    for (var i = 0; i < arr1.length; i++) {
+      if (i % 2 == 0) sum += Number(arr1[i]);
+      if (i % 2 != 0) sum1 += Number(arr1[i]);
+
+    }
+    var sumN1 = 3 * sum + sum1;
+    //alert(sumN1);
+    //使用大于等于sumN1且为10的最新整数倍的数减去它
+    var checkCode = String((parseInt(sumN1 / 10) + 1) * 10 - sumN1);
+    //alert(checkCode);
+    barvalue += checkCode;
+    for (var i = 0; i < barvalue.length; i++) {
+      if (i % 4 == 0) {
+        showString += barvalue.charAt(i);
+      } else {
+        showString += barvalue.charAt(i);
+      }
+    }
+    return showString;
+  }
