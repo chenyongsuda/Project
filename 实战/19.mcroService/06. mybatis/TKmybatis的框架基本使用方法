@@ -377,4 +377,129 @@ Criteria criteria1 = condition.and();
 
 2018-08-12 18:23:11.805 DEBUG 13760 --- [           main] c.c.m.UserRoleMapper.selectByCondition   : ==>  Preparing: SELECT f_id,f_user_id,f_type,f_status,f_description,f_creator_id,f_create_time,f_last_updator_id,f_last_update_time FROM t_sys_user_role WHERE ( f_user_id = ? and f_user_id = ? ) or ( f_description = ? or f_description = ? )
  
+==========================================================================================================================
+实体类的讲解
 
+实体类
+package org.fei.domain;
+ 
+import javax.persistence.*;
+import java.io.Serializable;
+ 
+@Table(name = "fly_user")
+public class UserPO implements Serializable {
+ 
+    @Id
+    @GeneratedValue(generator = "JDBC")
+    @Column(name = "user_id")
+    private Integer userId;
+ 
+    @Column(name = "user_name")
+    private String userName;
+ 
+    @Column(name = "user_pwd")
+    private String userPwd;
+ 
+    @Column(name = "full_name")
+    private String fullName;
+ 
+    @Column(name = "gender")
+    private String gender;
+ 
+    @Column(name = "age")
+    private String age;
+ 
+    @Column(name = "email")
+    private String email;
+ 
+    @Column(name = "address")
+    private String address;
+ 
+    @Column(name = "mobile")
+    private String mobile;
+ 
+    @Column(name = "location")
+    private String location;
+    
+    @Column(name = "img")
+    private byte[] img;
+    //get set  constructor
+}
+
+
+记住一个原则：实体类的字段数量 >= 数据库表中需要操作的字段数量。默认情况下，实体类中的所有字段都会作为表中的字段来操作，如果有额外的字段，必须加上@Transient注解。
+说明：
+
+表名默认使用类名,驼峰转下划线(只对大写字母进行处理),如UserInfo默认对应的表名为user_info。
+表名可以使用@Table(name = "tableName")进行指定,对不符合第一条默认规则的可以通过这种方式指定表名.
+字段默认和@Column一样,都会作为表字段,表字段默认为Java对象的Field名字驼峰转下划线形式.
+可以使用@Column(name = "fieldName")指定不符合第3条规则的字段名
+使用@Transient注解可以忽略字段,添加该注解的字段不会作为表字段使用.
+建议一定是有一个@Id注解作为主键的字段,可以有多个@Id注解的字段作为联合主键.
+如果是MySQL的自增字段，加上@GeneratedValue(generator = "JDBC")即可。如果是其他数据库，可以参考官网文档。
+DAO接口
+/** 
+* mybatis通用的Mapper的实现，能够满足绝大多数的需求，类似于jpa 
+* 必须指定泛型,来继承通用的Mapper，不需要配置对应xml文件。例如： extends Mapper<UserPO> 
+* @create 2018-06-26 17:13 
+*/
+ 
+public interface UserMapperDao extends Mapper<UserPO> {
+ 
+}
+
+一旦继承了Mapper，继承的Mapper就拥有了Mapper所有的通用方法：
+
+Select方法：List<T> select(T record);说明：根据实体中的属性值进行查询，查询条件使用等号
+
+方法：T selectByPrimaryKey(Object key);说明：根据主键字段进行查询，方法参数必须包含完整的主键属性，查询条件使用等号
+
+方法：List<T> selectAll();说明：查询全部结果，select(null)方法能达到同样的效果
+
+方法：T selectOne(T record);说明：根据实体中的属性进行查询，只能有一个返回值，有多个结果是抛出异常，查询条件使用等号
+
+方法：int selectCount(T record);说明：根据实体中的属性查询总数，查询条件使用等号
+
+Insert方法：int insert(T record);说明：保存一个实体，null的属性也会保存，不会使用数据库默认值
+
+方法：int insertSelective(T record);说明：保存一个实体，null的属性不会保存，会使用数据库默认值
+
+Update方法：int updateByPrimaryKey(T record);说明：根据主键更新实体全部字段，null值会被更新
+
+方法：int updateByPrimaryKeySelective(T record);说明：根据主键更新属性不为null的值
+
+Delete方法：int delete(T record);说明：根据实体属性作为条件进行删除，查询条件使用等号
+
+方法：int deleteByPrimaryKey(Object key);说明：根据主键字段进行删除，方法参数必须包含完整的主键属性
+
+Example方法方法：List<T> selectByExample(Object example);说明：根据Example条件进行查询重点：这个查询支持通过Example类指定查询列，通过selectProperties方法指定查询列
+
+方法：int selectCountByExample(Object example);说明：根据Example条件进行查询总数
+
+方法：int updateByExample(@Param("record") T record, @Param("example") Object example);说明：根据Example条件更新实体record包含的全部属性，null值会被更新
+
+方法：int updateByExampleSelective(@Param("record") T record, @Param("example") Object example);说明：根据Example条件更新实体record包含的不是null的属性值
+
+方法：int deleteByExample(Object example);说明：根据Example条件删除数据
+
+编写测试类进行测试
+    @Autowired
+    private UserMapperDao userMapperDao;
+    //MyBatis通用Mapper测试（类似jpa）
+    @Test
+    public void mybatisMapperTest() {
+        UserPO user = new UserPO();
+        user.setUserId(1);
+        List<UserPO> userList = userMapperDao.select(user);
+//        List<UserPO> userList = userMapperDao.selectAll();
+        for (UserPO userTemp : userList){
+            System.out.println(userTemp);
+        }
+ 
+ 
+一般配置如下：
+#mapper
+#mappers 多个接口时逗号隔开
+mapper.mappers=tk.mybatis.mapper.common.Mapper
+mapper.not-empty=false
+mapper.identity=MYSQL
