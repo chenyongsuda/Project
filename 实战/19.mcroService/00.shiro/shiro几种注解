@@ -114,3 +114,151 @@ springmvc中有一个org.springframework.web.servlet.handler.SimpleMappingExcept
 解决方法2：
 就是从问题产生的原因来解决，应为我们这个请求的页面是通过 /** = authc 来匹配了，就是通过认证(登录)过滤链来处理，改成perms或者roles 来匹配就好了。
 但是由于这样的授权路径比较多，建议使用方法1来解决。
+
+========================================================
+三、定义异常处理类
+异常有两种，登录认证异常和权限认证异常，分别对应的异常类是
+登录认证异常：UnauthenticatedException，AuthenticationException
+权限认证异常：UnauthorizedException，AuthorizationException
+
+因此创建一个BaseController,分别来处理这些异常，如下
+
+package com.bug.controller;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authz.AuthorizationException;
+import org.apache.shiro.authz.UnauthenticatedException;
+import org.apache.shiro.authz.UnauthorizedException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import com.bug.common.JSONParseUtils;
+
+public abstract class BaseController {
+	/**
+	 * 登录认证异常
+	 * 
+	 * @param request
+	 * @param response
+	 * @return
+	 */
+	@ExceptionHandler({ UnauthenticatedException.class, AuthenticationException.class })
+	public String authenticationException(HttpServletRequest request, HttpServletResponse response) {
+		Map<String, Object> map = new HashMap<>();
+		map.put("status", "-1000");
+		map.put("message", "未登录");
+		writeJson(map, response);
+		return null;
+	}
+
+	/**
+	 * 权限异常
+	 * 
+	 * @param request
+	 * @param response
+	 * @return
+	 */
+	@ExceptionHandler({ UnauthorizedException.class, AuthorizationException.class })
+	public String authorizationException(HttpServletRequest request, HttpServletResponse response) {
+		Map<String, Object> map = new HashMap<>();
+		map.put("status", "-1001");
+		map.put("message", "无权限");
+		writeJson(map, response);
+		return null;
+	}
+
+	private void writeJson(Map<String, Object> map, HttpServletResponse response) {
+		PrintWriter out = null;
+		try {
+			response.setCharacterEncoding("UTF-8");
+			response.setContentType("application/json; charset=utf-8");
+			out = response.getWriter();
+
+			out.write(JSONParseUtils.readJsonString(map));
+		} catch (IOException e) {
+		} finally {
+			if (out != null) {
+				out.close();
+			}
+		}
+	}
+}
+
+说明：
+当登录验证失败时，会通过authenticationException方法返回错误信息，当权限认证异常时，通过authorizationException方法返回错误信息
+
+在其他Controller中，只需要继承BaseController即可，如下的UserController
+
+@Controller
+@RequestMapping("/user")
+public class UserController extends BaseController{
+	@ResponseBody
+	@RequiresPermissions({"USER:ADD"})
+	@RequestMapping(value="/addUser",method = RequestMethod.GET)
+	public ResponseVO<String> addUser() {
+		ResponseVO<String> response = new ResponseVO<String>();
+		try {
+			response.setMessage("add user success");
+		} catch (Exception e) {
+			logger.error("add user error:",e);
+			response.setStatus(ResponseVO.failCode);
+		}
+		return response;
+	}
+}
+
+四、验证
+未登录，进入访问http://localhost:8080/bug.web/user/addUser，报未登录的提示信息，如下
+————————————————
+
+或者用切面
+
+5.全局异常捕获
+
+import javax.servlet.http.HttpServletRequest;
+ 
+import org.apache.shiro.authz.UnauthorizedException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+ 
+ 
+ 
+ 
+/**
+ * 1、新建一个Class,这里取名为GlobalDefaultExceptionHandler
+ * 2、在class上添加注解，@ControllerAdvice;
+ * 3、在class中添加一个方法
+ * 4、在方法上添加@ExcetionHandler拦截相应的异常信息；
+ * 5、如果返回的是View -- 方法的返回值是ModelAndView;
+ * 6、如果返回的是String或者是Json数据，那么需要在方法上添加@ResponseBody注解.
+ * 
+ * 
+ * @author gc
+ * @version v.0.1
+ * @date 2018年8月18日
+ */
+    @ControllerAdvice
+    public class GlobalDefaultExceptionHandler {
+ 
+ 
+ 
+       @ExceptionHandler(UnauthorizedException.class)
+       @ResponseBody
+       public String defaultExceptionHandler(HttpServletRequest req,Exception e){
+ 
+ 
+         return "对不起，你没有访问权限！";
+       }
+    }
+ 
+————————————————
+版权声明：本文为CSDN博主「gc1329689056」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/gc1329689056/article/details/83304205
