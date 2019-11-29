@@ -1,0 +1,116 @@
+shiro注解权限控制-5个权限注解
+Shiro共有5个注解，接下来我们就详细说说吧
+
+RequiresAuthentication:
+
+使用该注解标注的类，实例，方法在访问或调用时，当前Subject必须在当前session中已经过认证。
+
+RequiresGuest:
+
+使用该注解标注的类，实例，方法在访问或调用时，当前Subject可以是“gust”身份，不需要经过认证或者在原先的session中存在记录。
+
+RequiresPermissions:
+
+当前Subject需要拥有某些特定的权限时，才能执行被该注解标注的方法。如果当前Subject不具有这样的权限，则方法不会被执行。
+
+RequiresRoles:
+
+当前Subject必须拥有所有指定的角色时，才能访问被该注解标注的方法。如果当天Subject不同时拥有所有指定角色，则方法不会执行还会抛出AuthorizationException异常。
+
+RequiresUser
+
+当前Subject必须是应用的用户，才能访问或调用被该注解标注的类，实例，方法。
+
+使用方法：
+Shiro的认证注解处理是有内定的处理顺序的，如果有个多个注解的话，前面的通过了会继续检查后面的，若不通过则直接返回，处理顺序依次为（与实际声明顺序无关）：
+
+RequiresRoles
+RequiresPermissions
+RequiresAuthentication
+RequiresUser
+RequiresGuest
+
+例如：你同时声明了RequiresRoles和RequiresPermissions，那就要求拥有此角色的同时还得拥有相应的权限。
+
+1) RequiresRoles
+
+可以用在Controller或者方法上。可以多个roles，多个roles时默认逻辑为 AND也就是所有具备所有role才能访问。
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface RequiresRoles {
+    String[] value();
+    Logical logical() default Logical.AND; 
+}
+示例
+//属于user角色
+@RequiresRoles("user")
+
+//必须同时属于user和admin角色
+@RequiresRoles({"user","admin"})
+
+//属于user或者admin之一;修改logical为OR 即可
+@RequiresRoles(value={"user","admin"},logical=Logical.OR)
+2) RequiresPermissions
+
+与 RequiresRoles类似
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface RequiresPermissions {
+    String[] value();
+    Logical logical() default Logical.AND; 
+}
+
+示例
+//符合index:hello权限要求
+@RequiresPermissions("index:hello")
+
+//必须同时复核index:hello和index:world权限要求
+@RequiresPermissions({"index:hello","index:world"})
+
+//符合index:hello或index:world权限要求即可
+@RequiresPermissions(value={"index:hello","index:world"},logical=Logical.OR)
+
+3) RequiresAuthentication，RequiresUser，RequiresGuest
+
+这三个的使用方法一样
+@RequiresAuthentication
+@RequiresUser
+@RequiresGusst
+
+注：Shiro依赖于slf4j，commons-beanutils，commons-logging三个jar包。
+
+————————————————
+shiro无权限异常出现到页面上了，而不是shiro指定的无权访问的页面
+
+产生的原因：
+
+shiro的源代码ShiroFilterFactoryBean.Java定义的filter必须满足filter instanceof AuthorizationFilter，只有perms，roles，ssl，rest，port才是属于AuthorizationFilter，而anon，authcBasic，auchc，user是AuthenticationFilter，所以unauthorizedUrl设置后页面不跳转 
+Shiro注解模式下，登录失败与没有权限都是通过抛出异常。并且默认并没有去处理或者捕获这些异常。在SpringMVC下需要配置捕获相应异常来通知用户信息
+
+通过看配置文件可以看到，filter过滤链的最后是/** = authc 。
+
+一般我们访问的这个路径也在authc这个过滤器处理中，他是AuthenticationFilter(认证过滤链)，不是AuthorizationFilter（授权过滤链）。
+
+解决方法1：
+
+既然shiro的配置没有用了，那么就要来找找springmvc中能不能解决这个问题了。
+springmvc中有一个org.springframework.web.servlet.handler.SimpleMappingExceptionResolver类就可以解决这个问题，我们在spring-mvc.xml配置文件中配置一个bean，如下：
+
+<bean  
+    class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">  
+    <property name="exceptionMappings">  
+        <props>  
+            <prop key="org.apache.shiro.authz.UnauthorizedException">  //表示捕获的异常
+                /unauthorized  //捕获该异常时跳转的路径
+            </prop>  
+            <prop key="org.apache.shiro.authz.UnauthenticatedException">  //表示捕获的异常
+                /unauthenticated  //捕获该异常时跳转的路径
+            </prop>  
+        </props>  
+    </property>  
+</bean> 
+这样就可以把授权时没有权限时报的异常通过springmvc的来处理到相应的页面。
+
+解决方法2：
+就是从问题产生的原因来解决，应为我们这个请求的页面是通过 /** = authc 来匹配了，就是通过认证(登录)过滤链来处理，改成perms或者roles 来匹配就好了。
+但是由于这样的授权路径比较多，建议使用方法1来解决。
