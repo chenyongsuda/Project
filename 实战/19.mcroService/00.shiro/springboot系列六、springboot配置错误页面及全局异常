@@ -1,0 +1,384 @@
+springboot系列六、springboot配置错误页面及全局异常
+目录
+
+一、spring1.x中处理方式
+二、spring2.x中处理方式
+三、ErrorPageAction跳转处理
+四、全局controller异常返回处理
+1、返回错误页面配置
+2、返回Rest错误信息
+ 
+
+回到顶部
+一、spring1.x中处理方式
+复制代码
+    @Bean
+    public EmbeddedServletContainerCustomizer containerCustomizer() {
+        return new EmbeddedServletContainerCustomizer() {
+            @Override
+            public void customize(ConfigurableEmbeddedServletContainer container) {
+                ErrorPage error401Page = new ErrorPage(HttpStatus.UNAUTHORIZED, "/401");
+                ErrorPage error405Page = new ErrorPage(HttpStatus.METHOD_NOT_ALLOWED, "/405");
+                ErrorPage error404Page = new ErrorPage(HttpStatus.NOT_FOUND, "/404");
+                ErrorPage error500Page = new ErrorPage(HttpStatus.INTERNAL_SERVER_ERROR, "/500");
+
+                container.addErrorPages(error401Page,error405Page, error404Page, error500Page);
+            }
+        };
+    }
+复制代码
+回到顶部
+二、spring2.x中处理方式
+复制代码
+@Component
+public class ErrorConfig implements ErrorPageRegistrar {
+
+    @Override
+    public void registerErrorPages(ErrorPageRegistry registry) {
+        ErrorPage error400Page = new ErrorPage(HttpStatus.BAD_REQUEST, "/error400Page");
+        ErrorPage error401Page = new ErrorPage(HttpStatus.UNAUTHORIZED, "/error401Page");
+        ErrorPage error404Page = new ErrorPage(HttpStatus.NOT_FOUND, "/error404Page");
+        ErrorPage error500Page = new ErrorPage(HttpStatus.INTERNAL_SERVER_ERROR, "/error500Page");
+        registry.addErrorPages(error400Page,error401Page,error404Page,error500Page);
+    }
+}
+复制代码
+那么此时只要出现了错误，就会找到相应的 http 状态码，而后跳转到指定的错误路径上进行显示。
+
+回到顶部
+三、ErrorPageAction跳转处理
+复制代码
+@Controller
+public class ErrorPageAction {
+    @RequestMapping(value = "/error400Page")
+    public String error400Page() {
+        return "404";
+    }
+    @RequestMapping(value = "/error401Page")
+    public String error401Page() {
+        return "401";
+    }
+    @RequestMapping(value = "/error404Page")
+    public String error404Page(Model model) {
+        model.addAttribute("code","6666666");
+        model.addAttribute("msg","服务器降级中......");
+        return "404";
+    }
+    @RequestMapping(value = "/error500Page")
+    public String error500Page(Model model) {
+        return "500";
+    }
+}
+复制代码
+404.html
+
+复制代码
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <p th:text="${code}"/>
+    <p th:text="${msg}"/>
+</body>
+</html>
+复制代码
+回到顶部
+四、全局controller异常返回处理
+1、返回错误页面配置
+如果此时配置有错误页，那么这个时候错误会统一跳转到 500 所在的路径上进行错误的显示，但是如果说现在希望能够显示 出错误更加详细的内容呢？
+
+ 所以这个时候可以单独定义一个页面进行错误的信息显示处理，而这个页面，可以定义在“src/main/view/templates/error.html”， 这个页面里面要求可以输出一些信息；
+
+复制代码
+@ControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(Exception.class) // 所有的异常都是Exception子类
+    public ModelAndView defaultErrorHandler(HttpServletRequest request, Exception e) { // 出现异常之后会跳转到此方法
+        ModelAndView mav = new ModelAndView("error"); // 设置跳转路径
+        mav.addObject("exception", e); // 将异常对象传递过去
+        mav.addObject("url", request.getRequestURL()); // 获得请求的路径
+        return mav;
+    }
+}
+复制代码
+error.html
+
+复制代码
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>SpringBoot模版渲染</title>
+    <link rel="icon" type="image/x-icon" href="/images/study.ico"/>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+</head>
+<body>
+<p th:text="${url}"/>
+<p th:text="${exception.message}"/>
+</body>
+</html>
+复制代码
+2、返回Rest错误信息
+复制代码
+package cn.study.microboot.advice;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+//@ControllerAdvice// 作为一个控制层的切面处理
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    public static final String DEFAULT_ERROR_VIEW = "error"; // 定义错误显示页，error.html
+    @ExceptionHandler(Exception.class) // 所有的异常都是Exception子类
+    public Object defaultErrorHandler(HttpServletRequest request,Exception e) {
+        class ErrorInfo {
+            private Integer code ;
+            private String message ;
+            private String url ;
+            public Integer getCode() {
+                return code;
+            }
+            public void setCode(Integer code) {
+                this.code = code;
+            }
+            public String getMessage() {
+                return message;
+            }
+            public void setMessage(String message) {
+                this.message = message;
+            }
+            public String getUrl() {
+                return url;
+            }
+            public void setUrl(String url) {
+                this.url = url;
+            }
+        }
+        ErrorInfo info = new ErrorInfo() ;
+        info.setCode(100);     // 标记一个错误信息类型
+        info.setMessage(e.getMessage());
+        info.setUrl(request.getRequestURL().toString());
+        return info ;
+    }
+}
+
+=====================================================================================================================
+Spring boot/mvc项目中通过@RestControllerAdvice或者@ControllerAdvice配合@ExceptionHandler实现全局异常统一处理。
+
+       在spring web项目开发中，我们经常会遇到各种exception，这些exception根据业务或者场景不同抛出不同的信息和返回类型，有的exception需要返回json数据格式的错误，有的exception又需要跳转到某个错误页面。这里将会讲解常见的几个exception统一处理。
+
+通过注解@RestControllerAdvice统一处理rest接口的异常信息。
+注意@RestControllerAdvice注解一般在spring boot接口项目中使用。spring普通项目也支持不过需要高版本的spring才有@RestControllerAdvice注解标签。
+
+
+ 
+Java代码:
+ 复制
+import com.leftso.business.response.Result;
+import com.leftso.system.exception.BusinessException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class RestExceptionHandler {
+
+    @ExceptionHandler(value = { BusinessException.class })
+    public Result business(BusinessException ex) {
+        return Result.fail("业务异常:"+ex.getMessage());
+    }
+
+    @ExceptionHandler(value = { MethodArgumentNotValidException.class })
+    public Result methodArgumentNotValidException(MethodArgumentNotValidException ex) {
+        String field=ex.getBindingResult().getFieldError().getField().replace("parameter.","");
+        String message=ex.getBindingResult().getFieldError().getDefaultMessage();
+        return Result.fail("验证失败:字段["+field+"]"+message);
+    }
+
+    @ExceptionHandler(value = { Exception.class })
+    public Result exception(Exception ex) {
+        return Result.fail("系统异常:"+ex.getMessage());
+    }
+}
+
+
+通过注解@ControllerAdvice统一处理异常
+ 复制
+import com.leftso.common.http.result.ResultJson;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.servlet.view.json.MappingJackson2JsonView;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(value = {BusinessException.class})
+    @ResponseBody
+    public ResultJson business(BusinessException ex) {
+        return ResultJson.fail("业务异常:" + ex.getMessage());
+    }
+
+
+    @ExceptionHandler(value = {Exception.class})
+    public ModelAndView exception(Exception ex, HttpServletRequest request, HttpServletResponse response) {
+        String uri = request.getRequestURI();
+        ModelAndView modelAndView = new ModelAndView();
+        if (uri.contains("enterprise")) {
+            MappingJackson2JsonView jsonView = new MappingJackson2JsonView();
+            modelAndView.setView(jsonView);
+            modelAndView.addObject(ResultJson.fail("系统异常:" + ex.getMessage()));
+            return modelAndView;
+        } else {
+            RedirectView redirectView = new RedirectView("/static/error/500.jsp");
+            redirectView.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
+            modelAndView.setView(redirectView);
+            return modelAndView;
+        }
+    }
+}
+
+某些情况我们需要根据请求类型返回不同得view，比如ajax请求返回JSON数据，普通请求返回页面数据，
+ 
+ 复制
+import com.alibaba.fastjson.JSON;
+import net.ifok.common.utils.MapUtil;
+import net.ifok.ocms.system.exception.BusinessException;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.json.MappingJackson2JsonView;
+
+import javax.servlet.http.HttpServletRequest;
+import java.beans.IntrospectionException;
+import java.lang.reflect.InvocationTargetException;
+import java.nio.file.AccessDeniedException;
+import java.util.List;
+
+@ControllerAdvice
+public class ControllerExceptionHandler {
+
+	/**
+	 * 业务异常
+	 * 
+	 * @param
+	 * @param e
+	 * @return
+	 * @throws IntrospectionException
+	 * @throws InvocationTargetException
+	 * @throws IllegalAccessException
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = { BusinessException.class ,RuntimeException.class})
+	public ModelAndView businessExceptionHandler(HttpServletRequest request, BusinessException e)
+			throws IllegalAccessException, InvocationTargetException, IntrospectionException {
+		Log.error("业务异常:" + e.getMessage(),e, getClass());
+		String uri = request.getRequestURI();
+		boolean isJsonRequest =isAjaxRequest(request);
+		if (isJsonRequest) {
+			ModelAndView view = new ModelAndView();
+			MappingJackson2JsonView jsonView = new MappingJackson2JsonView();
+			jsonView.setAttributesMap(MapUtil.toMap(Result.fail(e.getMessage())));
+			view.setView(jsonView);
+			return view;
+		} else {
+			ModelAndView view = new ModelAndView();
+			view.setViewName("redirect:/503.html");
+			return view;
+		}
+	}
+
+	@ExceptionHandler(value = { MethodArgumentNotValidException.class})
+	public ModelAndView methodArgumentNotValidExceptionHandler(HttpServletRequest request, MethodArgumentNotValidException e){
+		String message=e.getBindingResult().getFieldError().getDefaultMessage();
+		Log.error("验证失败:" +message,e, getClass());
+		boolean isJsonRequest =isAjaxRequest(request);
+		if (isJsonRequest) {
+			ModelAndView view = new ModelAndView();
+			MappingJackson2JsonView jsonView = new MappingJackson2JsonView();
+			jsonView.setAttributesMap(JSON.parseObject(JSON.toJSONString(Result.fail(message))));
+			view.setView(jsonView);
+			return view;
+		} else {
+			ModelAndView view = new ModelAndView();
+			view.setViewName("redirect:/503.html");
+			return view;
+		}
+	}
+
+
+	@ExceptionHandler(value = { HttpRequestMethodNotSupportedException.class })
+	public ModelAndView methodNotSupportedException(HttpServletRequest request, HttpRequestMethodNotSupportedException e){
+		Log.error("HttpRequestMethodNotSupportedException:请求方法不支持:"+e.getMethod()+"\n请求地址："
+				+request.getRequestURI()+"\n UA:\n" + request.getHeader("User-Agent"),getClass());
+		boolean isJsonRequest =isAjaxRequest(request);
+		if (isJsonRequest) {
+			ModelAndView view = new ModelAndView();
+			MappingJackson2JsonView jsonView = new MappingJackson2JsonView();
+			jsonView.setAttributesMap(JSON.parseObject(JSON.toJSONString(Result.fail("请求方式["+e.getMethod()+"]不支持"))));
+			view.setView(jsonView);
+			return view;
+		} else {
+			ModelAndView view = new ModelAndView();
+			view.setViewName("redirect:/404.html");
+			return view;
+		}
+	}
+
+	@ExceptionHandler(value = { AccessDeniedException.class })
+	public ModelAndView accessDeniedException(HttpServletRequest request, AccessDeniedException e) {
+		Log.error("权限不足->\n资源地址:" + request.getRequestURI() + "\n UA:\n" + request.getHeader("User-Agent"),
+				this.getClass());
+		boolean isJsonRequest=isAjaxRequest(request);
+		if (isJsonRequest) {
+			ModelAndView view = new ModelAndView();
+			MappingJackson2JsonView jsonView = new MappingJackson2JsonView();
+			jsonView.setAttributesMap(JSON.parseObject(JSON.toJSONString(Result.fail(e.getMessage()))));
+			view.setView(jsonView);
+			return view;
+		} else {
+			ModelAndView view = new ModelAndView();
+			view.setViewName("redirect:/403.html");
+			return view;
+		}
+	}
+
+	@ExceptionHandler(value = { Exception.class })
+	public ModelAndView exceptionHandler(HttpServletRequest reqeust, Exception e) {
+		Log.error(e.getMessage(), e, getClass());
+		boolean isJsonRequest =isAjaxRequest(reqeust);
+		if (isJsonRequest) {
+			ModelAndView view = new ModelAndView();
+			MappingJackson2JsonView jsonView = new MappingJackson2JsonView();
+			jsonView.setAttributesMap(JSON.parseObject(JSON.toJSONString(Result.fail(e.getMessage()))));
+			view.setView(jsonView);
+			return view;
+		} else {
+			ModelAndView view = new ModelAndView();
+			view.setViewName("redirect:/503.html");
+			return view;
+		}
+	}
+	public static boolean isAjaxRequest(HttpServletRequest request) {
+		String requestedWith = request.getHeader("x-requested-with");
+		if (requestedWith != null && requestedWith.equalsIgnoreCase("XMLHttpRequest")) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
