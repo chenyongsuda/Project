@@ -1,0 +1,9 @@
+1. 对于配置的Map<String, String> filterChainDefinitionMap = new LinkedHashMap<>();
+   适用上面配置的url将会走自定义过滤器
+   
+   对于注解方式配置的,如果没授权或者没认证的话抛出异常.需要处理异常,可以通过controladvisor
+   
+ 
+ 2. 过滤链匹配的优先过滤链
+ 
+ 3. 注解方式不走自定义过滤链.
