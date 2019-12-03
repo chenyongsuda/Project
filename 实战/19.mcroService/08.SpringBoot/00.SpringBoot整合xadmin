@@ -1,0 +1,17 @@
+下载Xadmin
+
+将全部素材拷贝到templates文件夹下,写个control指向index
+发现css等文件不能用.
+将静态文件放到静态文件目录.
+
+理解springboot中的静态资源目录位置
+springboot的静态资源目录如下
+/static（或/public ，/resources，/META-INF/resources）
+
+By default, Spring Boot serves static content from a directory called /static (or /public or /resources or /META-INF/resources) in the classpath or from the root of the ServletContext. It uses the ResourceHttpRequestHandler from Spring MVC so that you can modify that behavior by adding your own WebMvcConfigurer and overriding the addResourceHandlers method.
+
+正确的理解上述的资源目录在根目录下的意思
+也就是上述的文件夹的内容在编译后都放置在/目录下。
+比如说你的/public/css/style.css文件，在项目启动后他的位置应该为：/css/style.css
+
+classpath 是一个表示去告诉java在哪里去获取对应的类和包的路径标识。也就是我们常说的项目根路径。
