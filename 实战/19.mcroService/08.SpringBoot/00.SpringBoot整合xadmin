@@ -15,3 +15,7 @@ By default, Spring Boot serves static content from a directory called /static (o
 比如说你的/public/css/style.css文件，在项目启动后他的位置应该为：/css/style.css
 
 classpath 是一个表示去告诉java在哪里去获取对应的类和包的路径标识。也就是我们常说的项目根路径。
+
+
+1. 如果将所有html拷贝到static目录下的话所有页面都可以访问.可以看下demo
+   然后拷贝INDEX到templates做一个页面加一个或者将static目录设置为模板目录不知道可行否.
