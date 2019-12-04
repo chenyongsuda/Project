@@ -1,0 +1,16 @@
+ResourceManager 支持分层级的应用队列，这些队列享有集群一定比例的资源。从某种意义上讲它就是一个纯粹的调度器，
+它在执行过程中不对应用进行监控和状态跟踪，也就不用处理应用的failover。ResourceManager 是基于应用程序对资源的需求进行调度的
+资源包括：内存，CPU，磁盘，网络等等。资源管理器提供一个调度策略的插件，它负责将集群资源分配给多个队列和应用程序。
+
+NodeManager 是每一台机器框架的代理，是执行应用程序的容器，监控应用程序的资源使用情况 (CPU，内存，硬盘，网络 ) 并且向调度器汇报。
+
+ApplicationMaster 是一个详细的框架库，它结合从 ResourceManager 获得的资源和 NodeManager 协同工作来运行和监控任务，它会处理任务的failover。
+
+综上所述，JobTracker的职责被分散给了多个组件，其中ApplicationMaster仅需为自己的Job负责，
+ResourceManager成为了一个创建ApplicationMaster然后只需要问ApplicationMaster提供资源申请服务的单纯的资源管理组建。
+这不仅让整个系统 的架构更优美，潜在瓶颈更分散，最关键的是，每类Job甚至每个Job都会有自己的ApplicationMaster，
+Job的Context、Failover都是由ApplicationMaster维护的，这就意味着我们自己可以根据每类Job的特点，配置或者实现各种更优的ApplicationMaster，
+这彻底解决了经典MapReduce资源管理框架多类Job通用性的问题。
+
+historyserver 日志历史服务器
+
