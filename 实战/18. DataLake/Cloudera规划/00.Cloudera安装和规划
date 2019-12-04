@@ -1,0 +1,15 @@
+1. 首先CDH 和CDM CDH是cloudera的hadoop的分发版本 CDM是CDH的管理端 HUE是操作入口
+
+
+CDH包含Server和agent
+  Server:中包含server服务和数据库和repo远程仓库配置
+  agent: 是在其他机器上每台机器都需要安装用来在Server上操作时候在其他机器安装软件和收集信息和操纵重启服务.
+  On the machine where Cloudera Manager Server is installed
+  – /var/log/cloudera-scm-server/cloudera-scmserver.log
+  On all machines in the cluster
+  – /var/log/cloudera-scm-agent/cloudera-scmagent.log
+  
+  
+  相关插件包含:
+  HDFS,hadoop,hive,yarn,kafka,spark等
+  
