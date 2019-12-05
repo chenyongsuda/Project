@@ -1,0 +1,35 @@
+大数据引擎对比：Druid vs Kudu
+# 大数据 2019-05-15 17:40 0 741 来源： 数据分析学院
+Kudu's storage format enables single row updates, whereas updates to existing Druid segments requires recreating the segment, so theoretically
+
+the process for updating old values should be higher latency in Druid. However, the requirements in Kudu for maintaining extra head space to store updates as well as organizing data by id instead of time has the potential to introduce some extra latency and accessing of data that is not need to answer a query at query time.
+
+Druid summarizes/rollups up data at ingestion time, which in practice reduces the raw data that needs to be stored significantly (up to 40 times on average), and increases performance of scanning raw data significantly. Druid segments also contain bitmap indexes for fast filtering, which Kudu does not currently support. Druid's segment architecture is heavily geared towards fast aggregates and filters, and for OLAP workflows. Appends are very fast in Druid, whereas updates of older data is higher latency. This is by design as the data Druid is good for is typically event data, and does not need to be updated too frequently. Kudu supports arbitrary primary keys with uniqueness constraints, and efficient lookup by ranges of those keys. Kudu chooses not to include the execution engine, but supports sufficient operations so as to allow node-local processing from the execution engines. This means that Kudu can support multiple frameworks on the same data (eg MR, Spark, and SQL). Druid includes its own query layer that allows it to push down aggregations and computations directly to data nodes for faster query processing.
+
+Kudu:
+
+1.Kudu可以进行单行更新
+
+2.Kudu维护用于存储更新的额外头部空间和通过ID而非时间来组织数据的需求，都有可能导致额外的延迟以及对非查询数据的访问。
+
+3.kudu不支持位图索引
+
+4.Kudu支持任意具有唯一性约束的主键，并且支持通过指定主键的值范围进行快速查询。
+
+5.Kudu不包含计算引擎，但是为了通过计算引擎进行本地节点的处理，Kudu提供了足够的操作。这意味着Kudu对相同的数据能支持多种框架（比如：MR,Spark和SQL）
+
+Druid:
+
+1.Druid为了更新已经存在的Druid段，必须重建这些已经存在的段。
+
+2.Druid更新旧的数据会很慢
+
+3.Druid在吸收数据的同时会将数据进行汇总，这将大大减少减少需要存储的原始数据（平均达到40倍），并且大大增加扫描原始数据的性能。
+
+4.Druid段拥有位图索引，可以用于快速筛选
+
+5.Druid的段架构主要是为快速聚合、快速筛选和olap工作流准备的
+
+6.数据追加非常快，但是旧数据的更新很慢。Druid被故意设计成这样，因为Druid主要是面向事件数据，这种数据不需要频繁的更新。
+
+7.Druid拥有自己的查询层，这允许Druid能直接推送聚合和计算到数据节点以提高查询处理速度。
