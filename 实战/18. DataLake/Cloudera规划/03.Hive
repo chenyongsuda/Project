@@ -1,1 +1,65 @@
 安装HIVE
+
+hive查询的方式如下：
+Cli
+Web
+HServer2
+
+一般来讲，我们认为HiveServer2是用来提交查询的，也就是用来访问数据的。
+而MetaStore才是用来访问元数据的。
+如果你把两者混了，起在同一个进程内，就会产生你的问题类的疑问。
+ 
+CliDriver是SQL本地直接编译，然后访问MetaStore，提交作业，是重客户端。
+BeeLine是把SQL提交给HiveServer2，由HiveServer2编译，然后访问MetaStore，提交作业，是轻客户端。
+ 
+具体写业务脚本两种都行，数据量大的话，建议用CliDriver
+
+hive的组件:
+HiveServer2
+MetaStoreServer
+Hcatalog
+
+HiveServer2:
+BeeLine是把SQL提交给HiveServer2，由HiveServer2编译，然后访问MetaStore，提交作业，是轻客户端。
+
+MetaStoreServer:
+当我们要连接Hive进行操作时，首先必须是安装了，安装hive很简单，直接在conf/hive-site配置存放Hive元数据的连接信息，通常是用mysql，如下：
+<property>
+      <name>javax.jdo.option.ConnectionURL</name>
+      <value>jdbc:mysql://localhost:3306/hive?createDatabaseIfNotExist=true</value>
+</property>
+<property>
+      <name>javax.jdo.option.ConnectionDriverName</name>
+      <value>com.mysql.jdbc.Driver</value>
+</property>
+<property>
+      <name>javax.jdo.option.ConnectionUserName</name>
+      <value>root</value>
+</property>
+<property>
+      <name>javax.jdo.option.ConnectionPassword</name>
+      <value>root</value>
+</property>
+这样配置好后，在hive的lib里加入Mysql JDBC 驱动后，我们就可以通过 bin/hive的方式进行hive客户端，请求数据。
+配置metastoreServer的话就不用直接在各节点配置mysql的敏感信息了.
+直接配置：
+在hive-site.xml只要简单的配置一下：
+
+<property>
+    <name>hive.metastore.uris</name>
+    <value>thrift://xxxxxx:9083</value>
+    <description
+</property>
+这样我就通过metaserver取得了元数据的信息对吧
+当然上面的图只是一个MetaStoreServer，存在单点问题，但我们完全可以配置两个或者多个MetaStoreServer，就实现了负载均衡与容错的功能了，如下面的配置
+<property>
+ <name>hive.metastore.uris</name>
+ <value>thrift://dw1:9083,thrift://dw2:9083</value>
+ <description>A comma separated list of metastore uris on which metastore service is running
+</description>
+</property>
+
+
+客户端连接metastore服务，metastore再去连接MySQL数据库来存取元数据。有了metastore服务，就可以有多个客户端同时连接，而且这些客户端不需要知道MySQL数据库的用户名和密码，只需要连接metastore 服务即可。 
+bin/hin --访问--> metaStore server --访问-->MySQL
+beeline --访问-->hiveServer2 --访问--> metaStore server --访问--> MySQL
