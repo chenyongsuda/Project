@@ -1,1 +1,3 @@
-111
+KUDU 不同于HIVE,HIVE存在HDFS中KUDU是自己的存储引擎.一般创建非外部表,KUDU的分区方式由hash或者range和HIVE不一样HIVE是通过分区key
+
+KUDU中没有insert overwrite的 只有insert into等,一般insert into 如果主键重复的话会自动更新.
