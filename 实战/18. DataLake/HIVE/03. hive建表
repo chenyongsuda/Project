@@ -172,6 +172,30 @@ CREATE VIEW [IF NOT EXISTS] view_name [ (column_name [COMMENT column_comment], .
 [TBLPROPERTIES (property_name = property_value, ...)]
 AS SELECT ...
 　　注：视图关键字。 视图是只读的，不能用LOAD/INSERT/ALTER
+
+2.4显示表
+　　查看表名：
+	  SHOW TABLES;
+    
+　　查看表名，部分匹配：
+    SHOW TABLES 'page.';
+    SHOW TABLES '.view';
+
+查看某表的所有Partition，如果没有就报错：
+SHOW PARTITIONS page_view;
+查看某表结构：
+
+DESCRIBE invites;
+查看分区内容：
+
+SELECT a.foo FROM invites a WHERE a.ds='2012-08-15';
+查看有限行内容，同Greenplum，用limit关键词：
+
+SELECT a.foo FROM invites a limit 3;
+查看表分区定义：
+
+DESCRIBE EXTENDED page_view PARTITION (ds='2013-08-08');
+
 =======================================================
 
 
