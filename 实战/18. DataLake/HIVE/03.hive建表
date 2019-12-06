@@ -1,0 +1,178 @@
+0.基本分析
+CREATE TABLE 创建一个指定名字的表。如果相同名字的表已经存在，则抛出异常；用户可以用 IF NOT EXIST 选项来忽略这个异常。
+ EXTERNAL 关键字可以让用户创建一个外部表，在建表的同时指定一个指向实际数据的路径（LOCATION），Hive 创建内部表时，会将数据移动到数据仓库指向的路径；若创建外部表，仅记录数据所在的路径，不对数据的位置做任何改变。在删除表的时候，内部表的元数据和数 据会被一起删除，而外部表只删除元数据，不删除数据。
+ LIKE 允许用户复制现有的表结构，但是不复制数据。
+ 用户在建表的时候可以自定义 SerDe 或者使用自带的 SerDe。如果没有指定 ROW FORMAT 或者 ROW FORMAT DELIMITED，将会使用自带的 SerDe。在建表的时候，用户还需要为表指定列，用户在指定表的列的同时也会指定自定义的 SerDe，Hive 通过 SerDe 确定表的具体的列的数据。
+ 如果文件数据是纯文本，可以使用 STORED AS TEXTFILE。如果数据需要压缩，使用 STORED AS SEQUENCE 。
+ 有分区的表可以在创建的时候使用 PARTITIONED BY 语句。一个表可以拥有一个或者多个分区，每一个分区单独存在一个目录下。而且，表和分区都可以对某个列进行 CLUSTERED BY 操作，将若干个列放入一个桶（bucket）中。也可以利用SORT BY 对数据进行排序。这样可以为特定应用提高性能。
+ 表名和列名不区分大小写，SerDe 和属性名区分大小写。表和列的注释是字符串
+　　注：
+
+SerDe是Serialize/Deserilize的简称，目的是用于序列化和反序列化
+STORED AS TEXTFILE：默认格式，数据不做压缩，磁盘开销大，数据解析开销大。 可结合Gzip、Bzip2使用(系统自动检查，执行查询时自动解压)，但使用这种方式，hive不会对数据进行切分， 从而无法对数据进行并行操作
+STORED AS SEQUENCE：Hadoop API提供的一种二进制文件支持，其具有使用方便、可分割、可压缩的特点。
+SequenceFile支持三种压缩选择：NONE，RECORD，BLOCK。Record压缩率低，一般建议使用BLOCK压缩。
+
+语法如下:
+CREATE [EXTERNAL] TABLE [IF NOT EXISTS] table_name
+  [(col_name data_type [COMMENT col_comment], ...)]
+  [COMMENT table_comment]
+  [PARTITIONED BY (col_name data_type [COMMENT col_comment], ...)]
+  [CLUSTERED BY (col_name, col_name, ...) [SORTED BY (col_name [ASC|DESC], ...)] INTO num_buckets BUCKETS]
+  [
+   [ROW FORMAT row_format] [STORED AS file_format]
+   | STORED BY 'storage.handler.class.name' [ WITH SERDEPROPERTIES (...) ]  
+  ]
+  [LOCATION hdfs_path]
+  [TBLPROPERTIES (property_name=property_value, ...)]  [AS select_statement]  CREATE [EXTERNAL] TABLE [IF NOT EXISTS] table_name
+  LIKE existing_table_name
+  [LOCATION hdfs_path]
+
+data_type
+  : primitive_type
+  | array_type
+  | map_type
+  | struct_type
+
+primitive_type
+  : TINYINT
+  | SMALLINT
+  | INT
+  | BIGINT
+  | BOOLEAN
+  | FLOAT
+  | DOUBLE
+  | STRING
+
+array_type
+  : ARRAY < data_type >
+
+map_type
+  : MAP < primitive_type, data_type >
+
+struct_type
+  : STRUCT < col_name : data_type [COMMENT col_comment], ...>
+
+row_format
+  : DELIMITED [FIELDS TERMINATED BY char] [COLLECTION ITEMS TERMINATED BY char]
+        [MAP KEYS TERMINATED BY char] [LINES TERMINATED BY char]
+  | SERDE serde_name [WITH SERDEPROPERTIES (property_name=property_value, property_name=property_value, ...)]
+
+file_format:
+  : SEQUENCEFILE
+  | TEXTFILE
+  | RCFILE     (Note:  only available starting with 0.6.0)
+  | INPUTFORMAT input_format_classname OUTPUTFORMAT output_format_classname
+
+
+======================================================
+1. hive建表语句讲解-最简单建表语句
+create table t1(
+    id      int
+   ,name    string
+   ,hobby   array<string>
+   ,add     map<String,string>
+)
+row format delimited            //[ROW FORMAT DELIMITED]关键字，是用来设置创建的表在加载数据的时候，支持的列分隔符。
+fields terminated by ','        //设置列分隔符
+collection items terminated by '-'  //设置集合分隔符
+map keys terminated by ':'          //设置map分隔符
+;
+
+=======================================================
+2. hive建表语句讲解--创建分区
+CREATE TABLE page_view(
+viewTime INT,
+userid BIGINT,
+page_url STRING,
+referrer_url STRING,
+ip STRING COMMENT 'IP Address of the User') 
+
+COMMENT 'This is the page view table'                     //comments
+PARTITIONED BY(dt STRING,country STRING)                  //分区
+CLUSTERED BY(userid) SORTED BY(viewTime) INTO 32 BUCKETS  //数据分桶一般不怎么用
+
+ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY '\001' 
+COLLECTION ITEMS TERMINATED BY '\002'
+MAP KEYS TERMINATED BY '\003' 
+STORED AS SEQUENCEFILE;
+
+2.1 装载数据
+装载数据：
+
+LOAD DATA INPATH '/user/admin/SqlldrDat/CnClickstat/20131101/19/clickstat_gp_fatdt0/0' OVERWRITE INTO TABLE c02_clickstat_fatdt1
+ PARTITION(dt='20131101');
+
+指定LOCATION位置：
+CREATE EXTERNAL TABLE page_view(
+     viewTime INT, 
+     userid BIGINT,
+     page_url STRING, 
+     referrer_url STRING,
+     ip STRING COMMENT 'IP Address of the User',
+     country STRING COMMENT 'country of origination')
+ COMMENT 'This is the staging page view table'
+ ROW FORMAT DELIMITED FIELDS TERMINATED BY '\054'
+ STORED AS TEXTFILE
+ LOCATION '<hdfs_location>';
+
+
+复制一个空表：
+CREATE TABLE empty_key_value_store
+LIKE key_value_store;
+
+2.2.1添加分区
+ALTER TABLE table_name ADD [IF NOT EXISTS] partition_spec [ LOCATION 'location1' ] partition_spec [ LOCATION 'location2' ] ...
+partition_spec:
+  : PARTITION (partition_col = partition_col_value, partition_col = partiton_col_value, ...)
+　　例子：
+
+ALTER TABLE c02_clickstat_fatdt1 ADD 
+PARTITION (dt='20131202') location '/user/hive/warehouse/c02_clickstat_fatdt1/part20131202' 
+PARTITION (dt='20131203') location '/user/hive/warehouse/c02_clickstat_fatdt1/part20131203';
+
+
+2.2.2删除分区
+ALTER TABLE table_name DROP partition_spec, partition_spec,...
+例子：
+ALTER TABLE c02_clickstat_fatdt1 DROP PARTITION (dt='20101202');
+
+2.2.3重命名表
+ALTER TABLE table_name RENAME TO new_table_name
+这个命令可以让用户为表更名。数据所在的位置和分区名并不改变。换而言之，老的表名并未“释放”，对老表的更改会改变新表的数据。
+
+2.2.4修改列/属性
+ALTER TABLE table_name CHANGE [COLUMN] col_old_name col_new_name column_type [COMMENT col_comment] [FIRST|AFTER column_name]
+这个命令可以允许改变列名、数据类型、注释、列位置或者它们的任意组合。
+
+2.2.5添加/替换列
+ALTER TABLE table_name ADD|REPLACE COLUMNS (col_name data_type [COMMENT col_comment], ...)
+ADD是代表新增一字段，字段位置在所有列后面(partition列前);REPLACE则是表示替换表中所有字段。
+例子：
+> hive> desc xi;
+> OK
+> id      int
+> cont    string
+> dw_ins_date     string
+> Time taken: 0.061 seconds
+> hive> create table xibak like xi;                         
+> OK
+> Time taken: 0.157 seconds
+> hive> alter table xibak replace columns (ins_date string);   
+> OK
+> Time taken: 0.109 seconds
+> hive> desc xibak;
+> OK
+> ins_date        string
+
+2.3创建视图
+CREATE VIEW [IF NOT EXISTS] view_name [ (column_name [COMMENT column_comment], ...) ]
+[COMMENT view_comment]
+[TBLPROPERTIES (property_name = property_value, ...)]
+AS SELECT ...
+　　注：视图关键字。 视图是只读的，不能用LOAD/INSERT/ALTER
+=======================================================
+
+
+
