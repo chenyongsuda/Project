@@ -196,7 +196,132 @@ SELECT a.foo FROM invites a limit 3;
 
 DESCRIBE EXTENDED page_view PARTITION (ds='2013-08-08');
 
+===实例讲解
+动态分区(需要查出分区字段)
+insert overwrite table test.demo1 partition(dt)
+ select dept_code,sales_days,yyyymm from ods.monthly_sales limit 10
+
+固定分区(不需要查出分区字段)
+insert overwrite table test.demo1 partition(dt='202001')
+ select dept_code,sales_days from ods.monthly_sales limit 10
+
+注意insert overwrite 只会覆盖固定分区的所有数据
+insert overwrite或者into
+
+2.5加载
+　　 HIVE装载数据没有做任何转换加载到表中的数据只是进入相应的配置单元表的位置移动数据文件。纯加载操作复制/移动操作。
+
+2.5.1语法
+LOAD DATA [LOCAL] INPATH 'filepath' [OVERWRITE] INTO TABLE tablename [PARTITION (partcol1=val1, partcol2=val2 ...)]
+
+　　Load 操作只是单纯的复制/移动操作，将数据文件移动到 Hive 表对应的位置。
+　　如：从本地导入数据到表格并追加原表
+
+LOAD DATA LOCAL INPATH /tmp/pv_2013-06-08_us.txt INTO TABLE c02 PARTITION(date='2013-06-08', country='US')
+　　从本地导入数据到表格并追加记录：
+
+LOAD DATA LOCAL INPATH './examples/files/kv1.txt' INTO TABLE pokes;
+　　从hdfs导入数据到表格并覆盖原表：
+
+LOAD DATA INPATH '/user/admin/SqlldrDat/CnClickstat/20131101/18/clickstat_gp_fatdt0/0' INTO table c02_clickstat_fatdt1 OVERWRITE PARTITION (dt='20131201');
+　　关于来源的文本数据的字段间隔符 如果要将自定义间隔符的文件读入一个表，需要通过创建表的语句来指明输入文件间隔符，然后load data到这个表就ok了。
+
+2.6插入
+2.6.1INSERT语法
+Standard syntax:
+INSERT OVERWRITE TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...)] select_statement1 FROM from_statement 
+
+Hive extension (multiple inserts):
+FROM from_statement
+INSERT OVERWRITE TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...)] select_statement1
+[INSERT OVERWRITE TABLE tablename2 [PARTITION ...] select_statement2] ...
+
+Hive extension (dynamic partition inserts):
+INSERT OVERWRITE TABLE tablename PARTITION (partcol1[=val1], partcol2[=val2] ...) select_statement FROM from_statement
+Insert时，from子句既可以放在select子句后，也可以放在insert子句前，下面两句是等价的
+
+hive> FROM invites a INSERT OVERWRITE TABLE events SELECT a.bar, count(*) WHERE a.foo > 0 GROUP BY a.bar;
+hive> INSERT OVERWRITE TABLE events SELECT a.bar, count(*) FROM invites a WHERE a.foo > 0 GROUP BY a.bar;
+
+2.6.1WRITE语法
+
+Standard syntax:
+INSERT OVERWRITE [LOCAL] DIRECTORY directory1 SELECT ... FROM ...
+
+Hive extension (multiple inserts):
+FROM from_statement
+INSERT OVERWRITE [LOCAL] DIRECTORY directory1 select_statement1
+[INSERT OVERWRITE [LOCAL] DIRECTORY directory2 select_statement2] ...
+
+导出文件到本地：
+INSERT OVERWRITE LOCAL DIRECTORY '/tmp/local_out' SELECT a.* FROM pokes a;
+
+导出文件到HDFS：
+INSERT OVERWRITE DIRECTORY '/user/admin/SqlldrDat/CnClickstat/20131101/19/clickstat_gp_fatdt0/0' SELECT a.* FROM c02_clickstat_fatdt1 a WHERE dt=’20131201’;
+
+一个源可以同时插入到多个目标表或目标文件，多目标insert可以用一句话来完成：
+FROM src
+  INSERT OVERWRITE TABLE dest1 SELECT src.* WHERE src.key < 100
+  INSERT OVERWRITE TABLE dest2 SELECT src.key, src.value WHERE src.key >= 100 and src.key < 200
+  INSERT OVERWRITE TABLE dest3 PARTITION(ds='2013-04-08', hr='12') SELECT src.key WHERE src.key >= 200 and src.key < 300
+  INSERT OVERWRITE LOCAL DIRECTORY '/tmp/dest4.out' SELECT src.value WHERE src.key >= 300;
+　
+	例子：
+	from tbl1
+	insert overwrite table test2 select '1,2,3' limit 1
+	insert overwrite table d select '4,5,6' limit 1;
+  
+2.8 删除
+　　删除一个内部表的同时会同时删除表的元数据和数据。删除一个外部表，只删除元数据而保留数据。
+　　语法：
+	DROP TABLE tbl_name
+	
+2.9 Limit/Top/REGEX
+　　Limit 可以限制查询的记录数。查询的结果是随机选择的。下面的查询语句从 t1 表中随机查询5条记录：
+
+	SELECT * FROM t1 LIMIT 5
+　　下面的查询语句查询销售记录最大的 5 个销售代表。
+
+	SET mapred.reduce.tasks = 1
+	SELECT * FROM sales SORT BY amount DESC LIMIT 5
+　　
+SELECT 语句可以使用正则表达式做列选择，下面的语句查询除了 ds 和 hr 之外的所有列：
+SELECT (ds|hr)?+.+ FROM sales
+
+
 =======================================================
 
+2.12 UDF　
+基本函数：
+	SHOW FUNCTIONS;
+	DESCRIBE FUNCTION <function_name>;
+
+2.13 UDTF
+　　 UDTF即Built-in Table-Generating Functions 使用这些UDTF函数有一些限制:
+　　1、SELECT里面不能有其它字段，如：
+	SELECT pageid, explode(adid_list) AS myCol...
+　　
+	2、不能嵌套，如：
+	SELECT explode(explode(adid_list)) AS myCol... ＃ 不支持
+
+　　3、不支持GROUP BY / CLUSTER BY / DISTRIBUTE BY / SORT BY ，如：
+	SELECT explode(adid_list) AS myCol ... GROUP BY myCol
+	
+2.14EXPLODE　
+
+　下面是一个示例：
+　　场景：将数据进行转置，如：
+
+	create table test2(mycol array<int>);
+	insert OVERWRITE table test2 select * from (select array(1,2,3) from a union all select array(7,8,9)  from d)c;
+	hive> select * from test2;
+	OK
+	[1,2,3]
+	[7,8,9]
+	hive> SELECT explode(myCol) AS myNewCol FROM test2;
+	OK
+	2
+	7
+	9
 
 
