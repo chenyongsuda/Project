@@ -64,6 +64,105 @@ file_format:
   | RCFILE     (Note:  only available starting with 0.6.0)
   | INPUTFORMAT input_format_classname OUTPUTFORMAT output_format_classname
 
+======================================================
+hive文件存储格式包括以下几类：
+
+1、TEXTFILE
+2、SEQUENCEFILE
+3、RCFILE
+4、ORCFILE(0.11以后出现)
+5、PARQUET
+
+一、TEXTFILE
+默认格式，数据不做压缩，磁盘开销大，数据解析开销大。
+可结合Gzip、Bzip2使用(系统自动检查，执行查询时自动解压)，但使用这种方式，hive不会对数据进行切分，
+从而无法对数据进行并行操作。
+
+示例：
+create table if not exists textfile_table(
+site string,
+url  string,
+pv   bigint,
+label string)
+row format delimited
+fields terminated by '\t'
+stored as textfile;
+
+插入数据操作：
+set hive.exec.compress.output=true;  
+set mapred.output.compress=true;  
+set mapred.output.compression.codec=org.apache.hadoop.io.compress.GzipCodec;  
+set io.compression.codecs=org.apache.hadoop.io.compress.GzipCodec;  
+insert overwrite table textfile_table select * from textfile_table;  
+
+
+二、SEQUENCEFILE
+SequenceFile是Hadoop API提供的一种二进制文件支持，其具有使用方便、可分割、可压缩的特点。
+SequenceFile支持三种压缩选择：NONE，RECORD，BLOCK。Record压缩率低，一般建议使用BLOCK压缩。
+示例：
+
+create table if not exists seqfile_table(
+site string,
+url  string,
+pv   bigint,
+label string)
+row format delimited
+fields terminated by '\t'
+stored as sequencefile;
+
+插入数据操作：
+set hive.exec.compress.output=true;  
+set mapred.output.compress=true;  
+set mapred.output.compression.codec=org.apache.hadoop.io.compress.GzipCodec;  
+set io.compression.codecs=org.apache.hadoop.io.compress.GzipCodec;  
+SET mapred.output.compression.type=BLOCK;
+insert overwrite table seqfile_table select * from textfile_table;  
+
+
+三、RCFILE
+RCFILE是一种行列存储相结合的存储方式。首先，其将数据按行分块，保证同一个record在一个块上，避免读一个记录需要读取多个block。其次，块数据列式存储，有利于数据压缩和快速的列存取。
+RCFILE文件示例：
+
+create table if not exists rcfile_table(
+site string,
+url  string,
+pv   bigint,
+label string)
+row format delimited
+fields terminated by '\t'
+stored as rcfile;
+
+插入数据操作：
+set hive.exec.compress.output=true;  
+set mapred.output.compress=true;  
+set mapred.output.compression.codec=org.apache.hadoop.io.compress.GzipCodec;  
+set io.compression.codecs=org.apache.hadoop.io.compress.GzipCodec;  
+insert overwrite table rcfile_table select * from textfile_table;
+
+
+四、ORCFILE()
+
+五、再看TEXTFILE、SEQUENCEFILE、RCFILE三种文件的存储情况：
+[hadoop@node3 ~]$ hadoop dfs -dus /user/hive/warehouse/*
+hdfs://node1:19000/user/hive/warehouse/hbase_table_1    0
+hdfs://node1:19000/user/hive/warehouse/hbase_table_2    0
+hdfs://node1:19000/user/hive/warehouse/orcfile_table    0
+hdfs://node1:19000/user/hive/warehouse/rcfile_table    102638073
+hdfs://node1:19000/user/hive/warehouse/seqfile_table   112497695
+hdfs://node1:19000/user/hive/warehouse/testfile_table  536799616
+hdfs://node1:19000/user/hive/warehouse/textfile_table  107308067
+[hadoop@node3 ~]$ hadoop dfs -ls /user/hive/warehouse/*/
+-rw-r--r--   2 hadoop supergroup   51328177 2014-03-20 00:42 /user/hive/warehouse/rcfile_table/000000_0
+-rw-r--r--   2 hadoop supergroup   51309896 2014-03-20 00:43 /user/hive/warehouse/rcfile_table/000001_0
+-rw-r--r--   2 hadoop supergroup   56263711 2014-03-20 01:20 /user/hive/warehouse/seqfile_table/000000_0
+-rw-r--r--   2 hadoop supergroup   56233984 2014-03-20 01:21 /user/hive/warehouse/seqfile_table/000001_0
+-rw-r--r--   2 hadoop supergroup  536799616 2014-03-19 23:15 /user/hive/warehouse/testfile_table/weibo.txt
+-rw-r--r--   2 hadoop supergroup   53659758 2014-03-19 23:24 /user/hive/warehouse/textfile_table/000000_0.gz
+-rw-r--r--   2 hadoop supergroup   53648309 2014-03-19 23:26 /user/hive/warehouse/textfile_table/000001_1.gz
+
+总结:
+相比TEXTFILE和SEQUENCEFILE，RCFILE由于列式存储方式，数据加载时性能消耗较大，但是具有较好的压缩比和查询响应。数据仓库的特点是一次写入、多次读取，因此，整体来看，RCFILE相比其余两种格式具有较明显的优势。
+
 
 ======================================================
 1. hive建表语句讲解-最简单建表语句
