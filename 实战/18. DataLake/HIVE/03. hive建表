@@ -175,7 +175,7 @@ AS SELECT ...
 
 2.4显示表
 　　查看表名：
-	  SHOW TABLES;
+    SHOW TABLES;
     
 　　查看表名，部分匹配：
     SHOW TABLES 'page.';
