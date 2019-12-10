@@ -15,3 +15,10 @@ flink目录必须在每一个worker节点的相同路劲。你可以使用一个
 任务提交方式
 1. 命令
 2. web端提交
+
+启动方式：
+windows:
+$ start-cluster.bat
+
+linux:
+$ bin/start-cluster.sh
