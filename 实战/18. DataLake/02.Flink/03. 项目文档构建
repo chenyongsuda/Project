@@ -1,0 +1,11 @@
+通过mvn命令创建脚手架
+$ mvn archetype:generate                               \
+      -DarchetypeGroupId=org.apache.flink              \
+      -DarchetypeArtifactId=flink-quickstart-java      \
+      -DarchetypeVersion=1.9.1
+      
+初始化后通过eclipse打开
+      如果你使用其他类而不是 StreamingJob 作为应用程序的主类/入口， 
+      我们建议你相应地修改 pom.xml 文件中的 mainClass 配置。这样， Flink 可以从 JAR 文件运行应用程序，而无需另外指定主类。
+      
+
