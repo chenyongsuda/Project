@@ -1,0 +1,17 @@
+1. 下载安装包
+2. 解压
+3. 修改
+
+vi /path/to/flink/conf/flink-conf.yaml
+jobmanager.rpc.address: 10.0.0.1
+ 
+vi /path/to/flink/conf/slaves
+10.0.0.2
+10.0.0.3
+可以修改每个taskmanager的slot个数
+
+flink目录必须在每一个worker节点的相同路劲。你可以使用一个共享的NFS目录，或者拷贝整个flink目录到每一个worker节点
+
+任务提交方式
+1. 命令
+2. web端提交
