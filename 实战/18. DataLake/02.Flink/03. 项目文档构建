@@ -9,3 +9,13 @@ $ mvn archetype:generate                               \
       我们建议你相应地修改 pom.xml 文件中的 mainClass 配置。这样， Flink 可以从 JAR 文件运行应用程序，而无需另外指定主类。
       
 
+发现导入eclipse少maven dependence
+在项目目录.classpath文件加上如下语句
+<classpathentry exported="true" kind="con" path="org.eclipse.m2e.MAVEN2_CLASSPATH_CONTAINER">
+	<attributes>
+		<attribute name="maven.pomderived" value="true"/>
+		<attribute name="org.eclipse.jst.component.dependency" value="/WEB-INF/lib"/>
+        </attributes>
+</classpathentry>
+
+重新关闭项目打开就好了.
