@@ -1,0 +1,305 @@
+Flink处理流程
+Source--------->Transformation------------->sink
+
+
+开始
+//1. 构建执行环境
+final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+//2. 定义数据源（source），这里使用监听9000端口的socket消息，通常也可用来测试flink任务
+DataStream<String> socketTextStream = env.socketTextStream("localhost", 9000, "\n");
+//3. 打印dataStream内容
+socketTextStream.print();
+
+执行环境:
+==============
+Environment
+执行环境StreamExecutionEnvironment是所有Flink程序的基础。
+
+创建执行环境有三种方式，分别为：
+StreamExecutionEnvironment.getExecutionEnvironment 
+StreamExecutionEnvironment.createLocalEnvironment 
+StreamExecutionEnvironment.createRemoteEnvironment
+
+3.1 StreamExecutionEnvironment.getExecutionEnvironment
+创建一个执行环境，表示当前执行程序的上下文。 如果程序是独立调用的，则此方法返回本地执行环境；如果从命令行客户端调用程序以提交到集群，则此方法返回此集群的执行环境，也就是说，getExecutionEnvironment会根据查询运行的方式决定返回什么样的运行环境，是最常用的一种创建执行环境的方式。
+val env = StreamExecutionEnvironment.getExecutionEnvironment
+
+3.2 StreamExecutionEnvironment.createLocalEnvironment
+返回本地执行环境，需要在调用时指定默认的并行度。
+val env = StreamExecutionEnvironment.createLocalEnvironment(1)
+
+3.3 StreamExecutionEnvironment.createRemoteEnvironment
+返回集群执行环境，将Jar提交到远程服务器。需要在调用时指定JobManager的IP和端口号，并指定要在集群中运行的Jar包。
+
+val env = StreamExecutionEnvironment.createRemoteEnvironment(1)
+
+
+Source：
+================================
+4.1 基于File的数据源
+	readTextFile(path)
+	一列一列的读取遵循TextInputFormat规范的文本文件，并将结果作为String返回。
+	val env = StreamExecutionEnvironment.getExecutionEnvironment 
+	val stream = env.readTextFile("/opt/modules/test.txt") stream.print() 
+	env.execute("FirstJob")
+	readFile(fileInputFormat, path)
+	按照指定的文件格式读取文件。
+
+	val env = StreamExecutionEnvironment.getExecutionEnvironment 
+	val path = new Path("/opt/modules/test.txt") 
+	stream = env.readFile(new TextInputFormat(path), "/opt/modules/test.txt") 
+	stream.print() env.execute("FirstJob
+	
+4.2 基于Socket的数据源
+	socketTextStream
+	从Socket中读取信息，元素可以用分隔符分开。
+
+	val env = StreamExecutionEnvironment.getExecutionEnvironment
+	 val stream = env.socketTextStream("localhost", 11111) 
+	stream.print() 
+	env.execute("FirstJob")
+	
+4.3 基于集合（Collection）的数据源
+	fromCollection(seq)
+	从集合中创建一个数据流，集合中所有元素的类型是一致的。
+	val env = StreamExecutionEnvironment.getExecutionEnvironment 
+	val list = List(1,2,3,4) 
+	val stream = env.fromCollection(list) 
+	stream.print() 
+	env.execute("FirstJob")
+	fromCollection(Iterator)
+	
+	从迭代(Iterator)中创建一个数据流，指定元素数据类型的类由iterator返回。
+	val env = StreamExecutionEnvironment.getExecutionEnvironment 
+	val iterator = Iterator(1,2,3,4) 
+	val stream = env.fromCollection(iterator)
+	stream.print() 
+	env.execute("FirstJob")
+	fromElements(elements:_*)
+	
+	从一个给定的对象序列中创建一个数据流，所有的对象必须是相同类型的。
+	val env = StreamExecutionEnvironment.getExecutionEnvironment 
+	val list = List(1,2,3,4) 
+	val stream = env.fromElements(list) 
+	stream.print() 
+	env.execute("FirstJob")
+	generateSequence(from, to)
+	
+	从给定的间隔中并行地产生一个数字序列。
+	val env = StreamExecutionEnvironment.getExecutionEnvironment 
+	val stream = env.generateSequence(1,10) 
+	stream.print() 
+	env.execute("FirstJob")
+
+
+sink:
+==================
+4. Sink
+Data Sink 消费DataStream中的数据，并将它们转发到文件、套接字、外部系统或者打印出。
+Flink有许多封装在DataStream操作里的内置输出格式。
+
+4.1 writeAsText
+将元素以字符串形式逐行写入（TextOutputFormat），这些字符串通过调用每个元素的toString()方法来获取。
+
+4.2 WriteAsCsv
+将元组以逗号分隔写入文件中（CsvOutputFormat），行及字段之间的分隔是可配置的。每个字段的值来自对象的toString()方法。
+
+4.3 print/printToErr
+打印每个元素的toString()方法的值到标准输出或者标准错误输出流中。或者也可以在输出流中添加一个前缀，这个可以帮助区分不同的打印调用，如果并行度大于1，那么输出也会有一个标识由哪个任务产生的标志。
+
+4.4 writeUsingOutputFormat
+自定义文件输出的方法和基类（FileOutputFormat），支持自定义对象到字节的转换。
+
+4.5 writeToSocket
+根据SerializationSchema 将元素写入到socket中。
+
+
+
+1.Map
+  DataStream → DataStream，流属性不变
+  就像传统的map数据结构，一个key对应一个value，map算子一个输入对应一个输出
+  LAMBDA：
+        env.fromElements(1, 2, 3)
+        // returns the squared i
+        .map(i -> i*i)
+        .print();
+        
+   =================
+   import org.apache.flink.api.common.typeinfo.Types;
+   import org.apache.flink.api.java.tuple.Tuple2;
+
+   // use the explicit ".returns(...)"
+   env.fromElements(1, 2, 3)
+        .map(i -> Tuple2.of(i, i))
+        .returns(Types.TUPLE(Types.INT, Types.INT))
+        .print();
+        
+   // or in this example use a tuple subclass instead
+    env.fromElements(1, 2, 3)
+        .map(i -> new DoubleTuple(i, i))
+        .print();
+
+    public static class DoubleTuple extends Tuple2<Integer, Integer> {
+        public DoubleTuple(int f0, int f1) {
+            this.f0 = f0;
+            this.f1 = f1;
+        }
+    }
+
+2.DataStream → DataStream，流属性不变
+  相当于平铺，输入一个元素，输出0、一个或多个元素，以下是是以空格分割字符串，并输出分割后的字符串集合
+  import org.apache.flink.api.common.typeinfo.Types;
+  import org.apache.flink.api.java.DataSet;
+  import org.apache.flink.util.Collector;
+
+  DataSet<Integer> input = env.fromElements(1, 2, 3);
+
+  // collector type must be declared
+  input.flatMap((Integer number, Collector<String> out) -> {
+      StringBuilder builder = new StringBuilder();
+      for(int i = 0; i < number; i++) {
+          builder.append("a");
+          out.collect(builder.toString());
+      }
+  })
+  // provide type information explicitly
+  .returns(Types.STRING)
+  // prints "a", "a", "aa", "a", "aa", "aaa"
+  .print();
+  
+  
+3 filter
+DataStream → DataStream，流属性不变
+过滤器，对数据流中的每个元素进行过滤判断，判断为true的元素进入下一个数据流
+
+
+3.1
+Connect
+DataStream,DataStream → ConnectedStreams：连接两个保持他们类型的数据流，两个数据流被Connect之后，只是被放在了一个同一个流中，内部依然保持各自的数据和形式不发生任何变化，两个流相互独立。
+val env = StreamExecutionEnvironment.getExecutionEnvironment
+val stream = env.readTextFile("test.txt")
+val streamMap = stream.flatMap(item => item.split(" ")).filter(item => item.equals("hadoop"))
+val streamCollect = env.fromCollection(List(1,2,3,4))
+val streamConnect = streamMap.connect(streamCollect)
+streamConnect.map(item=>println(item), item=>println(item))
+env.execute("FirstJob")
+
+
+3.2 CoMap,CoFlatMap
+
+ConnectedStreams → DataStream：作用于ConnectedStreams上，功能与map和flatMap一样，对ConnectedStreams中的每一个Stream分别进行map和flatMap处理。
+val env = StreamExecutionEnvironment.getExecutionEnvironment
+val stream1 = env.readTextFile("test.txt")
+val streamFlatMap = stream1.flatMap(x => x.split(" "))
+val stream2 = env.fromCollection(List(1,2,3,4))
+val streamConnect = streamFlatMap.connect(stream2)
+val streamCoMap = streamConnect.map(
+    (str) => str + "connect",
+    (in) => in + 100
+)
+env.execute("FirstJob")
+
+
+val env = StreamExecutionEnvironment.getExecutionEnvironment
+val stream1 = env.readTextFile("test.txt")
+val stream2 = env.readTextFile("test1.txt")
+val streamConnect = stream1.connect(stream2)
+val streamCoMap = streamConnect.flatMap(
+    (str1) => str1.split(" "),
+    (str2) => str2.split(" ")
+)
+streamConnect.map(item=>println(item), item=>println(item))
+env.execute("FirstJob")
+
+3.3 Spilt
+DataStream → SplitStream：根据某些特征把一个DataStream拆分成两个或者多个DataStream。
+val env = StreamExecutionEnvironment.getExecutionEnvironment
+val stream = env.readTextFile("test.txt")
+val streamFlatMap = stream.flatMap(x => x.split(" "))
+val streamSplit = streamFlatMap.split(
+  num =>
+# 字符串内容为hadoop的组成一个DataStream，其余的组成一个DataStream
+    (num.equals("hadoop")) match{
+        case true => List("hadoop")
+        case false => List("other")
+    }
+)
+env.execute("FirstJob")
+
+3.4 Select
+SplitStream→DataStream：从一个SplitStream中获取一个或者多个DataStream。
+
+val env = StreamExecutionEnvironment.getExecutionEnvironment
+val stream = env.readTextFile("test.txt")
+val streamFlatMap = stream.flatMap(x => x.split(" "))
+val streamSplit = streamFlatMap.split(
+  num =>
+    (num.equals("hadoop")) match{
+        case true => List("hadoop")
+        case false => List("other")
+    }
+)
+ 
+val hadoop = streamSplit.select("hadoop")
+val other = streamSplit.select("other")
+hadoop.print()
+ 
+env.execute("FirstJob")
+
+4 keyBy
+      DataStream → KeyedStream
+      将数据流按照key分成多个不相交的分区，相同的key的记录会被分到同一个分区中，keyBy()是通过散列分区实现的。
+      我们可以将一个pojo类的一个或多个属性当作key，也可以将tuple的元素当作key，但是有两种类型不能作为key：
+
+      没有复写hashCode方法，仅默认继承object的hashCode方法的pojo类
+      数组类型
+      dataStream.keyBy("someKey") // Key by field "someKey"
+      dataStream.keyBy(0) // Key by the first element of a Tuple
+      
+5 reduce
+      KeyedStream → DataStream
+      KeyedStream经过ReduceFunction后变成DataStream，主要的作用是对每个分区中的元素进行归约操作，每个分区只输出一个值，即归约结果。
+
+      DataStream<Student> flatMapSocketTextStream = socketTextStream.flatMap(new FlatMapFunction<String, Student>() {
+          @Override
+          public void flatMap(String value, Collector<Student> out) throws Exception {
+              String[] values = value.split(" ");
+              out.collect(new Student(values[0], values[1], values[2], Double.valueOf(values[3])));
+          }
+      });
+
+      DataStream<Student> reduceSteam = flatMapSocketTextStream
+              .keyBy("className")
+              .reduce((ReduceFunction<Student>) (s1, s2) -> s1.getScore() > s2.getScore() ? s1 : s2);
+      source:
+
+      zs nan a 60
+      ww nan a 70
+      ls nv b 90
+      ld nan b 85
+      ad nan a 80
+      flink:
+
+      3> {"name":"zs","gender":"nan","className":"a","score":60.0}
+      3> {"name":"ww","gender":"nan","className":"a","score":70.0}
+      1> {"name":"ls","gender":"nv","className":"b","score":90.0}
+      1> {"name":"ls","gender":"nv","className":"b","score":90.0}
+      3> {"name":"ad","gender":"nan","className":"a","score":80.0}
+
+6 Fold
+KeyedStream → DataStream
+Fold与reduce的唯一区别在于Fold可以设置初始值。
+注意：如果在一个时间窗口里进行窗口中的数据计算，相同的功能应该优先考虑ReduceFunction和FoldFunction，
+因为这些window函数是增量地对窗口中每一个到达的元素执行聚合操作，即一个窗口里永远只会保存一个聚合之后的结果，
+但一个windowFunction是获取了一个窗口中所有元素的一个迭代对象以及时间窗口的额外元信息。
+
+7 Aggregations
+KeyedStream → DataStream
+聚合类算子包括：min,max,sum等
+
+8 union & join
+union 可以将多个DataFrame拼接在一起
+join 将两个DataFrame join一起
+
+
+  
