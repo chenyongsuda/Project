@@ -1,0 +1,1 @@
+对Job而言：一个Job所需的Slot数量大于等于Operator配置的最大Parallelism数，在保持所有Operator的slotSharingGroup一致的前提下Job所需的Slot数量与Job中Operator配置的最大Parallelism相等。
