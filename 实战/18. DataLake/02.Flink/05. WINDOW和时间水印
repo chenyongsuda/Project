@@ -1,0 +1,41 @@
+1.窗口分为:分组window计算和非分组window计算
+Keyed Windows
+stream
+       .keyBy(...)               <-  keyed versus non-keyed windows
+       .window(...)              <-  required: "assigner"
+      [.trigger(...)]            <-  optional: "trigger" (else default trigger)
+      [.evictor(...)]            <-  optional: "evictor" (else no evictor)
+      [.allowedLateness(...)]    <-  optional: "lateness" (else zero)
+      [.sideOutputLateData(...)] <-  optional: "output tag" (else no side output for late data)
+       .reduce/aggregate/fold/apply()      <-  required: "function"
+      [.getSideOutput(...)]      <-  optional: "output tag"
+
+Non-Keyed Windows
+stream
+       .windowAll(...)           <-  required: "assigner"
+      [.trigger(...)]            <-  optional: "trigger" (else default trigger)
+      [.evictor(...)]            <-  optional: "evictor" (else no evictor)
+      [.allowedLateness(...)]    <-  optional: "lateness" (else zero)
+      [.sideOutputLateData(...)] <-  optional: "output tag" (else no side output for late data)
+       .reduce/aggregate/fold/apply()      <-  required: "function"
+      [.getSideOutput(...)]      <-  optional: "output tag"
+      
+
+2.窗口有包含计数和时间
+  计数分为滑动计数和滚动计数
+
+    分组：
+    滚动窗口：inStream.keyBy(0).countWindow(windowSize)
+    滑动窗口: inStream.keyBy(0).countWindow(windowSize,slibingtime)
+
+    不分组：
+    滚动窗口：inStream.countWindowAll(windowSize)
+    滑动窗口: inStream.countWindowAll(windowSize,slibingtime)
+  
+  时间分为滑动时间和滚动时间
+    
+    分组：
+  
+  
+  
+  
