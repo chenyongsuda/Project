@@ -35,7 +35,18 @@ stream
   时间分为滑动时间和滚动时间
     
     分组：
-  
+    滚动窗口: keyBy(0).timeWindow(Time.seconds(5)).sum(1).print()
+    滑动窗口: keyBy(0).timeWindow(Time.seconds(5),Time.seconds(1)).sum(1).print()
+    
+    不分组:
+    滚动窗口: timeWindowAll(Time.seconds(5)).sum(1).print()
+    滑动窗口: timeWindowAll(Time.seconds(5),Time.seconds(1)).sum(1).print()
+    
+    
+    
+    
+    
+    
   
   
   
