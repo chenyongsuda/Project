@@ -77,4 +77,7 @@ Mac 下编译 Linux 和 Windows
         CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build
         CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build
 
+====================================================================
 
+
+配置VSCode出错的话参考PDF VS Code开始Go编程.pdf
