@@ -1,0 +1,56 @@
+使用VSCode搭建Go环境
+
+第一步安装golang 和vscode 直接下一步即可；
+第二步配置环境变量
+
+默认Go安装在 C:\Go
+
+GOROOT=C:\Go
+GOPATH=C:\Learn
+PATH=$PATH;C:\Learn\bin #可以直接在cmd中运行
+VSCode 插件 ctrl + shift +x 输入 go 点击安装
+
+项目目录结构
+
+#公司项目
+├─bin # 存放编译后的二进制文件
+├─pkg # 存放编译后的库文件
+└─src # 存放源代码文件
+    ├─github.com
+    └─yourcompany.com # 网站域名 公司或GitHub
+        └─studygolang # 机构/作者
+            ├─project1 #项目一
+            │   ├─ moduleA #模块A
+            │   └─ moduleB #模块B
+            └─project2 #项目二
+                ├─ moduleA #模块A
+                └─ moduleB #模块B
+#个人项目
+├─bin # 编译后的二进制文件
+├─pkg # 编译后的库文件
+└─src # 源代码文件
+    ├─github.com
+    └─GitHub.com # 网站域名 公司或GitHub
+        └─author # 机构/作者
+            ├─project1 #项目一
+            │   ├─ moduleA #模块A
+            │   └─ moduleB #模块B
+            └─project2 #项目二
+                ├─ moduleA #模块A
+                └─ moduleB #模块B
+                
+go run main.go ## 运行main.go
+go build  ## 表示将源代码编译成可执行文件生成目录.exe二进制文件 fileName.exe
+go build main.go -o hello.exe ## 生成hello.exe
+go install ##表示安装的意思，它先编译源代码得到可执行文件，然后将可执行文件移动到GOPATH的bin目录下。因为环境变量中配置了PATH下的C:/Learn/bin目录，可以在任意地方直接执行可执行文件。
+
+
+从GitHub下导入库
+go get github.com/go-sql-driver/mysql
+#这个包会下载到我们本地GOPATH目录下的src/github.com/go-sql-driver/mysql
+导入使用
+import (
+"database/sql"
+"fmt"
+_ "github.com/go-sql-driver/mysql"
+)
