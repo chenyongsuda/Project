@@ -326,3 +326,62 @@ Key: user_2 窗口开始时间: 2019-11-09 14:05:50 窗口结束时间: 2019-11-
 Key: user_5 窗口开始时间: 2019-11-09 14:05:50 窗口结束时间: 2019-11-09 14:06:00 浏览的商品的平均价值: 20.00
 Key: user_1 窗口开始时间: 2019-11-09 14:05:50 窗口结束时间: 2019-11-09 14:06:00 浏览的商品的平均价值: 23.33
 ————————————————
+
+================================================
+计算实例
+滴滴司机每小时的最高收入
+我们乘坐滴滴打车的时候，每次付款都会向滴滴公司发送一个消息，里面包括行程情况和所付的费用，如果滴滴想了解每小时司机的收入，最高收入是多少，可以通过下面的代码实现：
+
+// configure thedata source
+DataStream<DidiFare> fares = xxxx;
+
+// compute tipsper hour for each driver
+DataStream<Tuple3<Long, Long, Float>> hourlyTips = fares
+.keyBy((DidiFare fare) ->fare.driverId).timeWindow(Time.hours(1))
+.aggregate(new HourlyTipsSolution.AddTips(), newHourlyTipsSolution.WrapWithWindowInfo());
+
+// find thehighest total tips in each hour
+DataStream<Tuple3<Long, Long, Float>> hourlyMax = hourlyTips
+    .timeWindowAll(Time.hours(1)).maxBy(2);
+
+// print theresult on stdout
+printOrTest(hourlyMax);
+
+上面的代码首先计算每个司机，每隔一小时的收入之和；然后基于上一步的数据(上一步的数据形成一个新的流)，每隔一小时计算出收入最大的那个。
+
+    public static class AddTips implements AggregateFunction<
+        DidiFare, // input type
+        Float,    // accumulator type
+        Float     // output type
+        >
+
+    {
+        @Override
+        public Float createAccumulator() {
+            return 0F;
+        }
+        @Override
+        public Float add(DidiFare fare, Float aFloat) {
+            return fare.tip + aFloat;
+        }
+        @Override
+        public Float getResult(Float aFloat) {
+            return aFloat;
+        }
+        @Override
+        public Float merge(Float aFloat, Float accumulator) {
+            return aFloat + accumulator;
+        }
+    }
+上面是个自定义的aggregate函数，在window中不必缓存数据，任一时刻只有一个值。
+
+    public static class WrapWithWindowInfo extends ProcessWindowFunction<
+        Float, Tuple3<Long, Long, Float>, Long, TimeWindow> {
+        @Override
+        public void process(Long key, Context context, Iterable<Float> elements,
+            Collector<Tuple3<Long, Long, Float>> out) throws Exception {
+            Float sumOfTips = elements.iterator().next();//after aggregation, there is only one value
+            out.collect(new Tuple3<>(context.window().getEnd(), key, sumOfTips));
+        }
+    }
+
