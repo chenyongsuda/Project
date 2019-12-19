@@ -48,8 +48,11 @@ stream
     是哪个字段或者如何产生.
     
     
-    
-    
+    如果设置event time的话需要设置时间
+    env.setStreamTimeCharacteristic ( TimeCharacteristic.EventTime );
+    DataStream.assignTimestampsAndWatermarks(...)
   
+  
+    
   
   
