@@ -52,7 +52,8 @@ stream
     env.setStreamTimeCharacteristic ( TimeCharacteristic.EventTime );
     DataStream.assignTimestampsAndWatermarks(...)
   
-  
+3. 无界全局窗口.不根据时间切分计算时间段
+       .keyBy(0).window(GlobalWindows.create())  GlobalWindows需要自定义计算触发器不然不会计算结果
     
   
   
