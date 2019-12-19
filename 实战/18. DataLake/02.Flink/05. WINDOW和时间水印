@@ -44,6 +44,9 @@ stream
     
     
     
+注: countWindow timeWindow 是window函数的封装可以看源码. 同时processtimewindow的话不需要指定特别的,eventtime的话需要指定eventtime
+    是哪个字段或者如何产生.
+    
     
     
     
