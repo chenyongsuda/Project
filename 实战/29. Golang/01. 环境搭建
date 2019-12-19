@@ -54,3 +54,27 @@ import (
 "fmt"
 _ "github.com/go-sql-driver/mysql"
 )
+
+
+编译---
+Go 编译不同平台代码；
+windows平台编译Linux 和Mac
+        # Linux
+        SET CGO_ENABLED=0  // 禁用CGO
+        SET GOOS=linux  // 目标平台是linux
+        SET GOARCH=amd64  // 目标处理器架构是amd64
+        SET CGO_ENABLED=0
+        go build
+        # Mac
+        SET GOOS=darwin
+        SET GOARCH=amd64
+        go build
+        
+Mac 下编译 Linux 和 Windows
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
+        CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build
+        Linux 下编译 Mac 和 Windows平台程序
+        CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build
+        CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build
+
+
