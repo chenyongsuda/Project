@@ -55,5 +55,60 @@ stream
 3. 无界全局窗口.不根据时间切分计算时间段
        .keyBy(0).window(GlobalWindows.create())  GlobalWindows需要自定义计算触发器不然不会计算结果
     
-  
+
+=====================================================================================================
+水位
+Watermark 
+提取WaterMark的方式两类，一类是定时提取watermark，对应AssignerWithPeriodicWatermarks，这种方式会定时提取更新wartermark，另一类伴随event的到来就提取watermark，就是每一个event到来的时候，就会提取一次Watermark，对应AssignerWithPunctuatedWatermarks，这样的方式当然设置watermark更为精准，但是当数据量大的时候，频繁的更新wartermark会比较影响性能。通常情况下采用定时提取就足够了。需要注意的是watermark的提取工作在taskManager中完成，意味着这项工作是并行进行的的，而watermark是一个全局的概念，就是一个整个Flink作业之后一个warkermark。那么warkermark一般是怎么提取呢，这里引用官网的两个例子来说明。在第一个例子中extractTimestamp方法，在每一个event到来之后就会被调用，这里其实就是为了设置watermark的值，关键代码在于Math.max(timestamp,currentMaxTimestamp)，意思是在当前的水位和当前事件时间中选取一个较大值，来让watermark流动。为什么要选取最大值，因为理想状态下，消息的事件时间肯定是递增的，实际处理中，消息乱序是大概率事件，所以为了保证watermark递增，要取最大值。而getCurrentWatermarker会被定时调用，可以看到方法中减了一个常量，这个原因在下面阐述。就这样，不断从eventTime中提取并更新watermark。第二个例子，并没有在提取eventTime的时候更新watermark的值，而是直接取系统当前时间减去一个常量，作为新的watermark。
+
+/**
+ * This generator generates watermarks assuming that elements arrive out of order,
+ * but only to a certain degree. The latest elements for a certain timestamp t will arrive
+ * at most n milliseconds after the earliest elements for timestamp t.
+ */
+public class BoundedOutOfOrdernessGenerator implements AssignerWithPeriodicWatermarks<MyEvent> {
+ 
+    private final long maxOutOfOrderness = 3500; // 3.5 seconds
+ 
+    private long currentMaxTimestamp;
+ 
+    @Override
+    public long extractTimestamp(MyEvent element, long previousElementTimestamp) {//表示提取每个消息现在所处的水位时间 来一个消息调度一次
+        long timestamp = element.getCreationTime();
+        currentMaxTimestamp = Math.max(timestamp, currentMaxTimestamp);
+        return timestamp;
+    }
+ 
+    @Override
+    public Watermark getCurrentWatermark() {                                      //当前水位值  定时调度
+        // return the watermark as current highest timestamp minus the out-of-orderness bound
+        return new Watermark(currentMaxTimestamp - maxOutOfOrderness);
+    }
+}
+/**
+ * This generator generates watermarks that are lagging behind processing time by a fixed amount.
+ * It assumes that elements arrive in Flink after a bounded delay.
+ */
+public class TimeLagWatermarkGenerator implements AssignerWithPeriodicWatermarks<MyEvent> {
+ 
+	private final long maxTimeLag = 5000; // 5 seconds
+ 
+	@Override
+	public long extractTimestamp(MyEvent element, long previousElementTimestamp) { //表示提取每个消息现在所处的水位时间 来一个消息调度一次
+		return element.getCreationTime();
+	}
+ 
+	@Override
+	public Watermark getCurrentWatermark() {                                       //当前水位值  来一个调用一次
+		// return the watermark as current time minus the maximum time lag
+		return new Watermark(System.currentTimeMillis() - maxTimeLag);
+	}
+}
+可以上面两种代码中，提取watermark的时候都要减去一个常量，为了理解这么做的原因，需要了解，watermark的工作方式，上文提到在基于eventTime的计算中，需要watermark的协助来触发window的计算，触发规则是watermark大于等于window的结束时间，并且这个窗口中有数据的时候，就会触发window计算。 举个例子说明其工作方式，当前window为10s，设想理想情况下消息都没有延迟，那么eventTime等于系统当前时间，假如设置watermark等于eventTIme的时候，当watermark = 00:00:10的时候，就会触发w1的计算，这个时后因为消息都没有延迟，watermark之前的消息（00：00：00~00：00：10）都已经落入到window中，所以会计算window中全量的数据。那么假如有一条消息data1，eventTime是00：00：01 应该属于w1，在00：00：11才到达，因为假设消息没有延迟，那么watermark等于当前时间，00：00:11,这个时候w1已经计算完毕，那么这条消息就会被丢弃，没有加入计算，这样就会出现问题。这是已经可以理解，代码中为什么要减去一个常量作为watermark，假设每次提取eventTime的时后，减去2s，那么当data1在00：00：11到达的时候，watermark才是00：00：09这个时候，w1还没有触发计算，那么data1会被加入w1，这个时候计算完全没有问题，所以减去一个常量是为了对延时的消息进行容错的。
+
+实践中遇到问题
+在实际的工作中，会遇到各种各样的数据，最近在工作中遇到一类数据，需求是基于eventTime，按照原始数据中某几个key做keyby操作，然后window为1分钟，对指标做sum。按照一般的做法我选取了类似官网中的第一种生成watermark的方式来处理数据，同时也考虑到延时，看了部分数据的延时，又咨询的业务方，确定了一个延时时间，但在验数（通过离线明细验一天的数）的时候发现，有几个key明显统计小了，经过分析之后，得出结论这些key的数据严重延迟，倒是整体数据严重乱序，watermark设置的太浅了，开始设置延时为10秒，数据中，我发现有一些数据的延时很小只有1s，而这些key的延时竟然达到了60s。因为我是根据eventTime结合延时常量去更新watermark，那些延时很小的key的数据将watermark来到最新，导致延时大的key可能数据刚到，不到10s，watermark已经到达window的end time，直接触发了这个window的计算，导致这些延时太大的key，在window中丢失很多数据。
+
+结论
+对于严重乱序的数据，需要严格统计数据最大延迟时间，才能保证计算的数据准确，延时设置太小会影响数据准确性，延时设置太大不经影响数据的实时性，更加会加重Flink作业的负担，不是对eventTime要求特别严格的数据，尽量不要采用eventTime方式来处理，会有丢数据的风险。
   
