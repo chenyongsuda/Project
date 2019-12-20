@@ -1,0 +1,179 @@
+自定义flink source
+首先根据并行度来区分，可分为单并行度（并行度为1）和多并行度的source。单并行度的source之后的算子中不能再通过setParallelism()来改变并行度，
+多并行度默认同任务的并行度
+然后可以根据是否为RichFunction来区分。RichSourceFunction接口中有open，close，getRuntimeContext和setRuntimeContext等方法来获取状态，缓存系统内部数据等
+
+SourceFunction 只有Run 和 close方法
+RichSourceFunction 有open close等方法
+
+如下类型
+SourceFunction、ParallelSourceFunction、RichParallelSourceFunction
+
+rich 单并行度source 实现  RichSourceFunction 
+rich 多并行度source 实现  RichParallelSourceFunction
+
+==========================================================================================
+3. 继承RichSourceFunction包将jdbc封装读mysql
+package com.run;
+
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+
+import org.apache.flink.api.java.tuple.Tuple10;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
+
+import com.mysql.jdbc.Connection;
+import com.mysql.jdbc.PreparedStatement;
+
+public class Flink2JdbcReader extends
+        RichSourceFunction<Tuple10<String, String, String, String, String, String, String, String, String, String>> {
+    private static final long serialVersionUID = 3334654984018091675L;
+
+    private Connection connect = null;
+    private PreparedStatement ps = null;
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.apache.flink.api.common.functions.AbstractRichFunction#open(org.
+     * apache.flink.configuration.Configuration) to use open database connect
+     */
+    @Override
+    public void open(Configuration parameters) throws Exception {
+        super.open(parameters);
+        Class.forName("com.mysql.jdbc.Driver");
+        connect = (Connection) DriverManager.getConnection("jdbc:mysql://192.168.21.11:3306", "root", "flink");
+        ps = (PreparedStatement) connect
+                .prepareStatement("select col1,col2,col3,col4,col5,col6,col7,col8,col9,col10 from flink.test_tb");
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * org.apache.flink.streaming.api.functions.source.SourceFunction#run(org.
+     * apache.flink.streaming.api.functions.source.SourceFunction.SourceContext)
+     * to use excuted sql and return result
+     */
+    @Override
+    public void run(
+            SourceContext<Tuple10<String, String, String, String, String, String, String, String, String, String>> collect)
+            throws Exception {
+        ResultSet resultSet = ps.executeQuery();
+        while (resultSet.next()) {
+            Tuple10<String, String, String, String, String, String, String, String, String, String> tuple = new Tuple10<String, String, String, String, String, String, String, String, String, String>();
+            tuple.setFields(resultSet.getString(1), resultSet.getString(2), resultSet.getString(3),
+                    resultSet.getString(4), resultSet.getString(5), resultSet.getString(6), resultSet.getString(7),
+                    resultSet.getString(8), resultSet.getString(9), resultSet.getString(10));
+            collect.collect(tuple);
+        }
+
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * org.apache.flink.streaming.api.functions.source.SourceFunction#cancel()
+     * colse database connect
+     */
+    @Override
+    public void cancel() {
+        try {
+            super.close();
+            if (connect != null) {
+                connect.close();
+            }
+            if (ps != null) {
+                ps.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+}
+
+================================================
+4. 继承RichSourceFunction包将jdbc封装写mysql
+package com.run;
+
+import java.sql.DriverManager;
+
+import org.apache.flink.api.java.tuple.Tuple10;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
+
+import com.mysql.jdbc.Connection;
+import com.mysql.jdbc.PreparedStatement;
+
+public class Flink2JdbcWriter extends
+        RichSinkFunction<Tuple10<String, String, String, String, String, String, String, String, String, String>> {
+    private static final long serialVersionUID = -8930276689109741501L;
+
+    private Connection connect = null;
+    private PreparedStatement ps = null;
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.apache.flink.api.common.functions.AbstractRichFunction#open(org.
+     * apache.flink.configuration.Configuration) get database connect
+     */
+    @Override
+    public void open(Configuration parameters) throws Exception {
+        super.open(parameters);
+        Class.forName("com.mysql.jdbc.Driver");
+        connect = (Connection) DriverManager.getConnection("jdbc:mysql://192.168.21.11:3306", "root", "flink");
+        ps = (PreparedStatement) connect.prepareStatement("insert into flink.test_tb1 values (?,?,?,?,?,?,?,?,?,?)");
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * org.apache.flink.streaming.api.functions.sink.SinkFunction#invoke(java.
+     * lang.Object,
+     * org.apache.flink.streaming.api.functions.sink.SinkFunction.Context) read
+     * data from flink DataSet to database
+     */
+    @Override
+    public void invoke(Tuple10<String, String, String, String, String, String, String, String, String, String> value,
+            Context context) throws Exception {
+        ps.setString(1, value.f0);
+        ps.setString(2, value.f1);
+        ps.setString(3, value.f2);
+        ps.setString(4, value.f3);
+        ps.setString(5, value.f4);
+        ps.setString(6, value.f5);
+        ps.setString(7, value.f6);
+        ps.setString(8, value.f7);
+        ps.setString(9, value.f8);
+        ps.setString(10, value.f9);
+        ps.executeUpdate();
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.apache.flink.api.common.functions.AbstractRichFunction#close()
+     * close database connect
+     */
+    @Override
+    public void close() throws Exception {
+        try {
+            super.close();
+            if (connect != null) {
+                connect.close();
+            }
+            if (ps != null) {
+                ps.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
