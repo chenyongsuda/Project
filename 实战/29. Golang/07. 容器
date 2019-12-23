@@ -1,0 +1,200 @@
+数组:
+数组的声明语法如下：
+var 数组变量名 [元素数量]Type
+
+语法说明如下所示：
+数组变量名：数组声明及使用时的变量名。
+元素数量：数组的元素数量，可以是一个表达式，但最终通过编译期计算的结果必须是整型数值，元素数量不能含有到运行时才能确认大小的数值。
+Type：可以是任意基本类型，包括数组本身，类型为数组本身时，可以实现多维数组。
+
+===========初始化:
+var q [3]int = [3]int{1, 2, 3}
+在数组的定义中，如果在数组长度的位置出现“...”省略号，则表示数组的长度是根据初始化值的个数来计算，因此，上面数组 q 的定义可以简化为：
+纯文本复制
+q := [...]int{1, 2, 3}
+
+数组的长度是数组类型的一个组成部分，因此 [3]int 和 [4]int 是两种不同的数组类型，数组的长度必须是常量表达式，因为数组的长度需要在编译阶段确定。
+纯文本复制
+q := [3]int{1, 2, 3}
+q = [4]int{1, 2, 3, 4} // 编译错误：无法将 [4]int 赋给 [3]int
+
+============遍历数组
+var team [3]string
+team[0] = "hammer"
+team[1] = "soldier"
+team[2] = "mum"
+for k, v := range team {
+    fmt.Println(k, v)
+}
+
+================================================================================
+多维数组
+// 声明一个二维整型数组，两个维度的长度分别是 4 和 2
+var array [4][2]int
+// 使用数组字面量来声明并初始化一个二维整型数组
+array = [4][2]int{{10, 11}, {20, 21}, {30, 31}, {40, 41}}
+// 声明并初始化数组中索引为 1 和 3 的元素
+array = [4][2]int{1: {20, 21}, 3: {40, 41}}
+// 声明并初始化数组中指定的元素
+array = [4][2]int{1: {0: 20}, 3: {1: 41}}
+
+
+【示例 2】为二维数组的每个元素赋值
+纯文本复制
+// 声明一个 2×2 的二维整型数组
+var array [2][2]int
+// 设置每个元素的整型值
+array[0][0] = 10
+array[0][1] = 20
+array[1][0] = 30
+array[1][1] = 40
+
+【示例 3】同样类型的多维数组赋值
+纯文本复制
+// 声明两个二维整型数组
+var array1 [2][2]int
+var array2 [2][2]int
+// 为array2的每个元素赋值
+array2[0][0] = 10
+array2[0][1] = 20
+array2[1][0] = 30
+array2[1][1] = 40
+// 将 array2 的值复制给 array1
+array1 = array2
+
+【示例 4】使用索引为多维数组赋值
+纯文本复制
+// 将 array1 的索引为 1 的维度复制到一个同类型的新数组里
+var array3 [2]int = array1[1]
+// 将数组中指定的整型值复制到新的整型变量里
+var value int = array1[1][0]
+
+==========================================
+切片
+slice [开始位置 : 结束位置]
+语法说明如下：
+slice：表示目标切片对象；
+开始位置：对应目标切片对象的索引；
+结束位置：对应目标切片的结束索引。
+
+
+声明切片
+var name []Type
+
+// 声明字符串切片
+var strList []string
+// 声明整型切片
+var numList []int
+// 声明一个空切片
+var numListEmpty = []int{}
+// 输出3个切片
+fmt.Println(strList, numList, numListEmpty)
+// 输出3个切片大小
+fmt.Println(len(strList), len(numList), len(numListEmpty))
+// 切片判定空的结果
+fmt.Println(strList == nil)
+fmt.Println(numList == nil)
+fmt.Println(numListEmpty == nil)
+
+代码输出结果：
+[] [] []
+0 0 0
+true
+true
+false
+
+
+===========
+如果需要动态地创建一个切片，可以使用 make() 内建函数，格式如下：
+make( []Type, size, cap )
+其中 Type 是指切片的元素类型，size 指的是为这个类型分配多少个元素，cap 为预分配的元素数量，这个值设定后不影响 size，只是能提前分配空间，降低多次分配空间造成的性能问题。
+
+示例如下：
+纯文本复制
+a := make([]int, 2)
+b := make([]int, 2, 10)
+fmt.Println(a, b)
+fmt.Println(len(a), len(b))
+代码输出如下：
+[0 0] [0 0]
+2 2
+
+其中 a 和 b 均是预分配 2 个元素的切片，只是 b 的内部存储空间已经分配了 10 个，但实际使用了 2 个元素。
+
+
+容量不会影响当前的元素个数，因此 a 和 b 取 len 都是 2。
+
+=====================================================
+迭代
+// 创建一个整型切片，并赋值
+slice := []int{10, 20, 30, 40}
+// 迭代每一个元素，并显示其值
+for index, value := range slice {
+    fmt.Printf("Index: %d Value: %d\n", index, value)
+}
+
+=======================================================
+map 概念
+map 是引用类型，可以使用如下方式声明：
+var mapname map[keytype]valuetype
+
+其中：
+mapname 为 map 的变量名。
+keytype 为键类型。
+valuetype 是键对应的值类型。
+提示：[keytype] 和 valuetype 之间允许有空格。
+
+在声明的时候不需要知道 map 的长度，因为 map 是可以动态增长的，未初始化的 map 的值是 nil，使用函数 len() 可以获取 map 中 pair 的数目。
+
+【示例】
+纯文本复制
+package main
+import "fmt"
+func main() {
+    var mapLit map[string]int
+    //var mapCreated map[string]float32
+    var mapAssigned map[string]int
+    mapLit = map[string]int{"one": 1, "two": 2}
+    mapCreated := make(map[string]float32)
+    mapAssigned = mapLit
+    mapCreated["key1"] = 4.5
+    mapCreated["key2"] = 3.14159
+    mapAssigned["two"] = 3
+    fmt.Printf("Map literal at \"one\" is: %d\n", mapLit["one"])
+    fmt.Printf("Map created at \"key2\" is: %f\n", mapCreated["key2"])
+    fmt.Printf("Map assigned at \"two\" is: %d\n", mapLit["two"])
+    fmt.Printf("Map literal at \"ten\" is: %d\n", mapLit["ten"])
+}
+输出结果：
+Map literal at "one" is: 1
+Map created at "key2" is: 3.14159
+Map assigned at "two" is: 3
+Map literal at "ten" is: 0
+
+示例中 mapLit 演示了使用{key1: value1, key2: value2}的格式来初始化 map ，就像数组和结构体一样。
+上面代码中的 mapCreated 的创建方式mapCreated := make(map[string]float)等价于mapCreated := map[string]float{} 。
+mapAssigned 是 mapList 的引用，对 mapAssigned 的修改也会影响到 mapLit 的值。
+注意：可以使用 make()，但不能使用 new() 来构造 map，如果错误的使用 new() 分配了一个引用对象，会获得一个空引用的指针，相当于声明了一个未初始化的变量并且取了它的地址：
+mapCreated := new(map[string]float)
+接下来当我们调用mapCreated["key1"] = 4.5的时候，编译器会报错：
+invalid operation: mapCreated["key1"] (index of type *map[string]float).
+
+map 容量
+和数组不同，map 可以根据新增的 key-value 动态的伸缩，因此它不存在固定长度或者最大限制，但是也可以选择标明 map 的初始容量 capacity，格式如下：
+make(map[keytype]valuetype, cap)
+
+例如：
+map2 := make(map[string]float, 100)
+
+当 map 增长到容量上限的时候，如果再增加新的 key-value，map 的大小会自动加 1，所以出于性能的考虑，对于大的 map 或者会快速扩张的 map，即使只是大概知道容量，也最好先标明。
+
+这里有一个 map 的具体例子，即将音阶和对应的音频映射起来：
+noteFrequency := map[string]float32 {
+"C0": 16.35, "D0": 18.35, "E0": 20.60, "F0": 21.83,
+"G0": 24.50, "A0": 27.50, "B0": 30.87, "A4": 440}
+用切片作为 map 的值
+既然一个 key 只能对应一个 value，而 value 又是一个原始类型，那么如果一个 key 要对应多个值怎么办？例如，当我们要处理 unix 机器上的所有进程，以父进程（pid 为整形）作为 key，所有的子进程（以所有子进程的 pid 组成的切片）作为 value。通过将 value 定义为 []int 类型或者其他类型的切片，就可以优雅的解决这个问题，示例代码如下所示：
+纯文本复制
+mp1 := make(map[int][]int)
+mp2 := make(map[int]*[]int)
+
