@@ -1,1 +1,17 @@
-111
+
+流程引擎的几大模块
+
+ProcessEnigne 流程引擎
+===========
+RepositoryService 流程仓库Service,可以管理流程仓库例如部署删除读取流程资源
+RuntimeService 运行时Service可以处理所有运行状态的流程实例流程控制(开始,暂停,挂起等)
+TaskService 任务Service用于管理、查询任务，例如签收、办理、指派等
+IdentitiServicec 身份Service可以管理查询用户、组之间的关系
+FormService 表单Service用于读取和流程、任务相关的表单数据
+HistoryService 历史Service用于查询所有的历史数据
+ManagementService 引擎管理Service，和具体业务无关，主要查询引擎配置，数据库作业
+DynamicBpmService 动态bpm服务
+
+工作流过程
+1. 创建流程  ->  发布流程  -> 创建流程实例(任务Task,有taskmanager) ->结束task
+
