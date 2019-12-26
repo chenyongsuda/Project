@@ -162,7 +162,45 @@ logging.level.org.activiti.engine.impl.persistence.entity=trace
 要重载相关bean方法设置数据源
 
 
+@Configuration
+public class DataSourceConfig {
+    @Bean(name = "primaryDataSource")
+    @Primary
+    @ConfigurationProperties(prefix = "spring.datasource.primary")
+    public DataSource primaryDataSource() {
+        return DataSourceBuilder.create().type(DruidDataSource.class).build();
+    }
 
+    @Bean(name = "secondaryDataSource")
+    @ConfigurationProperties(prefix = "spring.datasource.secondary")
+    public DataSource secondaryDataSource() {
+        return DataSourceBuilder.create().type(DruidDataSource.class).build();
+    }
+}
+
+// 工作流库
+@Configuration
+class PrimaryConfig extends AbstractProcessEngineAutoConfiguration {
+
+    @Autowired
+    @Qualifier("primaryDataSource")
+    private DataSource primaryDataSource;
+    @Autowired
+    private CustomProcessDiagramGeneratorI customProcessDiagramGeneratorI;
+
+    @Primary
+    @Bean
+    public SpringProcessEngineConfiguration springProcessEngineConfiguration(
+            PlatformTransactionManager transactionManager,
+            SpringAsyncExecutor springAsyncExecutor) throws IOException {
+        return baseSpringProcessEngineConfiguration(
+                primaryDataSource,
+                transactionManager,
+                springAsyncExecutor);
+    }
+}
+
+参考同目录多数据源配置
 =========================================================================
 
 
