@@ -1,0 +1,171 @@
+1.搭建简易开发环境
+
+====配置库依赖
+<parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.1.2.RELEASE</version>
+    <relativePath/>
+</parent>
+<dependencies>
+
+    <dependency>
+        <groupId>org.activiti</groupId>
+        <artifactId>activiti-spring-boot-starter-basic</artifactId>
+        <version>6.0.0</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>mysql</groupId>
+        <artifactId>mysql-connector-java</artifactId>
+    </dependency>
+</dependencies>
+
+
+====配置数据源
+#server port
+server.port=7777
+
+#mysql
+spring.datasource.driverClassName=com.mysql.jdbc.Driver
+spring.datasource.url=jdbc:mysql://localhost:3306/springbootactiviti?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true&nullCatalogMeansCurrent=true
+spring.datasource.username=root
+spring.datasource.password=root
+
+#每次应用启动不检查Activiti数据表是否存在及版本号是否匹配，提升应用启动速度
+spring.activiti.database-schema-update=true
+#保存历史数据级别设置为full最高级别，便于历史数据的追溯
+spring.activiti.history-level=full
+spring.activiti.process-definition-location-prefix: classpath:/processes
+
+
+====编写springboot开始代码
+package com.test;
+
+import org.activiti.spring.boot.SecurityAutoConfiguration;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
+public class Main {
+    public static void main(String[] args) {
+        SpringApplication.run(Main.class, args);
+    }
+}
+
+====资源文件夹创建processes文件夹或者配置路径
+
+启动后自动创建28张表
+==============================================================================
+相关配置详解
+## activiti default configuration
+spring.activiti.database-schema-update=true
+spring.activiti.check-process-definitions=false
+spring.activiti.async-executor-enabled=false
+spring.activiti.job-executor-activate=false
+spring.activiti.async-executor-activate=false
+spring.activiti.process-definition-location-prefix: classpath:/processes/
+spring.activiti.history-level=full
+
+###############################################
+spring.activiti.database-schema-update=true建表规则
+flase： 默认值。activiti在启动时，会对比数据库表中保存的版本，如果没有表或者版本不匹配，将抛出异常。
+true： activiti会对数据库中所有表进行更新操作。如果表不存在，则自动创建。
+create_drop： 在activiti启动时创建表，在关闭时删除表（必须手动关闭引擎，才能删除表）。
+drop-create： 在activiti启动时删除原来的旧表，然后在创建新表（不需要手动关闭引擎）
+————————————————
+# 自动部署验证设置:true-开启（默认）、false-关闭
+spring.activiti.check-process-definitions=false
+
+# asyncExecutorEnabled属性设置设置true后将代替那些老的Job executor
+spring.activiti.async-executor-enabled=false 
+spring.activiti.job-executor-activate=false
+
+# asyncExecutorActivate是指activiti在流程引擎启动就激活AsyncExecutor,异步：true-开启（默认）、false-关闭
+spring.activiti.async-executor-activate=true
+
+process-definition-location-prefix是指定activiti流程描述文件的前缀（即路径），启动时，activiti就会去寻找此路径下的流程描述文件，并且自动部署；
+process-definition-location-suffixes是一个String数组，表示描述文件的默认后缀名，默认以下两种。
+#      - **.bpmn
+#      - **.bpmn20.xml
+###############################################
+
+==============================================================================
+比较详细的配置参考如下：
+server.port=8085
+spring.application.name=activiti
+
+## Properties
+##第一数据源
+spring.datasource.primary.url=jdbc:mysql://127.0.0.1:3306/activiti_demo?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true&nullCatalogMeansCurrent=true
+spring.datasource.primary.username=root
+spring.datasource.primary.password=root
+spring.datasource.primary.driverClassName=com.mysql.cj.jdbc.Driver
+spring.datasource.primary.type=com.alibaba.druid.pool.DruidDataSource
+spring.datasource.primary.initialSize=5
+spring.datasource.primary.minIdle=5
+spring.datasource.primary.maxActive=60
+spring.datasource.primary.maxWait=60000
+spring.datasource.primary.timeBetweenEvictionRunsMillis=60000
+spring.datasource.primary.minEvictableIdleTimeMillis=300000
+spring.datasource.primary.testWhileIdle=false
+spring.datasource.primary.testOnBorrow=true
+spring.datasource.primary.testOnReturn=false
+spring.datasource.primary.poolPreparedStatements=true
+spring.datasource.primary.maxPoolPreparedStatementPerConnectionSize=20
+
+##第二数据源
+spring.datasource.secondary.url=jdbc:mysql://127.0.0.1:3306/business_demo?useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
+spring.datasource.secondary.username=root
+spring.datasource.secondary.password=root
+spring.datasource.secondary.driverClassName=com.mysql.cj.jdbc.Driver
+spring.datasource.secondary.type=com.alibaba.druid.pool.DruidDataSource
+spring.datasource.secondary.initialSize=5
+spring.datasource.secondary.minIdle=5
+spring.datasource.secondary.maxActive=60
+spring.datasource.secondary.maxWait=60000
+spring.datasource.secondary.timeBetweenEvictionRunsMillis=60000
+spring.datasource.secondary.minEvictableIdleTimeMillis=300000
+spring.datasource.secondary.testWhileIdle=false
+spring.datasource.secondary.testOnBorrow=true
+spring.datasource.secondary.testOnReturn=false
+spring.datasource.secondary.poolPreparedStatements=true
+spring.datasource.secondary.maxPoolPreparedStatementPerConnectionSize=20
+## activiti default configuration
+spring.activiti.database-schema-update=true
+
+# activiti
+spring.activiti.check-process-definitions=false
+spring.activiti.async-executor-enabled=false
+spring.activiti.job-executor-activate=false
+spring.activiti.async-executor-activate=false
+spring.activiti.process-definition-location-prefix: classpath:/processes/
+spring.activiti.history-level=full
+
+mybatis.mapper-locations= classpath:mapping/*Mapper.xml
+mybatis.type-aliases-package=com.example.activiti.entity
+
+#showSql
+logging.level.com.example.activiti.mapper= debug
+logging.level.org.activiti.engine.impl.persistence.entity=trace
+
+如果就一个数据源的话直接使用单数据源如果是多数据源按照上面的配置
+多数据源的话要指定activiti使用的数据源
+要重载相关bean方法设置数据源
+
+
+
+=========================================================================
+
+
+
+
+
