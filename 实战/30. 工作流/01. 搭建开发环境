@@ -202,6 +202,141 @@ class PrimaryConfig extends AbstractProcessEngineAutoConfiguration {
 
 参考同目录多数据源配置
 =========================================================================
+创建数据库方式由三种 第一种就是如上述搭建方式通过代码方式
+另两种
+数据库初始化
+activiti默认采用内存数据库h2，作为本地测试是够了，但是作为测试环境，开发环境和生产环境，是远远不够的，我们需要使用更为强大和灵活的数据库，以下是zip包里提供的数据库创建脚本
+
+activiti.db2.create.engine.sql
+activiti.db2.create.history.sql
+activiti.db2.create.identity.sql
+activiti.h2.create.engine.sql
+activiti.h2.create.history.sql
+activiti.h2.create.identity.sql
+activiti.hsql.create.engine.sql
+activiti.hsql.create.history.sql
+activiti.hsql.create.identity.sql
+activiti.mssql.create.engine.sql
+activiti.mssql.create.history.sql
+activiti.mssql.create.identity.sql
+activiti.mysql.create.engine.sql
+activiti.mysql.create.history.sql
+activiti.mysql.create.identity.sql
+activiti.mysql55.create.engine.sql
+activiti.mysql55.create.history.sql
+activiti.oracle.create.engine.sql
+activiti.oracle.create.history.sql
+activiti.oracle.create.identity.sql
+activiti.postgres.create.engine.sql
+activiti.postgres.create.history.sql
+activiti.postgres.create.identity.sql
+从脚本上看，activiti支持以下几种数据库
+
+db2
+h2
+hsqldb
+sql server
+mysql
+oracle
+postgres
+本次以mysql为例。
+
+activiti提供两种方式进行数据库初始化，一种是通过脚本，一种是在libs/activiti-engine-6.0.0.jar中提供了DbSchemaCreate类用来创建数据库。一般开发人员无法拿到生产环境的数据库账号密码那么就需要提供脚本给dba执行，但如果有数据库的用户名密码，通过第二种更为方便。
+
+不管通过哪种方式，都需要提前创建mysql数据库，以下就是创建数据库脚本参考(基于mysql 8.0.15)
+
+CREATE DATABASE  activiti default charset utf8 COLLATE utf8_general_ci;
+
+CREATE USER 'activiti'@'%' IDENTIFIED BY 'definesys';
+
+GRANT ALL PRIVILEGES ON activiti.* TO 'activiti'@'%';
+
+ALTER USER 'activiti'@'%' IDENTIFIED WITH mysql_native_password;
+alter user 'activiti'@'%' identified by 'definesys';
+
+FLUSH   PRIVILEGES;
+sql脚本方式初始化
+如果是通过脚本方式，将以下四个脚本依次执行即可
+
+activiti.mysql.create.engine.sql
+activiti.mysql.create.history.sql
+activiti.mysql.create.identity.sql
+如果mysql的版本低于5.6.4的话，需要执行以下几个脚本，原因是由于5.6.4以下的mysql版本不支持timestamps类型。
+
+activiti.mysql55.create.engine.sql
+activiti.mysql55.create.history.sql
+activiti.mysql.create.identity.sql
+DbSchemaCreate方式初始化
+创建maven项目，引入依赖包
+<dependency>
+    <groupId>org.activiti</groupId>
+    <artifactId>activiti-engine</artifactId>
+    <version>6.0.0</version>
+</dependency>
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+</dependency>
+在src/resources文件夹下创建activiti.cfg.xml文件，文件名不可以更改，参考下面配置修改
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <bean id="processEngineConfiguration" class="org.activiti.engine.impl.cfg.StandaloneProcessEngineConfiguration">
+        <property name="databaseType" value="mysql"></property>
+        <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/activiti"></property>
+        <property name="jdbcDriver" value="com.mysql.jdbc.Driver"></property>
+        <property name="jdbcUsername" value="activiti"></property>
+        <property name="jdbcPassword" value="definesys"></property>
+    </bean>
+</beans>
+创建一个包含main方法的java类
+public class DBCreate {
+
+    public static void main(String[] cmd) {
+        DbSchemaCreate.main(cmd);
+    }
+}
+运行程序DBCreate
+如果执行成功，将会有28张表被创建，除了ACT_EVT_LOG表外，其他的都是业务表。
+
+ACT_EVT_LOG
+ACT_GE_BYTEARRAY
+ACT_GE_PROPERTY
+ACT_HI_ACTINST
+ACT_HI_ATTACHMENT
+ACT_HI_COMMENT
+ACT_HI_DETAIL
+ACT_HI_IDENTITYLINK
+ACT_HI_PROCINST
+ACT_HI_TASKINST
+ACT_HI_VARINST
+ACT_ID_GROUP
+ACT_ID_INFO
+ACT_ID_MEMBERSHIP
+ACT_ID_USER
+ACT_PROCDEF_INFO
+ACT_RE_DEPLOYMENT
+ACT_RE_MODEL
+ACT_RE_PROCDEF
+ACT_RU_DEADLETTER_JOB
+ACT_RU_EVENT_SUBSCR
+ACT_RU_EXECUTION
+ACT_RU_IDENTITYLINK
+ACT_RU_JOB
+ACT_RU_SUSPENDED_JOB
+ACT_RU_TASK
+ACT_RU_TIMER_JOB
+ACT_RU_VARIABLE
+数据库表说明
+所有表都是以ACT开头，并且两个字母表示模块。
+
+ACT_RE_*: RE表示repository（仓库），存储流程静态资源，如流程模型文件等
+ACT_RU_*: RU表示runtime（运行时），存储activiti运行时产生的数据，比如实例信息，用户任务信息，job信息等，另外，当流程结束后，运行时数据将会被删除，以保证数据量尽可能少，保证性能。
+ACT_ID_*: ID表示identity（认证），存储认证信息，比如用户，组等。
+ACT_HI_*: HI表示history（历史），存储流程历史数据，比如实例信息，变量数据等。
+ACT_GE_*: GE表示general（通用），存储通用数据。
 
 
 
