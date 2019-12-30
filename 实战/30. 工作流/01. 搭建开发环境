@@ -339,6 +339,272 @@ ACT_HI_*: HI表示history（历史），存储流程历史数据，比如实例�
 ACT_GE_*: GE表示general（通用），存储通用数据。
 
 
+=======================
+springboot配置自动化搭建或者直接网页包放到tomcat能创建整体表结构还有另一种代码方式
+
+========资源文件创建activiti.cfg.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.2.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.2.xsd">
+	<!--druid数据源-->
+	<!--    <bean id ="dataSourceActiviti" class="com.alibaba.druid.pool.DruidDataSource">-->
+	<!--采用内存数据库-->
+	<!-- <property name="url" value="jdbc:h2:mem:activiti;DB_CLOSE_DELAY=1000;MVCC=TRUE" />
+     <property name="driverClassName" value="org.h2.Driver" />
+     <property name="username" value="sa" />
+     <property name="password" value="" />-->
+ 
+	<!--自己本地的数据库-->
+	<!--    <property name="url" value="jdbc:mysql://localhost:3306/activiti8unit?useUnicode=true&amp;characterEncoding=utf-8&amp;usessl=false" />
+        <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+        <property name="username" value="root" />
+        <property name="password" value="root" />
+        <property name="initialSize" value="1"/>
+        <property name="maxActive" value="10"/>
+        <property name="filters" value="stat,slf4j"/>
+    </bean>-->
+ 
+ 
+	<!--=====================================================================-->
+	<!-- 配置数据源 -->
+	<!--<bean id="dataSourceActiviti" class="org.apache.commons.dbcp.BasicDataSource"
+		  destroy-method="close">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver"/>
+		<property name="url" value="jdbc:mysql://localhost:3306/activiti10unit?useUnicode=true&amp;characterEncoding=utf-8&amp;usessl=false"/>
+		<property name="username" value="root"/>
+		<property name="password" value="root"/>
+		&lt;!&ndash; 初始化连接大小 &ndash;&gt;
+		<property name="initialSize" value="1"></property>
+		&lt;!&ndash; 连接池最大数量 &ndash;&gt;
+		<property name="maxActive" value="10"></property>
+		&lt;!&ndash; 连接池最大空闲 &ndash;&gt;
+		<property name="maxIdle" value="10"></property>
+		&lt;!&ndash; 连接池最小空闲 &ndash;&gt;
+		<property name="minIdle" value="2"></property>
+		&lt;!&ndash; 获取连接最大等待时间 &ndash;&gt;
+		<property name="maxWait" value="10000"></property>
+	</bean>-->
+ 
+ 
+<!--	<bean id="dataSourceActiviti" class="org.apache.commons.dbcp.BasicDataSource"
+		  destroy-method="close">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver"/>
+		<property name="url" value="jdbc:mysql://localhost:3306/activiti10unit?useUnicode=true&amp;characterEncoding=utf-8&amp;usessl=false"/>
+		<property name="username" value="root"/>
+		<property name="password" value="root"/>
+		&lt;!&ndash; 初始化连接大小 &ndash;&gt;
+		<property name="initialSize" value="1"></property>
+		&lt;!&ndash; 连接池最大数量 &ndash;&gt;
+		<property name="maxActive" value="10"></property>
+		&lt;!&ndash; 连接池最大空闲 &ndash;&gt;
+		<property name="maxIdle" value="10"></property>
+		&lt;!&ndash; 连接池最小空闲 &ndash;&gt;
+		<property name="minIdle" value="2"></property>
+		&lt;!&ndash; 获取连接最大等待时间 &ndash;&gt;
+		<property name="maxWait" value="10000"></property>
+	</bean>-->
+ 
+ 
+	<!-- 单独创建事物管理器-->
+	<!--<bean id="transactionManager1" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		&lt;!&ndash;<property name="dataSource" ref="dataSourceActiviti"/> 数据源分开&ndash;&gt;
+		<property name="dataSource" ref="dataSource"/> &lt;!&ndash;用同一个数据源&ndash;&gt;
+	</bean>-->
+	<!--Spring集成-->
+	<!--要单独创建数据库，因为speing要单独对我们的事物做处理 事物是基于数据库的事物-->
+	<bean id="processEngineConfiguration" class="org.activiti.spring.SpringProcessEngineConfiguration">
+		<!--<property name="dataSource" ref="dataSourceActiviti"/> 数据源分开-->
+		<property name="dataSource" ref="dataSource"/> <!--用同一个数据源-->
+		<!--数据库策略-->
+ 
+		<property name="databaseSchemaUpdate" value="true" />
+		<!--注入事物管理器-->
+		<property name="transactionManager" ref="transactionManager"/>
+		<!--<property name="jobExecutorActivate" value="false" />-->
+		<property name="deploymentResources" value="classpath:/activitit-bpmn20/*.*.xml"/>
+ 
+		<!--是否使用历史数据-->
+		<property name="dbHistoryUsed" value="true"/>
+		<!--是否使用身份数据-->
+		<property name="dbIdentityUsed" value="true"/>
+        <!--所有表结构加前缀 开头-->
+		<!--<property name="databaseTablePrefix" value="t_"/>-->
+ 
+		<!--默认属性，流程引擎可以根据传进去数据库的url 驱动等自动判断数据库，所以这个配置可以省略-->
+		<!--<property name="databaseType" value="mysql"/>-->
+ 
+		<!--记录历史详情的级别 共4个级别 -->
+		<!--<property name="history" value="none" /> -->      <!-- 不记录历史流程，性能高，流程结束后不可读-->
+		<!--<property name="history" value="activity" />-->   <!-- 归档流程实例和活动实例，流程变量不同步-->
+		<!--<property name="history" value="audit" />-->      <!-- 默认值，在activiti基础上同步变量值，保持表单属性-->
+		<property name="history" value="full" />              <!--全部记录，性能较差，记录所有实例和变量的细节变化-->
+ 
+		<!--是否开启我们的事件日志 true开启 act_evt_log -->
+		<property name="enableDatabaseEventLogging" value="true"/>
+ 
+		<!--事件处理及监听器配置：1 list -->
+		<!--<property name="eventListeners">
+			<list>
+				&lt;!&ndash;自定义监听类&ndash;&gt;
+				<bean class="su.activiti.event.ProcessEventListener"/>
+			</list>
+		</property>-->
+ 
+		<!--事件处理及监听器配置：2 map -->
+	<!--	<property name="typedEventListeners">
+		<map>
+			<entry key="PROCESS_STARTED"> &lt;!&ndash; 配置key以后只打印PROCESS_STARTED 对应的流程启动日志&ndash;&gt;
+				<list>
+					<bean class="su.activiti.event.ProcessEventListener"/>
+				</list>
+			</entry>
+		</map>
+		</property>-->
+ 
+		<!-- 配置自定义MDCComandInvoder 拦截器 引入自己定义的bean -->
+		<!--<property name="commandInvoker" ref="comandInvoder" />-->
+ 
+		<!--命令拦截器-->
+	<!--	<property name="customPreCommandInterceptors">
+			<list>   &lt;!&ndash;这个配置好像有问题配置后 test 测试 流程启动报错   java.lang.IllegalStateException: Failed to load ApplicationContext&ndash;&gt;
+				&lt;!&ndash;定义一个拦截器统计这个命令执行的时间是多少&ndash;&gt;
+				<bean class="su.activiti.interceptor.DurationCommandInterceptor" />
+			</list>
+		</property>-->
+ 
+ 
+	</bean>
+ 
+ 
+	<!--	<bean id="processEngineConfiguration" class="org.activiti.engine.impl.cfg.StandaloneProcessEngineConfiguration">
+                <property name="dataSource" ref="dataSourceActiviti"/>
+                <property name="databaseSchemaUpdate" value="true"/>
+            </bean>-->
+ 
+	<bean id="comandInvoder" class="su.activiti.interceptor.MDCComandInvoder" />
+ 
+	<!--构造流程引擎对象-->
+	<bean id="processEngine" class="org.activiti.spring.ProcessEngineFactoryBean">
+		<!--指定流程引擎配置对象-->
+		<property name="processEngineConfiguration" ref="processEngineConfiguration"/>
+	</bean>
+ 
+	<!--把服务暴露给Spring-->
+	<!-- 创建activiti提供的各种服务 -->
+	<!-- 工作流仓储服务 --> <!--部署流程定义文件-->
+	<bean id="repositoryService" factory-bean="processEngine"
+		  factory-method="getRepositoryService" />
+	<!-- 工作流运行服务 -->
+	<bean id="runtimeService" factory-bean="processEngine"
+		  factory-method="getRuntimeService" />
+	<!-- 工作流任务服务 -->
+	<bean id="taskService" factory-bean="processEngine"
+		  factory-method="getTaskService" />
+	<!-- 工作流历史数据服务 -->
+	<bean id="historyService" factory-bean="processEngine"
+		  factory-method="getHistoryService" />
+	<!-- 工作流管理服务 -->
+	<bean id="managementService" factory-bean="processEngine"
+		  factory-method="getManagementService" />
+	<!-- 工作流唯一服务（用户服务） -->
+	<bean id="identityService" factory-bean="processEngine" factory-method="getIdentityService"/>
+ 
+	<!-- 表单服务 -->
+	<bean id="formService" factory-bean="processEngine" factory-method="getFormService"/>
+	<bean id="dynamicBpmnService" factory-bean="processEngine" factory-method="getDynamicBpmnService"/>
+ 
+ 
+	<!--配置测试 Rule-->
+	<!--
+        <bean id="activitiRule" class="org.activiti.engine.test.ActivitiRule">
+            <property name="processEngine"  ref="processEngine"/>
+        </bean>
+    -->
+	<!-- <bean id="helloBean" class="com.su.test.HelloBean"></bean>-->
+	<!--=====================================================================-->
+</beans>
+ 
+
+ 简单配置:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+						http://www.springframework.org/schema/contex http://www.springframework.org/schema/context/spring-context.xsd
+						http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+ 
+    <!--数据源配置dbcp-->
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+        <property name="url" value="jdbc:mysql://localhost:3306/activiti7.0" />
+        <property name="username" value="root" />
+        <property name="password" value="root" />
+    </bean>
+    <!--activiti单独运行的ProcessEngine配置对象(processEngineConfiguration),使用单独启动方式
+        默认情况下：bean的id=processEngineConfiguration
+    -->
+ 
+    <bean id="processEngineConfiguration" class="org.activiti.engine.impl.cfg.StandaloneProcessEngineConfiguration">
+    <!--代表数据源-->
+    <property name="dataSource" ref="dataSource"></property>
+ 
+ 
+   <!-- <property name="jdbcDriver" value="com.mysql.jdbc.Driver" />
+    <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/activiti" />
+    <property name="jdbcUsername" value="root" />
+    <property name="jdbcPassword" value="root" />-->
+    <!--代表是否生成表结构-->
+    <property name="databaseSchemaUpdate" value="true"/>
+    </bean>
+</beans>
+
+======
+Activiti也可以通过配置文件来配置数据库的信息，加载配置文件从而得到工作流引擎
+
+
+        /**2. 通过加载 activiti.cfg.xml 获取 流程引擎 和自动创建数据库及表
+         * 
+         
+        ProcessEngineConfiguration engineConfiguration=
+                ProcessEngineConfiguration.createProcessEngineConfigurationFromResource("activiti.cfg.xml");
+            //从类加载路径中查找资源  activiti.cfg.xm文件名可以自定义
+        ProcessEngine processEngine = engineConfiguration.buildProcessEngine();
+        System.out.println("使用配置文件Activiti.cfg.xml获取流程引擎");
+        */
+        
+        
+activiti.cfg.xml
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd
+http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+ <!-- 配置 ProcessEngineConfiguration  -->
+ <bean id="processEngineConfiguration" class="org.activiti.engine.impl.cfg.StandaloneProcessEngineConfiguration">
+   <!-- 配置数据库连接 -->
+ <property name="jdbcDriver" value="com.mysql.jdbc.Driver"></property>
+ <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/activitiDB?createDatabaseIfNotExist=true&amp;useUnicode=true&amp;characterEncoding=utf8"></property>
+ <property name="jdbcUsername" value="root"></property>
+ <property name="jdbcPassword" value="root"></property>
+ 
+  <!-- 配置创建表策略 :没有表时，自动创建 -->
+  <property name="databaseSchemaUpdate" value="true"></property>
+ 
+ </bean>
+
+</beans>
+
+
 
 
 
