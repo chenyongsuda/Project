@@ -1,0 +1,56 @@
+=================发布流程
+/调用引擎,初始化
+ProcessEngine processEngine = ProcessEngines.getDefaultProcessEngine();
+/**
+ * 部署流程定义
+ */
+@Test
+public void deployment() {
+    Deployment deployment = processEngine.getRepositoryService()//与流程定义和部署相关的Service
+            .createDeployment()//创建一个部署对象
+            .name("helloword")//添加部署的名称
+            .addClasspathResource("diagrams/helloword.bpmn")//从classpath下加载资源，一次一个
+            .addClasspathResource("diagrams/helloword.png")
+            .deploy();//完成部署
+        System.out.println("部署ID"+deployment.getId());//1
+        System.out.println("部署名称"+deployment.getName());
+}
+
+
+将会影响三张表
+ACT_GE_BYTEARRAY      通用的流程定义和流程资源(增加流程定义文件描述helloword.bpmn 和 png)
+ACT_RE_DEPLOYMENT     部署单元信息(描述部署信息,描述部署的动作信息)
+ACT_RE_PROCDEF        已部署的流程定义(描述部署中的xml中流程的信息如流程的key版本等信息)
+
+
+=================
+/**
+   *启动流程实例
+   */
+  @Test
+  public void startProcessInstance() {
+      String processDefinitionKey = "helloword";
+      ProcessInstance processInstance = processEngine.getRuntimeService()//与正在执行的流程实例和执行对象相关的Service
+              .startProcessInstanceByKey(processDefinitionKey);//根据Key值来查询流程,也可以根据ID
+      System.out.println("流程实例ID:"+processInstance.getId());  //2501
+                                                                  //对应数据库act_ru_execution
+      System.out.println("流程定义ID:"+processInstance.getProcessDefinitionId()); //helloword:1:4
+                                                                              //对应数据库act_re_deployment
+  }
+  
+涉及如下表
+1. ACT_HI_PROCINST     流程实例(启动完就会产生一条实例ID)
+3. ACT_HI_TASKINST     历史的任务实例(所有任务历史)现阶段走过start 到张三提交请假请求节点了 这里产生的一个task就是该张三了
+2. ACT_HI_ACTINST      历史的流程实例(包含start-end的所有流程过程,taskid比TASKINST表少一有对应关系)(比如上述代码执行完就会有两条记录,1.start节点 2. 第一个提交节点但是结束时间没有表示还没结束)
+4. ACT_RU_IDENTITYLINK 运行时用户关系信息
+5. ACT_RU_TASK         正在执行的节点(显示需要执行的节点当处理结束会删除)
+
+
+
+
+
+
+
+
+
+
