@@ -297,10 +297,193 @@ public class BusinessKeyAdd {
         return "redirect:/workflow/process-list";
     }
     
+===流程参数
+    流程变量在整个工作流中扮演很重要的作用
+　　例如：请假流程中有请假天数、请假原因等一些参数都为流程变量的范围。流程变量的作用域范围是流程实例。也就是说各个流程实例的流程变量是不相互影响的。
+添加流程变量
+　　1、在启动流程实例时，可以添加流程变量。　　
+public void startProcess() throws Exception {
+        String processDefinitionKey ="varTest";
+        // 创建流程变量
+        Map<String,Object> variables = new HashMap<String,Object>();
+        variables.put("请假人", "冯小刚");
+        // 在启动时设置流程变量
+        ProcessInstance pi = processEngine.getRuntimeService().startProcessInstanceByKey(processDefinitionKey , variables );
+        System.out.println("pid:" + pi.getId());
+    }
     
-    
+    说明：
+　　1)     在启动流程实例时，通过重载startProcessInstanceByKey的方法可以加载流程变量。
+　　2)     第二个参数要求是Map<String ,Object>类型，意味着可以添加多个流程变量。
+　　3)     当这段代码执行完以后，会在数据库表act_ru_variable中添加两行记录。
 
+　　2、在办理任务时
+　　　　在办理任务时，有时候任务办理完成以后，要传递一些信息到系统中。这个时候可以利用TaskService这个类来添加流程实例。
+        public void setVar() throws Exception {
+                String processInstanceId = "1901";
+                Task task =taskService.createTaskQuery().taskAssignee("manager").processInstanceId(processInstanceId ).singleResult();
+        //        String taskId 
+                /**
+                 *  在办理过程中设置流程变量
+                 */
+        //        taskService.setVariable(taskId, variableName, value)   // 设置一个流程变量
+                Map<String, Object> variables = new HashMap<>();
+        //        variables.put("请假时间", "2013-11-22");
+        //        variables.put("请假天数", "3");
+                variables.put("请假天数", 3);
+                taskService.setVariables(task.getId(), variables );
+                /**
+                 * 在任务完成时设置流程变量
+                 */
+        //        taskService.complete(taskId)
+        //        Map<String, Object> variables = new HashMap<>();
+        //        variables.put("请假原因", "约会！！");
+        //        taskService.complete(task.getId(), variables);
+        }
+        说明：
+          1)     利用setVariables方法在任务办理过程中添加一批流程变量。
+          2)     利用setVariable方法在任务办理过程中添加一个流程变量。
+          3)     TaskService有一个重载 complete方法
+
+ 
+
+　　3、执行流程实例时直接在Execution上设置流程变量 
+
+　　　　因为流程变量的作用域就是流程实例，所以只要设置就行了，不用管在哪个阶段
+
+        public void setVarByExecution() throws Exception {
+                String processInstanceId = "1901";
+                Task task =taskService.createTaskQuery().taskAssignee("manager").processInstanceId(processInstanceId ).singleResult();
+        //        String taskId 
+                /**
+                 *  在办理过程中设置流程变量
+                 */
+        //        taskService.setVariable(taskId, variableName, value)   // 设置一个流程变量
+                Map<String, Object> variables = new HashMap<>();
+                variables.put("批注", "好好约会，注意安全！！");
+                runtimeService.setVariables(task.getExecutionId(), variables);
+                /**
+                 * 在任务完成时设置流程变量
+                 */
+        //        taskService.complete(taskId)
+        //        Map<String, Object> variables = new HashMap<>();
+        //        variables.put("请假原因", "约会！！");
+        //        taskService.complete(task.getId(), variables);
+
+            }
     
+        另一种设置变量的方法：
+        public void setVarByObj() throws Exception {
+                String processInstanceId = "1901";
+                Task task =taskService.createTaskQuery().taskAssignee("manager").processInstanceId(processInstanceId ).singleResult();
+                Form form = new Form();//这个javabean实现了Serializable接口
+
+             form.setName("表单名称");
+                form.setContent("我是张三，我要请假3天");
+                taskService.setVariable(task.getId(), "form", form);
+            }
+ 
+
+        获取流程变量
+          可以通过runTimeService的方法来获取流程变量。
+        public void viewVar() throws Exception {
+                String processInstanceId = "1901";
+                Task task =taskService.createTaskQuery().taskAssignee("user").processInstanceId(processInstanceId ).singleResult();
+                System.out.println("taskName:" + task.getName());
+        //        String variableName = "请假人";
+        //        String val = (String)taskService.getVariable(task.getId(), variableName );
+                Map<String,Object> vars = taskService.getVariables(task.getId());
+                for (String variableName : vars.keySet()) {
+                    String val = (String) vars.get(variableName);
+                    System.out.println(variableName + " = " +val);
+                }
+            }
+          说明：这些流程变量是从act_ru_variable这个表中读出来的。
+======== 
+    监听器方式设置审批人
+    事件分为
+    assignment：任务分配给指定的人员时触发。当流程到达userTask， assignment事件会在create事件之前发生。
+    create：任务创建并设置所有属性后触发。
+    complete：当任务完成，并尚未从运行数据中删除时触发。
+    delete：只在任务删除之前发生。注意在通过completeTask正常完成时，也会执行。
+
+需要实现TaskListener接口
+    import org.activiti.engine.delegate.DelegateTask;
+    import org.activiti.engine.delegate.TaskListener;
+
+    public class MyTaskListener implements TaskListener {
+
+        @Override
+        public void notify(DelegateTask delegateTask) {
+            System.out.println(delegateTask.getEventName());
+            if ("assignment".equals(delegateTask.getEventName())) {
+                System.out.println("办理人" + delegateTask.getAssignee());
+            }
+        }
+    }
+
+===============================================================================================
+学习流程变量
+
+设置全局流程变量
+/**
+     * 设置流程变量数据
+     */
+    @Test
+    public void setVariableValues2(){
+        TaskService taskService=processEngine.getTaskService(); // 任务Service
+        String taskId="15004";
+        Student student=new Student();
+        student.setId(1);
+        student.setName("张三");
+
+        Map<String, Object> variables=new HashMap<String,Object>();
+        variables.put("days", 2);
+        variables.put("date", new Date());
+        variables.put("reason", "发烧");
+        variables.put("student", student);
+        taskService.setVariables(taskId, variables);
+    }
+    
+    或者在complete方法中第二个参数上设置(变量)
+    
+    或者在运行时设置流程变量
+    runtimeservice.setenv...
+    
+    可以通过任务id设置或者流程实例id设置
+    
+    /**
+     * 获取流程变量数据
+     */
+    @Test
+    public void getVariableValues2(){
+        TaskService taskService=processEngine.getTaskService(); // 任务Service
+        String taskId="20002";
+        Map<String,Object> variables=taskService.getVariables(taskId);
+        Integer days=(Integer) variables.get("days");
+        Date date=(Date) variables.get("date");
+        String reason=(String) variables.get("reason");
+        Student student=(Student)variables.get("student"); 
+        System.out.println("请假天数："+days);
+        System.out.println("请假日期："+date);
+        System.out.println("请假原因："+reason);
+        System.out.println("请假对象："+student.getId()+","+student.getName());
+    }
+
+设置局部流程变量
+　　　　TaskService taskService=processEngine.getTaskService(); // 任务Service
+        String taskId="72504";
+        taskService.setVariableLocal(taskId,"date", new Date());
+获取局部流程变量
+　　　　TaskService taskService=processEngine.getTaskService(); // 任务Service
+        String taskId="80002";  
+        Date date=(Date) taskService.getVariableLocal(taskId, "date");
+
+=========================================================================
+
+
+
+
 
 
 
