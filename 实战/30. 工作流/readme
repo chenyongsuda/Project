@@ -88,3 +88,136 @@ ACT_RU_*: 'RU'表示runtime。 这些运行时的表，包含流程实例，任�
 ACT_ID_*: 'ID'表示identity。 这些表包含身份信息，比如用户，组等等。
 ACT_HI_*: 'HI'表示history。 这些表包含历史数据，比如历史流程实例， 变量，任务等等。
 ACT_GE_*: 通用数据， 用于不同场景下，如存放资源文件。
+
+===========================
+流程定义查询删除
+/**
+ * 查询流程定义 返回流程定义集合 ---对应act_re_procdef
+ */
+@Test
+public void list(){
+    List<processdefinition> pdList=processEngine.getRepositoryService() // 获取service类
+        .createProcessDefinitionQuery() // 创建流程定义查询
+        .processDefinitionKey("myFirstProcess") // 通过key查询
+        .list(); // 返回一个集合
+    for(ProcessDefinition pd:pdList){
+        System.out.println("ID_："+pd.getId());
+        System.out.println("NAME_："+pd.getName());
+        System.out.println("KEY_："+pd.getKey());
+        System.out.println("VERSION_："+pd.getVersion());
+        System.out.println("===================");
+    }
+}
+
+/**
+ * 通过ID查询当个流程定义
+ */
+@Test
+public void getById(){
+    ProcessDefinition pd=processEngine.getRepositoryService() // 获取service类
+            .createProcessDefinitionQuery() // 创建流程定义查询
+            .processDefinitionId("myFirstProcess:1:4") // 通过id查询
+            .singleResult(); // 查询返回当个结果
+    System.out.println("ID_："+pd.getId());
+    System.out.println("NAME_："+pd.getName());
+    System.out.println("KEY_："+pd.getKey());
+    System.out.println("VERSION_："+pd.getVersion());
+}
+
+/**
+ * 删除流程定义
+ */
+@Test
+public void delete(){
+    processEngine.getRepositoryService()
+        .deleteDeployment("12501"); // 流程部署ID
+    System.out.println("delete OK！");
+}
+上面那种有个问题，一般情况不会有问题，但是，假如这个流程定义的流程实例在运行活动中，未完结。这时候我们执行上面的代码，会报错；
+本质的话，就是数据库里的数据 有主外键关联，不能删除；
+我们实际情况的，假如一个流程定义都不需要了。那那些活动的流程实例也直接了当的级联删除；所以我们这里要搞级联删除；上代码；
+
+/**
+ * 级联删除 已经在使用的流程实例信息也会被级联删除
+ */
+@Test
+public void deleteCascade(){
+    processEngine.getRepositoryService()
+        .deleteDeployment("12501", true); // 默认是false true就是级联删除
+    System.out.println("delete cascade OK!");
+}
+这时候 任何情况都能直接删除流程定义； 我们开发的时候就用这种；
+有时候我们一个流程定义不需要的，包括所有版本，这时候我们在用户界面上一个一个删除太麻烦；所有有时候我们又这样的需求，一下子把所有Key相同的流程定义全部删除；
+我们的思路是这样的；
+第一步：根据Key获取所有的流程定义；
+第二步：遍历集合，获取每个流程定义的流程部署Id
+第三步：我们根据流程部署Id即可删除所有的流程定义；
+/**
+ * 删除所有Key相同的流程定义
+ * @throws Exception
+ */
+@Test
+public void deleteByKey()throws Exception{
+    List<processdefinition> pdList=processEngine.getRepositoryService()  // 获取service类
+            .createProcessDefinitionQuery() // 创建流程定义查询
+            .processDefinitionKey("mySecondProcess") // 根据Key查询
+            .list();
+    for(ProcessDefinition pd:pdList){  // 遍历集合 获取流程定义的每个部署Id，根据这个id来删除所有流程定义
+        processEngine.getRepositoryService()
+        .deleteDeployment(pd.getDeploymentId(), true); 
+    }
+}
+
+===========================
+Activiti流程定义“修改”
+前面讲了流程定义的添加，查询，删除。至于这个修改；我们今天来讨论下；
+首先说下结论，流程定义是不能修改的；这里举例子，假如一个流程定义的流程实例在活动运行中。假如可以修改，本来要流转到A这个节点，因为流程定义修改了，流转到B这个节点。就不符合当时这个流程实例的初衷了；所以一般开发的话，不能修改流程定义，我们是通过增加版本号的方式。来实现“修改”的；
+
+在设计流程图的时候，这里的Id 对应到数据库里的就是那个Key值 只要Id相同。就算是同一个流程定义；
+比如我们可以发布多次，Id一样，到数据库表那边 Key作为版本属性 值会增加；
+
+我们一般启动流程实例的时候，我们用Key来启动。这样启动的时候 就是用的最新版本的流程定义来启动流程实例的；
+
+假如用流程定义Id来启动 很不推荐；
+
+这里顺便再说下流程定义的Id；
+
+这个Id值组成的话 是 key值:版本号:流程部署ID；
+
+===========================
+流程定义历史查询
+1.根据流程实例id（processInstanceId）获取流程的历史记录，并按照发起时间排序
+List<HistoricTaskInstance> historicTaskInstanceList = ProcessEngines.getDefaultProcessEngine().
+getHistoryService().createHistoricTaskInstanceQuery().
+processInstanceId(processInstanceId).
+orderByTaskCreateTime().asc().list();
+
+
+2.通过for each 循环遍历列表 通过historicTaskInstanceLis.get*** 方法即可取出单个历史任务的属性，并设置一个index来标记步骤的编号
+​
+index=1;
+for (HistoricTaskInstance historicTaskInstance : historicTaskInstanceList) {
+    //父级流程任务Id
+    historicTaskInstance.getParentTaskId();
+    //taskId 活动ID
+    historicTaskInstance.getId();
+    //任务序号
+    processHistoryDTO.setIndexKey(index);
+    index+=1;
+    //节点ID
+    historicTaskInstance.getTaskDefinitionKey();
+    //办理时间
+    historicTaskInstance.getEndTime();
+    //接收时间
+    historicTaskInstance.getStartTime();
+    //节点名称
+    historicTaskInstance.getName();
+    //节点状态
+    if (endTimeDate != null) {
+        processHistoryDTO.setStates("已结束");
+    }else{
+        processHistoryDTO.setStates("运行中");
+    }
+    //会签、绿色通道等消息（需要取出getDescription的内容进行判断）
+    historicTaskInstance.getDescription()
+}
