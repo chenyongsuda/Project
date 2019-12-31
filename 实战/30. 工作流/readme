@@ -221,3 +221,88 @@ for (HistoricTaskInstance historicTaskInstance : historicTaskInstanceList) {
     //会签、绿色通道等消息（需要取出getDescription的内容进行判断）
     historicTaskInstance.getDescription()
 }
+
+
+
+===========================================================================================
+进阶
+流程实例为动态概念,流程定义为静态概念
+
+如何和业务系统通过business key来结合
+
+/**
+ *  启动流程实例，添加进businessKey
+ *
+ *  本质：act_ru_execution表中的businessKey的字段要存入业务标识
+ */
+public class BusinessKeyAdd {
+ 
+    public static void main(String[] args) {
+        //1.得到ProcessEngine对象
+        ProcessEngine processEngine = ProcessEngines.getDefaultProcessEngine();
+ 
+        //2.得到RuntimeService对象
+        RuntimeService runtimeService = processEngine.getRuntimeService();
+ 
+        //3.启动流程实例,同时还要指定业务标识businessKey  它本身就是请假单的id
+        //第一个参数：是指流程定义key
+        //第二个参数：业务标识businessKey
+        ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("holiday", "1001");
+ 
+        //4.输出processInstance相关的属性,取出businessKey使用:processInstance.getBusinessKey()
+        System.out.println(processInstance.getBusinessKey());
+ 
+    }
+}
+
+=========================
+新制度和老制度交替情况下流程挂起
+===单个流程实例挂起
+    /**
+     * 测试挂起一个流程实例
+     */
+    @Test
+    public void testSuspendProcessInstance(){
+        RuntimeService runtimeService = engine.getRuntimeService();
+        String processInstanceId="1801";
+        //根据一个流程实例的id挂起该流程实例
+        runtimeService.suspendProcessInstanceById(processInstanceId);
+        
+    }
+    
+    /**
+     * 激活一个流程实例
+     */
+    @Test
+    public void testActivateProcessInstance(){
+        RuntimeService runtimeService = engine.getRuntimeService();
+        String processInstanceId="1801";
+        runtimeService.activateProcessInstanceById(processInstanceId);
+    }
+    
+ ===全部流程实例的挂起激活
+    /**
+     * 挂起、激活流程定义
+     */
+    @RequestMapping(value = "processdefinition/update/{state}/{processDefinitionId}")
+    public String updateState(@PathVariable("state") String state, @PathVariable("processDefinitionId") String processDefinitionId,
+                              RedirectAttributes redirectAttributes) {
+        if (state.equals("active")) {
+            redirectAttributes.addFlashAttribute("message", "已激活ID为[" + processDefinitionId + "]的流程定义。");
+            repositoryService.activateProcessDefinitionById(processDefinitionId, true, null);
+        } else if (state.equals("suspend")) {
+            repositoryService.suspendProcessDefinitionById(processDefinitionId, true, null);
+            redirectAttributes.addFlashAttribute("message", "已挂起ID为[" + processDefinitionId + "]的流程定义。");
+        }
+        return "redirect:/workflow/process-list";
+    }
+    
+    
+    
+
+    
+
+
+
+
+
