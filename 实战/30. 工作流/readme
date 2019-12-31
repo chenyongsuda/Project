@@ -480,6 +480,8 @@ public void startProcess() throws Exception {
         Date date=(Date) taskService.getVariableLocal(taskId, "date");
 
 =========================================================================
+组任务
+
 
 
 
