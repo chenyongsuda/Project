@@ -70,6 +70,11 @@ public void fingByPerson() {
     }
 }
 
+// 判断任务是否已经被签收
+if(task.getAssignee()==null){
+ taskService.claim(taskId, userId);
+}
+
 /**
  * 完成个人任务
  */
