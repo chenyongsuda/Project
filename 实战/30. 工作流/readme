@@ -488,7 +488,116 @@ public void startProcess() throws Exception {
 组任务
 
 
+流程测试代码
+=========================================================================
+package com.test;
 
+import org.activiti.engine.ProcessEngine;
+import org.activiti.engine.ProcessEngines;
+import org.activiti.engine.RepositoryService;
+import org.activiti.engine.history.HistoricTaskInstance;
+import org.activiti.engine.repository.Deployment;
+import org.activiti.engine.runtime.ProcessInstance;
+import org.activiti.engine.task.Task;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
+
+import java.util.List;
+
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class TestProcess {
+    @Autowired
+    private ProcessEngine processEngine;
+
+    @Test
+    public void StartProcess(){
+//        @@@Deploy
+//        Deployment deployment= processEngine.getRepositoryService().createDeployment().name("first-flow")
+//                .addClasspathResource("processes/TEST001.bpmn20.xml")
+//                .addClasspathResource("processes/TEST001.png").deploy();
+//        System.out.println("部署ID"+deployment.getId());//1
+//        System.out.println("部署名称"+deployment.getName());
+
+//      @@@Start Process
+//        String processDefineKey = "TEST001";
+//        ProcessInstance processInstance = processEngine.getRuntimeService().startProcessInstanceByKey(processDefineKey);
+//        System.out.println("流程实例ID:"+processInstance.getId());  //2501
+//        //对应数据库act_ru_execution
+//        System.out.println("流程定义ID:"+processInstance.getProcessDefinitionId());
+//        流程实例ID:2501
+//        流程定义ID:TEST001:1:4
+
+//      @@@查询流程
+//        String user="lisi";
+//        List<Task> list = processEngine.getTaskService().createTaskQuery().taskCandidateOrAssigned(user).list();
+//
+//        if(list != null && list.size()>0) {
+//            for(Task task:list) {
+//                System.out.println("任务ID:"+task.getId());//2501
+//                System.out.println("任务名称："+task.getName());//提交申请
+//                System.out.println("任务的创建时间："+task.getCreateTime());//Wed Jun 06 18:12:15 CST 2018
+//                System.out.println("任务的代理人："+task.getAssignee());//张三
+//                System.out.println("流程实例ID："+task.getProcessInstanceId());//2501
+//                System.out.println("执行对象ID："+task.getExecutionId());//2501
+//                System.out.println("流程定义ID："+task.getProcessDefinitionId());//helloword:1:4
+//            }
+//        }
+
+//      捞取任务
+//        String user="zhangsan";
+//        Task task = processEngine.getTaskService().createTaskQuery().taskCandidateOrAssigned(user).singleResult();
+//        processEngine.getTaskService().claim(task.getId(),user);
+
+//      完成任务
+//        String user="lisi";
+//        Task task = processEngine.getTaskService().createTaskQuery().taskCandidateOrAssigned(user).singleResult();
+//        processEngine.getTaskService().complete(task.getId());
+
+//       查询流程进度
+//        List<HistoricTaskInstance> historicTaskInstanceList = ProcessEngines.getDefaultProcessEngine().
+//                getHistoryService().createHistoricTaskInstanceQuery().
+//                processInstanceId("10001").
+//                orderByTaskCreateTime().asc().list();
+//
+//        int index=1;
+//        for (HistoricTaskInstance historicTaskInstance : historicTaskInstanceList) {
+//            //父级流程任务Id
+//            historicTaskInstance.getParentTaskId();
+//            //taskId 活动ID
+//            historicTaskInstance.getId();
+//            //任务序号
+//            index+=1;
+//            //节点ID
+//            historicTaskInstance.getTaskDefinitionKey();
+//            //办理时间
+//            String endTimeDate = "";
+//            if(null != historicTaskInstance.getEndTime()) {
+//                endTimeDate = historicTaskInstance.getEndTime().toString();
+//            }
+//            //接收时间
+//            String startTimeDate = "";
+//            if(null != historicTaskInstance.getStartTime()) {
+//                startTimeDate = historicTaskInstance.getStartTime().toString();
+//            }
+//            //节点名称
+//            String name = historicTaskInstance.getName();
+//
+//            System.out.println(name + " | " + startTimeDate + " | " + endTimeDate);//2501
+////            //节点状态
+////            if (endTimeDate != null) {
+////                System.out.println("已结束");//2501
+////            }else{
+////                System.out.println("运行中");
+////            }
+//            //会签、绿色通道等消息（需要取出getDescription的内容进行判断）
+//            historicTaskInstance.getDescription();
+//        }
+    }
+}
 
 
 
