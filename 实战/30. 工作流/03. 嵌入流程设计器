@@ -1,0 +1,270 @@
+Activiti7可以使用的设计器
+要想非常方便的使用Activiti7框架，则必须要安装流程设计器插件，关于Activiti7流程设计器相关插件说明如下：
+
+activiti6 官方提供有Web设计器（Modeler设计器）。这个不需要进行安装，直接部署运行activiti-modeler模块即可使用。
+官方提供有Eclipse开发工具流程插件。
+官方提供有IntelliJ IDEA开发工具相关的流程插件
+由于Activiti7新团队将开发重心放到了云Bpmn上，所以对于上述的几个流程设计器都不在进行维护。对于Eclipse开发工具的流程插件止步不前，几乎停滞更新和维护。这样就导致了开发人员使用Eclipse或者IntelliJ IDEA开发工具的流程插件有如下几个风险：
+
+ Activiti7.x版本中的新增特性、新功能无法使用。
+ 使用Activiti流程插件绘制的流程不一定完全可以在Activiti7框架中运行。
+ Activiti流程插件（该插件对准的是5.x版本）。
+ 使用IntelliJ IDEA开发工具的读者可以安装Activiti流程插件（actibpm）进行开发。但是无法享受Activiti7.x版本带来的的新功能。
+Activiti7推荐使用的设计器
+Activiti7开发团队已经完全抛弃了IntelliJ IDEA/Eclipse中的流程插件以及Modeler设计器。开始使用了bpmn.io提供的bpmn-js设计器。如下图所示：
+
+开发选用6版本集成modeler设计器
+============================================================================
+1. 下载Activiti5.22 拿到里面的activiti-explorer.war 解压
+将文件夹内 diagram-viewer,editor-app,modeler.html拷贝到项目中resource/static目录下
+其中的editor-app就是编辑器，modeler.html是编辑器的入口页面。
+diagram-viewer是流程跟踪插件，虽然这次用不着，但之后会用到。
+还有一个界面组件文件，在resource下，名称叫stencilset.json。本身是英文的，可以通过替换它来达到汉化的效果。但现在还是先把它放到项目中去。
+
+在editor-app/app-cfg.js中配置一下项目url。这个url是编辑器相关的后台服务的url。
+
+改为：
+var ACTIVITI = ACTIVITI || {};
+
+ACTIVITI.CONFIG = {
+	'contextRoot' : '/service',
+};
+
+先引入两个activiti的模块，因为编辑器会用到这两个模块。
+<properties>
+        <apache.xmlgraphics.version>1.7</apache.xmlgraphics.version>
+</properties>
+
+<dependency>
+    <groupId>org.activiti</groupId>
+    <artifactId>activiti-json-converter</artifactId>
+    <version>6.0.0</version>
+</dependency>
+
+<dependency>
+    <groupId>org.apache.xmlgraphics</groupId>
+    <artifactId>batik-codec</artifactId>
+    <version>${apache.xmlgraphics.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.xmlgraphics</groupId>
+    <artifactId>batik-css</artifactId>
+    <version>${apache.xmlgraphics.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.xmlgraphics</groupId>
+    <artifactId>batik-svg-dom</artifactId>
+    <version>${apache.xmlgraphics.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.xmlgraphics</groupId>
+    <artifactId>batik-svggen</artifactId>
+    <version>${apache.xmlgraphics.version}</version>
+</dependency>
+
+其中需要将modeler模块的源代码放到src中，因为需要在其中做部分修改，主要是url的映射。
+
+源码：
+https://github.com/Activiti/Activiti/tree/master/modules/activiti-modeler
+
+其中有3个类，都是Controller(从源文件中拷贝过来)：
+
+StencilsetRestResource #获取编辑器组件及配置项信息。
+ModelEditorJsonRestResource #根据modelId获取model的节点信息，编辑器根据返回的json进行绘图。
+ModelSaveRestResource #编辑器制图之后，将节点信息以json的形式提交给这个Controller，然后由其进行持久化操作。
+需要修改的地方就三个，在每个Controller类上加上@RequestMapping注解，并指定值为"service"（对应前台app-cfg.js中配置的url）。
+
+···
+@RequestMapping("service")
+public class StencilsetRestResource {
+···
+···
+@RequestMapping("service")
+public class ModelEditorJsonRestResource implements ModelDataJsonConstants {
+···
+···
+@RequestMapping("service")
+public class ModelSaveRestResource implements ModelDataJsonConstants {
+···
+
+排除SecurityAutoConfiguration，不然启动会报错
+@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
+
+然后访问url http://localhost:7777/modeler.html?modelId=2501 访问这个是不会出来的默认没有模型
+
+添加创建service
+@RequestMapping("/create")
+  public void newModel(HttpServletRequest request, HttpServletResponse response) throws UnsupportedEncodingException {
+    try {
+      //初始化一个空模型
+      Model model = repositoryService.newModel();
+
+      //设置一些默认信息
+      String name = "new-process";
+      String description = "";
+      int revision = 1;
+      String key = "process";
+
+      ObjectNode modelNode = objectMapper.createObjectNode();
+      modelNode.put(ModelDataJsonConstants.MODEL_NAME, name);
+      modelNode.put(ModelDataJsonConstants.MODEL_DESCRIPTION, description);
+      modelNode.put(ModelDataJsonConstants.MODEL_REVISION, revision);
+
+      model.setName(name);
+      model.setKey(key);
+      model.setMetaInfo(modelNode.toString());
+
+      repositoryService.saveModel(model);
+      String id = model.getId();
+
+      //完善ModelEditorSource
+      ObjectNode editorNode = objectMapper.createObjectNode();
+      editorNode.put("id", "canvas");
+      editorNode.put("resourceId", "canvas");
+      ObjectNode stencilSetNode = objectMapper.createObjectNode();
+      stencilSetNode.put("namespace",
+              "http://b3mn.org/stencilset/bpmn2.0#");
+      editorNode.put("stencilset", stencilSetNode);
+      repositoryService.addModelEditorSource(id, editorNode.toString().getBytes("utf-8"));
+
+      response.sendRedirect(request.getContextPath() + "/modeler.html?modelId=" + id);
+    }catch (IOException e){
+      e.printStackTrace();
+      LOGGER.info("模型创建失败！");
+    }
+
+  }
+  
+ 访问http://localhost:7777/service/create 就能看见设计器,当然这个url可以自定义
+ 
+ 
+ 
+ 
+ 
+ 注模型管理的几个方法
+ ================================================================================
+ /**
+ * Created by liuruijie on 2017/2/21.
+ * 模型管理
+ */
+@RestController
+@RequestMapping("models")
+public class ModelerController {
+
+    @Autowired
+    ProcessEngine processEngine;
+    @Autowired
+    ObjectMapper objectMapper;
+
+    /**
+     * 新建一个空模型
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    @PostMapping
+    public Object newModel() throws UnsupportedEncodingException {
+        RepositoryService repositoryService = processEngine.getRepositoryService();
+        //初始化一个空模型
+        Model model = repositoryService.newModel();
+
+        //设置一些默认信息
+        String name = "new-process";
+        String description = "";
+        int revision = 1;
+        String key = "process";
+
+        ObjectNode modelNode = objectMapper.createObjectNode();
+        modelNode.put(ModelDataJsonConstants.MODEL_NAME, name);
+        modelNode.put(ModelDataJsonConstants.MODEL_DESCRIPTION, description);
+        modelNode.put(ModelDataJsonConstants.MODEL_REVISION, revision);
+
+        model.setName(name);
+        model.setKey(key);
+        model.setMetaInfo(modelNode.toString());
+
+        repositoryService.saveModel(model);
+        String id = model.getId();
+
+        //完善ModelEditorSource
+        ObjectNode editorNode = objectMapper.createObjectNode();
+        editorNode.put("id", "canvas");
+        editorNode.put("resourceId", "canvas");
+        ObjectNode stencilSetNode = objectMapper.createObjectNode();
+        stencilSetNode.put("namespace",
+                "http://b3mn.org/stencilset/bpmn2.0#");
+        editorNode.put("stencilset", stencilSetNode);
+        repositoryService.addModelEditorSource(id,editorNode.toString().getBytes("utf-8"));
+        return ToWeb.buildResult().redirectUrl("/modeler.html?modelId="+id);
+    }
+
+    /**
+     * 获取所有模型
+     * @return
+     */
+    @GetMapping
+    public Object modelList(){
+        RepositoryService repositoryService = processEngine.getRepositoryService();
+        List<Model> models = repositoryService.createModelQuery().list();
+        return ToWeb.buildResult().putData("models", models);
+    }
+
+    /**
+     * 删除模型
+     * @param id
+     * @return
+     */
+    @DeleteMapping("{id}")
+    public Object deleteModel(@PathVariable("id")String id){
+        RepositoryService repositoryService = processEngine.getRepositoryService();
+        repositoryService.deleteModel(id);
+        return ToWeb.buildResult().refresh();
+    }
+
+    /**
+     * 发布模型为流程定义
+     * @param id
+     * @return
+     * @throws Exception
+     */
+    @PostMapping("{id}/deployment")
+    public Object deploy(@PathVariable("id")String id) throws Exception {
+
+        //获取模型
+        RepositoryService repositoryService = processEngine.getRepositoryService();
+        Model modelData = repositoryService.getModel(id);
+        byte[] bytes = repositoryService.getModelEditorSource(modelData.getId());
+
+        if (bytes == null) {
+            return ToWeb.buildResult().status(Config.FAIL)
+                    .msg("模型数据为空，请先设计流程并成功保存，再进行发布。");
+        }
+
+        JsonNode modelNode = new ObjectMapper().readTree(bytes);
+
+        BpmnModel model = new BpmnJsonConverter().convertToBpmnModel(modelNode);
+        if(model.getProcesses().size()==0){
+            return ToWeb.buildResult().status(Config.FAIL)
+                    .msg("数据模型不符要求，请至少设计一条主线流程。");
+        }
+        byte[] bpmnBytes = new BpmnXMLConverter().convertToXML(model);
+
+        //发布流程
+        String processName = modelData.getName() + ".bpmn20.xml";
+        Deployment deployment = repositoryService.createDeployment()
+                .name(modelData.getName())
+                .addString(processName, new String(bpmnBytes, "UTF-8"))
+                .deploy();
+        modelData.setDeploymentId(deployment.getId());
+        repositoryService.saveModel(modelData);
+
+        return ToWeb.buildResult().refresh();
+    }
+}
+
+
+
+
+
+
+
+
