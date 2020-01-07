@@ -1,0 +1,326 @@
+
+
+=============================================================================
+综述：
+在Hive中有六类常用的函数，除了本文讲述的四类函数之外，还有rank函数，和开窗函数，Hive中的自定义函数一般被分成了三类
+
+UDF:uer-defined-function 一进一出
+UDAF:user-defined-aggregation-function 多进一出
+UDTF:user-defined-generating-function 一进多出
+
+NVL：
+nvl(value,default_value)如果value为null，则返回default_value的值，否则返回value
+
+select comm,nvl(comm,-1) from emp;
+0: jdbc:hive2://hadoop108:10000> select comm,nvl(comm,-1) from emp;
++---------+---------+--+
+|  comm   |   _c1   |
++---------+---------+--+
+| NULL    | -1.0    |
+| 300.0   | 300.0   |
+| 500.0   | 500.0   |
+| NULL    | -1.0    |
+| 1400.0  | 1400.0  |
+| NULL    | -1.0    |
+| NULL    | -1.0    |
+| NULL    | -1.0    |
+| NULL    | -1.0    |
+| 0.0     | 0.0     |
+| NULL    | -1.0    |
+| NULL    | -1.0    |
+| NULL    | -1.0    |
+| NULL    | -1.0    |
++---------+---------+--+
+ 
+如果员工的comm为NULL，则用领导id代替
+select comm,nvl(comm,mgr) from emp;
+0: jdbc:hive2://hadoop108:10000> select comm,nvl(comm,mgr) from emp;
++---------+---------+--+
+|  comm   |   _c1   |
++---------+---------+--+
+| NULL    | 7902.0  |
+| 300.0   | 300.0   |
+| 500.0   | 500.0   |
+| NULL    | 7839.0  |
+| 1400.0  | 1400.0  |
+| NULL    | 7839.0  |
+| NULL    | 7839.0  |
+| NULL    | 7566.0  |
+| NULL    | NULL    |
+| 0.0     | 0.0     |
+| NULL    | 7788.0  |
+| NULL    | 7698.0  |
+| NULL    | 7566.0  |
+| NULL    | 7782.0  |
++---------+---------+--+
+
+case when:
+[isea@hadoop108 datas]$ cat emp_sex.txt 
+悟空		A	男
+八戒		A	男
+刘备		B	男
+嫦娥		A	女
+大乔		B	女
+小乔		B	女
+ 
+ 
+需求：求出部门和对应的员工的性别人数
+A     2       1
+B     1       2
+ 
+创建hive表并导入数据：
+create table emp_sex(name string,dept_id string,sex string)
+row format delimited
+fields terminated by '\t';
+ 
+load data local inpath '/opt/module/datas/emp_sex.txt' into table emp_sex;
+0: jdbc:hive2://hadoop108:10000> select * from emp_sex;
++---------------+------------------+--------------+--+
+| emp_sex.name  | emp_sex.dept_id  | emp_sex.sex  |
++---------------+------------------+--------------+--+
+| 悟空            | A                | 男            |
+| 八戒            | A                | 男            |
+| 刘备            | B                | 男            |
+| 嫦娥            | A                | 女            |
+| 大乔            | B                | 女            |
+| 小乔            | B                | 女            |
++---------------+------------------+--------------+--+
+ 
+> select dept_id,count(sex) from emp_sex group by dept_id;
++----------+------+--+
+| dept_id  | _c1  |
++----------+------+--+
+| A        | 3    |
+| B        | 3    |
++----------+------+--+
+ 
+ 
+我们来尝试分析一下，如果单纯的使用group by 对dept_id 分组和聚合函数sum，我们求的是部门下所有的
+员工的总数，并不是对于区分性别，所以我们需要一种方式，当检查到sex为男的时候，记录一下man变量为
+1，当检查到sex为女的时候对women 加1
+ 
+所以使用下面的查询语句：
+select dept_id,sum(case sex when '男' then 1 else 0 end) male_count,
+sum(case sex when '女' then 1 else 0 end) female_count
+from emp_sex group by dept_id;
++----------+-------------+---------------+--+
+| dept_id  | male_count  | female_count  |
++----------+-------------+---------------+--+
+| A        | 2           | 1             |
+| B        | 1           | 2             |
++----------+-------------+---------------+--+
+ 
+或者使用下面这种功能类似的写法
+select dept_id,sum(case when sex = '男' then 1 else 0 end) male_count,
+sum(case  when sex = '女' then 1 else 0 end) female_count
+from emp_sex group by dept_id;
+ 
++----------+-------------+---------------+--+
+| dept_id  | male_count  | female_count  |
++----------+-------------+---------------+--+
+| A        | 2           | 1             |
+| B        | 1           | 2             |
++----------+-------------+---------------+--+
+
+————————————————
+行转列，CONCAT，CONCAT_WS，COLLECT_SET：
+什么是行转列呢？
+
+将类似于下面的形式：
+A
+B
+C
+转化为类似于下面的形式：
+A B C 
+即将多行转化为一行，排在一行了，就成了一列对吧
+关于行转列主要有三个函数，
+
+concat:
+select concat('liubei','xihuan','xiaoqiao');
+ 
+0: jdbc:hive2://hadoop108:10000> select concat('liubei','xihuan','xiaoqiao');
+OK
++-----------------------+--+
+|          _c0          |
++-----------------------+--+
+| liubeixihuanxiaoqiao  |
++-----------------------+--+
+ 
+concat_ws:
+0: jdbc:hive2://hadoop108:10000> select concat_ws('|',array('liiubei','xihuan','xiaoqiao'));
+OK
++--------------------------+--+
+|           _c0            |
++--------------------------+--+
+| liiubei|xihuan|xiaoqiao  |
++--------------------------+--+
+1 row selected (0.096 seconds)
+ 
+collect_set(col)将传入的内容去重，并放置到一个数组中。
+ 
+[isea@hadoop108 datas]$ cat contellation.txt 
+悟空		白羊座	A
+张飞		射手座	A
+刘备		白羊座	B
+八戒		白羊座	A
+小乔		射手座	A
+ 
+创建hive表并导入数据：
+create table person_info(name string,contellation string,blood_type string)
+row format delimited
+fields terminated by '\t';
+ 
+load data local inpath '/opt/module/datas/contellation.txt' into table person_info;
+ 
+0: jdbc:hive2://hadoop108:10000> select * from person_info;
+OK
++-------------------+---------------------------+-------------------------+--+
+| person_info.name  | person_info.contellation  | person_info.blood_type  |
++-------------------+---------------------------+-------------------------+--+
+| 悟空                | 白羊座                       | A                       |
+| 张飞                | 射手座                       | A                       |
+| 刘备                | 白羊座                       | B                       |
+| 八戒                | 白羊座                       | A                       |
+| 小乔                | 射手座                       | A                       |
++-------------------+---------------------------+-------------------------+--+
+把星座和血型一样的人归类到一起:
+ 
+t：先将星座和血型归类到一起，
+select name,concat(contellation,",",blood_type) base
+from person_info;
+ 
++-------+--------+--+
+| name  |  base  |
++-------+--------+--+
+| 悟空    | 白羊座,A  |
+| 张飞    | 射手座,A  |
+| 刘备    | 白羊座,B  |
+| 八戒    | 白羊座,A  |
+| 小乔    | 射手座,A  |
++-------+--------+--+
+ 
+select t.base,concat_ws('|',collect_set(name)) names
+from (
+select name,concat(contellation,",",blood_type) base
+from person_info
+) t
+group by t.base;
+ 
++---------+--------+--+
+| t.base  | names  |
++---------+--------+--+
+| 射手座,A   | 张飞|小乔  |
+| 白羊座,A   | 悟空|八戒  |
+| 白羊座,B   | 刘备     |
++---------+--------+--+
+这里使用group by 将base分组，使用collect_set将所有name去重后存放到一个数组中，在使用concat_ws
+将数组中的元素连接起来。
+列转行：EXPLODE，LATERAL VIEW：
+什么是列转行呢？
+
+把类似于
+A , B , C
+转化为
+A
+B
+C
+列转行主要有两个函数：
+
+select explode(array('liubei','zhangfei','guanyu'));
++-----------+--+
+|    col    |
++-----------+--+
+| liubei    |
+| zhangfei  |
+| guanyu    |
++-----------+--+
+select explode(map('liubei','18','zhangfei','19'));
+ 
++-----------+--------+--+
+|    key    | value  |
++-----------+--------+--+
+| liubei    | 18     |
+| zhangfei  | 19     |
++-----------+--------+--+
+ 
+ 
+来看一下爆炸函数的局限性：在使用爆炸函数的时候，select后面只能跟爆炸函数，其他的不能跟
+select '1',explode(array('liubei','zhangfei','guanyu'));
+0: jdbc:hive2://hadoop108:10000> select '1',explode(array('liubei','zhangfei','guanyu'));
+FAILED: SemanticException [Error 10081]: UDTF s are not supported outside the SELECT clause, nor nested in expressions
+ 
+ 
+lateral view:斜写视图，为了解决爆炸函数的局限性，结合UDTF函数(如，explode())一起使用。
+将电影分类中的数组数据展开
+期望：
+《疑犯追踪》      悬疑
+《疑犯追踪》      动作
+《疑犯追踪》      科幻
+《疑犯追踪》      剧情
+《Lie to me》   悬疑
+《Lie to me》   警匪
+《Lie to me》   动作
+《Lie to me》   心理
+《Lie to me》   剧情
+《战狼2》        战争
+《战狼2》        动作
+《战狼2》        灾难
+ 
+ 
+[isea@hadoop108 datas]$ cat move_info.txt 
+《疑犯追踪》	悬疑,动作,科幻,剧情
+《Lie to me》	悬疑,警匪,动作,心理,剧情
+《战狼2》	战争,动作,灾难
+ 
+创建hive表并导入数据：
+create table movie_info(name string,category array<string>)
+row format delimited
+fields terminated by '\t'
+collection items terminated by ',';
+ 
+load data local inpath '/opt/module/datas/move_info.txt' into table movie_info;
+ 
+下面使用测写视图的方式，在求出爆炸函数结果的同时，求出除了爆炸函数字段之外的字段。需要添加爆炸之
+后的表名，和爆炸之后的字段名，这个字段名可以放置于select之后，查询爆炸之后的字段值。
+ 
+select name,category_info
+from movie_info
+lateral view explode(category) tmp_tbl as category_info;
+ 
++--------------+----------------+--+
+|     name     | category_info  |
++--------------+----------------+--+
+| 《疑犯追踪》       | 悬疑             |
+| 《疑犯追踪》       | 动作             |
+| 《疑犯追踪》       | 科幻             |
+| 《疑犯追踪》       | 剧情             |
+| 《Lie to me》  | 悬疑             |
+| 《Lie to me》  | 警匪             |
+| 《Lie to me》  | 动作             |
+| 《Lie to me》  | 心理             |
+| 《Lie to me》  | 剧情             |
+| 《战狼2》        | 战争             |
+| 《战狼2》        | 动作             |
+| 《战狼2》        | 灾难             |
++--------------+----------------+--+
+ 
+ 
+这里需要指出的是：在键表的时候一定不能对于集合数据类型，如果没有添加
+collection items terminated by ','表中的数据是这样的：
++------------------+----------------------+--+
+| movie_info.name  | movie_info.category  |
++------------------+----------------------+--+
+| 《疑犯追踪》           | ["悬疑,动作,科幻,剧情"]      |
+| 《Lie to me》      | ["悬疑,警匪,动作,心理,剧情"]   |
+| 《战狼2》            | ["战争,动作,灾难"]         |
++------------------+----------------------+--+
+category是一个完整的字符串，也即array中只有一个元素
+添加了分隔符号之后是这样的：
++------------------+-----------------------------+--+
+| movie_info.name  |     movie_info.category     |
++------------------+-----------------------------+--+
+| 《疑犯追踪》           | ["悬疑","动作","科幻","剧情"]       |
+| 《Lie to me》      | ["悬疑","警匪","动作","心理","剧情"]  |
+| 《战狼2》            | ["战争","动作","灾难"]            |
++------------------+-----------------------------+--+
+————————————————
