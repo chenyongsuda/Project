@@ -1,0 +1,94 @@
+场景：
+
+页面中我使用下面标签来做个细粒度的权限控制，每次在进入这个页面的时候都会报以上异常
+
+这个标签使我自定义的哈
+
+<#if shiro.hasPermission("sys:dept:save")>
+    <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;新增</a>
+</#if>
+1、异常分析：
+
+The following has evaluated to null or missing:
+==> shiro  [in template "modules/sys/dept.html" at line 18, column 30]
+If the failing expression is known to legally refer to something that's sometimes null or missing
+2、大胆猜想
+
+从关键的几个异常中我们可以定位到dept.html，异常中也给出了提示line 18，打开页面一看，好了是shiro.hasPermission
+
+这里有问题，以前没用过shiro，但是靠猜也能猜到这里是控制按钮的权限的，然后再猜shiro.hasPermission("sys:dept:save")为
+
+null了或者missing了，导致页面报错。为什么导致为null了，我再猜。。。授权有问题。
+
+3、精准定位
+
+我就在我授权代码处做个断点，看看到底获得到值了没有。
+
+然后我发现，shiro根本没有走授权，也就是doGetAuthorizationInfo方法
+
+4、解决处理
+
+上面我已经知道了为什么出现这样的异常。那么这时候就要想，为什么没有走doGetAuthorizationInfo，doGetAuthorizationInfofo方法什么时候才会走。
+
+找了些博客和资料，基本上有一下几种情况会走doGetAuthorizationInfo方法：
+
+subject.hasRole(“admin”) 或 subject.isPermitted(“admin”)：自己去调用这个是否有什么角色或者是否有什么权限的时候
+@RequiresRoles("admin") ：在方法上加注解的时候；
+[@shiro.hasPermission name = "admin"][/@shiro.hasPermission]：在页面上加shiro标签的时候，即进这个页面的时候扫描到有这个标签的时候。
+xml配置权限也会走
+我这里使用了自定义标签，自定义标签里有subject.isPermitted方法，没有走doGetAuthorizationInfo的原因是之前调试shiro的时候我去掉了一个注解。。。。。自己把自己坑了。。。。
+
+总结：
+
+大多数异常都可以通过上面方法来解决，分为分析、猜想、验证、定位、处理这几步，当然有经验的程序员可以省去其中几步由分析可以直接到定位处理，在我们开发周期比较短的情况下，又碰到自己没有遇到过的异常，直接去网上找答案是个不科学的解决方式，因为你不知道为什么出现这样的异常，网上的答案又有很多，这样只会让时间浪费掉。找个高手来帮你解决，高手都很高很忙，没碰到这类异常的高手也会慢慢帮你找到原因，即使帮你解决一时也解决不了一世。最好的方法就是先自己分析解决，给自己定个时间，如果10分钟解决不了，或者20分钟解决不了，再去找高人。
+
+下面贴出我自定义标签，我就是调试shiro的时候把@Configuration给去掉了。。。惩罚今天少吃一碗饭，多看一会书
+
+@Component
+public class ShiroTag {
+ 
+	/**
+	 * 是否拥有该权限
+	 * @param permission  权限标识
+	 * @return   true：是     false：否
+	 */
+	public boolean hasPermission(String permission) {
+		Subject subject = SecurityUtils.getSubject();
+		return subject != null && subject.isPermitted(permission);
+	}
+ 
+}
+@Configuration
+public class FreemarkerConfig {
+ 
+    @Bean
+    public FreeMarkerConfigurer freeMarkerConfigurer(ShiroTag shiroTag){
+        FreeMarkerConfigurer configurer = new FreeMarkerConfigurer();
+        configurer.setTemplateLoaderPath("classpath:/templates");
+        Map<String, Object> variables = new HashMap<>(1);
+        variables.put("shiro", shiroTag);
+        configurer.setFreemarkerVariables(variables);
+ 
+        Properties settings = new Properties();
+        settings.setProperty("default_encoding", "utf-8");
+        settings.setProperty("number_format", "0.##");
+        configurer.setFreemarkerSettings(settings);
+        return configurer;
+    }
+ 
+}
+页面使用
+
+<div class="grid-btn">
+    <#if shiro.hasPermission("sys:dept:save")>
+        <a class="btn btn-primary" @click="add"><i class="fa fa-plus"></i>&nbsp;新增</a>
+    </#if>
+    <#if shiro.hasPermission("sys:dept:update")>
+        <a class="btn btn-primary" @click="update"><i class="fa fa-pencil-square-o"></i>&nbsp;修改</a>
+    </#if>
+    <#if shiro.hasPermission("sys:dept:delete")>
+        <a class="btn btn-primary" @click="del"><i class="fa fa-trash-o"></i>&nbsp;删除</a>
+    </#if>
+ </div>
+ 
+————————————————
