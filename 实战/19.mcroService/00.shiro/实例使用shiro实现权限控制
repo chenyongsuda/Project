@@ -1,0 +1,428 @@
+说明：
+
+UI：
+使用了 LayUI 简单优化一下界面
+角色所含权限：
+p：select
+ip：select、insert
+vip：select、insert、update、delete
+
+权限：
+select
+insert
+update
+delete
+
+-----------------------------------------------------------------
+
+① Controller（重点）
+package com.cun.controller;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
+
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.apache.shiro.authz.annotation.RequiresRoles;
+import org.apache.shiro.subject.Subject;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.cun.entity.User;
+
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
+
+@EnableSwagger2
+@RestController
+@RequestMapping("/user")
+public class UserController {
+
+    @PostMapping("/login")
+    public Map<String, Object> login(@Valid User user, BindingResult bindingResult, HttpSession session) {
+        Map<String, Object> map = new HashMap<String, Object>();
+
+        // 1、JSR303
+        if (bindingResult.hasErrors()) {
+            map.put("success", false);
+            map.put("errorInfo", bindingResult.getFieldError().getDefaultMessage());
+            return map;
+        }
+
+        // 2、Shiro
+        Subject subject = SecurityUtils.getSubject();
+        UsernamePasswordToken token = new UsernamePasswordToken(user.getUserName(), user.getPassword());
+        try {
+            subject.login(token);
+            map.put("success", true);
+            return map;
+        } catch (Exception e) {
+            e.printStackTrace();
+            map.put("success", false);
+            map.put("errorInfo", "用户名或者密码错误!");
+            return map;
+        }
+    }
+
+    @RequiresPermissions({"select"}) //没有的话 AuthorizationException
+    @PostMapping("/select")
+    public Map<String, Object> selectPermission() {
+        System.out.println("select");
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("success", true);
+        map.put("msg", "当前角色有查看的权力");
+        return map;
+    }
+
+    @RequiresPermissions({"insert"}) //没有的话 AuthorizationException
+    @PostMapping("/insert")
+    public Map<String, Object> insertPermission() {
+        System.out.println("insert");
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("success", true);
+        map.put("msg", "当前角色有增加的权力");
+        return map;
+    }
+
+    @RequiresPermissions({"update"}) //没有的话 AuthorizationException
+    @PostMapping("/update")
+    public Map<String, Object> updatePermission() {
+        System.out.println("update");
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("success", true);
+        map.put("msg", "当前角色有更新的权力");
+        return map;
+    }
+
+    @RequiresPermissions({"delete"}) //没有的话 AuthorizationException
+    @PostMapping("/delete")
+    public Map<String, Object> deletePermission() {
+        System.out.println("delete");
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("success", true);
+        map.put("msg", "当前角色有删除的权力");
+        return map;
+    }
+
+    @RequiresRoles({"vip"}) //没有的话 AuthorizationException
+    @PostMapping("/vip")
+    public Map<String, Object> vipRole() {
+        System.out.println("vip");
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("success", true);
+        map.put("msg", "当前用户具有 vip 角色");
+        return map;
+    }
+
+    @RequiresRoles({"ip"}) //没有的话 AuthorizationException
+    @PostMapping("/ip")
+    public Map<String, Object> ipRole() {
+        System.out.println("ip");
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("success", true);
+        map.put("msg", "当前用户具有 ip 角色");
+        return map;
+    }
+
+    @RequiresRoles({"p"}) //没有的话 AuthorizationException
+    @PostMapping("/p")
+    public Map<String, Object> pRole() {
+        System.out.println("vip");
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("success", true);
+        map.put("msg", "当前用户具有 p 角色");
+        return map;
+    }
+}
+————————————————
+
+
+ShiroConfig（重点）
+package com.cun.config;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.apache.shiro.spring.LifecycleBeanPostProcessor;
+import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
+import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
+import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
+import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
+import org.apache.shiro.mgt.SecurityManager;
+import com.cun.realm.MyRealm;
+
+/**
+ * Shiro配置类
+ * @author linhongcun
+ *
+ */
+@Configuration
+public class ShiroConfig {
+    /**
+     * ShiroFilterFactoryBean 处理拦截资源文件问题。
+     * 注意：单独一个ShiroFilterFactoryBean配置是或报错的，以为在
+     * 初始化ShiroFilterFactoryBean的时候需要注入：SecurityManager
+     *
+     * Filter Chain定义说明 1、一个URL可以配置多个Filter，使用逗号分隔 2、当设置多个过滤器时，全部验证通过，才视为通过
+     * 3、部分过滤器可指定参数，如perms，roles
+     *
+     */
+    @Bean
+    public ShiroFilterFactoryBean shirFilter(SecurityManager securityManager) {
+        ShiroFilterFactoryBean shiroFilterFactoryBean = new ShiroFilterFactoryBean();
+
+        // 必须设置 SecurityManager
+        shiroFilterFactoryBean.setSecurityManager(securityManager);
+
+        // 如果不设置默认会自动寻找Web工程根目录下的"/login.jsp"页面
+        shiroFilterFactoryBean.setLoginUrl("/login.html");
+
+        // 拦截器.
+        Map<String, String> filterChainDefinitionMap = new LinkedHashMap<String, String>();
+        // 配置不会被拦截的链接 顺序判断
+        filterChainDefinitionMap.put("/static/**", "anon");
+        filterChainDefinitionMap.put("/user/login", "anon");
+        //测试权限用
+        filterChainDefinitionMap.put("/swagger-ui.html", "anon");
+
+        // 配置退出过滤器,其中的具体的退出代码Shiro已经替我们实现了
+        filterChainDefinitionMap.put("/logout", "logout");
+
+        // 过滤链定义，从上向下顺序执行，一般将 /**放在最为下边 :这是一个坑呢，一不小心代码就不好使了;
+        // ① authc:所有url都必须认证通过才可以访问; ② anon:所有url都都可以匿名访问
+        filterChainDefinitionMap.put("/**", "authc");
+        shiroFilterFactoryBean.setFilterChainDefinitionMap(filterChainDefinitionMap);
+        return shiroFilterFactoryBean;
+    }
+
+    @Bean
+    public SecurityManager securityManager() {
+        DefaultWebSecurityManager securityManager = new DefaultWebSecurityManager();
+        // 设置realm.
+        securityManager.setRealm(myRealm());
+        return securityManager;
+    }
+
+    /**
+     * 身份认证realm; (这个需要自己写，账号密码校验；权限等)
+     * 
+     * @return
+     */
+    @Bean
+    public MyRealm myRealm() {
+        MyRealm myRealm = new MyRealm();
+        return myRealm;
+    }
+
+    /**
+     * Shiro生命周期处理器
+     * @return
+     */
+    @Bean
+    public LifecycleBeanPostProcessor lifecycleBeanPostProcessor() {
+        return new LifecycleBeanPostProcessor();
+    }
+
+    /**
+     * 开启Shiro的注解(如@RequiresRoles,@RequiresPermissions),需借助SpringAOP扫描使用Shiro注解的类,并在必要时进行安全逻辑验证
+     * 配置以下两个bean(DefaultAdvisorAutoProxyCreator(可选)和AuthorizationAttributeSourceAdvisor)即可实现此功能
+     * @return
+     */
+    @Bean
+    @DependsOn({ "lifecycleBeanPostProcessor" })
+    public DefaultAdvisorAutoProxyCreator advisorAutoProxyCreator() {
+        DefaultAdvisorAutoProxyCreator advisorAutoProxyCreator = new DefaultAdvisorAutoProxyCreator();
+        advisorAutoProxyCreator.setProxyTargetClass(true);
+        return advisorAutoProxyCreator;
+    }
+
+    @Bean
+    public AuthorizationAttributeSourceAdvisor authorizationAttributeSourceAdvisor() {
+        AuthorizationAttributeSourceAdvisor authorizationAttributeSourceAdvisor = new AuthorizationAttributeSourceAdvisor();
+        authorizationAttributeSourceAdvisor.setSecurityManager(securityManager());
+        return authorizationAttributeSourceAdvisor;
+    }
+}
+————————————————
+MyRealm（重点）
+
+package com.cun.realm;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authc.AuthenticationInfo;
+import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.SimpleAuthenticationInfo;
+import org.apache.shiro.authz.AuthorizationInfo;
+import org.apache.shiro.authz.SimpleAuthorizationInfo;
+import org.apache.shiro.realm.AuthorizingRealm;
+import org.apache.shiro.subject.PrincipalCollection;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.cun.dao.PermissionDao;
+import com.cun.dao.RoleDao;
+import com.cun.dao.UserDao;
+import com.cun.entity.Permission;
+import com.cun.entity.Role;
+import com.cun.entity.User;
+
+public class MyRealm extends AuthorizingRealm {
+
+    @Autowired
+    private UserDao userDao;
+
+    @Autowired
+    private RoleDao roleDao;
+
+    @Autowired
+    private PermissionDao permissionDao;
+
+    /**
+     * 授权
+     */
+    @Override
+    protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
+        String userName=(String) SecurityUtils.getSubject().getPrincipal();
+        SimpleAuthorizationInfo info=new SimpleAuthorizationInfo();
+        Set<String> roles=new HashSet<String>();
+        List<Role> rolesByUserName = roleDao.getRolesByUserName(userName);
+        for(Role role:rolesByUserName) {
+            roles.add(role.getRoleName());
+        }
+        List<Permission> permissionsByUserName = permissionDao.getPermissionsByUserName(userName);
+        for(Permission permission:permissionsByUserName) {
+            info.addStringPermission(permission.getPermissionName());
+        }
+        info.setRoles(roles);
+        return info;
+    }
+
+    /**
+     * 认证
+     */
+    @Override
+    protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+        System.out.println("token.getPrincipal:" + token.getPrincipal());
+        System.out.println("token.getCredentials:" + token.getCredentials());
+        String userName = token.getPrincipal().toString();
+        User user = userDao.getUserByUserName(userName);
+        if (user != null) {
+            // Object principal, Object credentials, String realmName
+            AuthenticationInfo authcInfo = new SimpleAuthenticationInfo(user.getUserName(), user.getPassword(), getName());
+            return authcInfo;
+        } else {
+            return null;
+        }
+    }
+
+}
+————————————————
+
+
+sql
+
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/`urp` /*!40100 DEFAULT CHARACTER SET utf8 */;
+
+USE `urp`;
+
+/*Table structure for table `t_permission` */
+
+DROP TABLE IF EXISTS `t_permission`;
+
+CREATE TABLE `t_permission` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `permission_name` varchar(50) DEFAULT NULL,
+  `remarks` varchar(1000) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
+
+/*Data for the table `t_permission` */
+
+insert  into `t_permission`(`id`,`permission_name`,`remarks`) values (1,'select','查询'),(2,'insert','增加'),(3,'update','更新'),(4,'delete','删除');
+
+/*Table structure for table `t_role` */
+
+DROP TABLE IF EXISTS `t_role`;
+
+CREATE TABLE `t_role` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `remarks` varchar(1000) DEFAULT NULL,
+  `role_name` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+
+/*Data for the table `t_role` */
+
+insert  into `t_role`(`id`,`remarks`,`role_name`) values (1,'普通角色','p'),(2,'重要角色','ip'),(3,'超级角色','vip');
+
+/*Table structure for table `t_role_permission` */
+
+DROP TABLE IF EXISTS `t_role_permission`;
+
+CREATE TABLE `t_role_permission` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `remarks` varchar(1000) DEFAULT NULL,
+  `permission_id` int(11) DEFAULT NULL,
+  `role_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `FKjobmrl6dorhlfite4u34hciik` (`permission_id`),
+  KEY `FK90j038mnbnthgkc17mqnoilu9` (`role_id`),
+  CONSTRAINT `FK90j038mnbnthgkc17mqnoilu9` FOREIGN KEY (`role_id`) REFERENCES `t_role` (`id`),
+  CONSTRAINT `FKjobmrl6dorhlfite4u34hciik` FOREIGN KEY (`permission_id`) REFERENCES `t_permission` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
+
+/*Data for the table `t_role_permission` */
+
+insert  into `t_role_permission`(`id`,`remarks`,`permission_id`,`role_id`) values (1,'授予普通角色select权限',1,1),(2,'授予重要角色select权限',1,2),(3,'授予重要角色insert权限',2,2),(4,'授予超级角色select权限',1,3),(5,'授予超级角色insert权限',2,3),(6,'授予超级角色update权限',3,3),(7,'授予超级角色delete权限',4,3);
+
+/*Table structure for table `t_user` */
+
+DROP TABLE IF EXISTS `t_user`;
+
+CREATE TABLE `t_user` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `password` varchar(100) NOT NULL,
+  `remarks` varchar(1000) DEFAULT NULL,
+  `user_name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+
+/*Data for the table `t_user` */
+
+insert  into `t_user`(`id`,`password`,`remarks`,`user_name`) values (1,'123','JKing团队','jking'),(2,'123','网维团队','wteam'),(3,'123','ITAEM团队','itaem');
+
+/*Table structure for table `t_user_role` */
+
+DROP TABLE IF EXISTS `t_user_role`;
+
+CREATE TABLE `t_user_role` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `remarks` varchar(1000) DEFAULT NULL,
+  `role_id` int(11) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `FKa9c8iiy6ut0gnx491fqx4pxam` (`role_id`),
+  KEY `FKq5un6x7ecoef5w1n39cop66kl` (`user_id`),
+  CONSTRAINT `FKq5un6x7ecoef5w1n39cop66kl` FOREIGN KEY (`user_id`) REFERENCES `t_user` (`id`),
+  CONSTRAINT `FKa9c8iiy6ut0gnx491fqx4pxam` FOREIGN KEY (`role_id`) REFERENCES `t_role` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+
+/*Data for the table `t_user_role` */
+
+insert  into `t_user_role`(`id`,`remarks`,`role_id`,`user_id`) values (1,'授予JKing团队普通角色',1,1),(2,'授予网维团队重要角色',2,2),(3,'授予ITAEM团队超级角色',3,3);
+————————————————
+
+
