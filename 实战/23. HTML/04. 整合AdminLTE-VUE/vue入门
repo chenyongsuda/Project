@@ -1,0 +1,27 @@
+项目结构
+src   [项目核心文件]
+        1、assets  静态资源
+            资源目录，这里的资源会被webpack构建
+        2、components  公共组件
+           公共组件目录。
+        3、route       路由（配置项目路由）
+            所有的路由规则
+        4、App.vue   根组件 App.vue 是一个Vue组件，也是项目的第一个Vue组件
+             一个vue页面通常有三部分组成：模板[template]、js[javascript]、样式[style]
+             A、模板template：其中模板只能包含一个父节点，也就是顶层的div只能有一个。
+            <template>
+              <div id="app">
+              <img src="./assets/logo.png">
+               <div> 这是一段测试的html </div>
+              <router-view/>
+              </div> 
+            </template>
+            <router-view></router-view>是一个子路由视图，后面的路由页面都显示在此处
+            B、Script：vue通常都用es6来写的，用export default导出，其下面可以包含data，生命周期（mounted等），方法（methods）等，具体语法请看vue.js文档。
+            C、style: 样式通过<style></style>包裹，默认是影响全局的，如需定义作用域只在
+        5、main.js  入口文件 main.js相当于Java中的main方法，是整个项目的入口js
+        
+------------------------------
+分析main.js
+      
+      
