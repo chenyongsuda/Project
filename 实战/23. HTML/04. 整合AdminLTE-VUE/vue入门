@@ -24,7 +24,7 @@ src   [项目核心文件]
 ------------------------------
 分析main.js
       new Vue({
-          el: '#app',
+          el: '#app',             //挂载点为id = app的元素
           router,
           store,
           render: h => h(App)     //渲染App这个模块
