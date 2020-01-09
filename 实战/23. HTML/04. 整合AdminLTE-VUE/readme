@@ -1,1 +1,29 @@
 
+常用后台模板
+1、vue-manage-system
+git地址：https://github.com/lin-xin/vue-manage-system
+线上地址： http://blog.gdfengshuo.com/example/work/#/dashboard
+
+2、vue-element-admin
+git地址：https://github.com/PanJiaChen/vue-element-admin
+线上地址：https://panjiachen.github.io/vue-element-admin/#/dashboard
+
+3、vuejs 和 element 搭建的一个后台管理界面
+相关技术：
+vuejs2.0：渐进式JavaScript框架，易用、灵活、高效，似乎任何规模的应用都适用。
+element：基于vuejs2.0的ui组件库。
+vue-router：一般单页面应用spa都要用到的前端路由。
+vuex：Vuex 是一个专为 Vue.js 应用程序开发的状态管理模式。
+
+线上地址：https://taylorchen709.github.io/vue-admin/#/login
+git地址：https://github.com/taylorchen709/vue-admin
+
+4、基于Vue实现后台系统权限控制
+
+博客地址： https://blog.csdn.net/qq_32340877/article/details/79416344
+
+基于Vue.js 2.x系列 + Element UI 的后台系统权限控制
+
+git地址：https://github.com/mgbq/vue-permission
+线上地址：https://mgbq.github.io/vue-permission/#/dashboard/dashboard
+————————————————
