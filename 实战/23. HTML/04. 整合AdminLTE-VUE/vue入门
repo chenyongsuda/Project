@@ -23,5 +23,11 @@ src   [项目核心文件]
         
 ------------------------------
 分析main.js
-      
-      
+      new Vue({
+          el: '#app',
+          router,
+          store,
+          render: h => h(App)     //渲染App这个模块
+        })
+ 
+ 
