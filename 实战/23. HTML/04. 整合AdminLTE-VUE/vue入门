@@ -6,7 +6,8 @@ src   [项目核心文件]
            公共组件目录。
         3、route       路由（配置项目路由）
             所有的路由规则
-        4、App.vue   根组件 App.vue 是一个Vue组件，也是项目的第一个Vue组件
+        4、views 放置所有页面
+        5、App.vue   根组件 App.vue 是一个Vue组件，也是项目的第一个Vue组件
              一个vue页面通常有三部分组成：模板[template]、js[javascript]、样式[style]
              A、模板template：其中模板只能包含一个父节点，也就是顶层的div只能有一个。
             <template>
@@ -19,7 +20,7 @@ src   [项目核心文件]
             <router-view></router-view>是一个子路由视图，后面的路由页面都显示在此处
             B、Script：vue通常都用es6来写的，用export default导出，其下面可以包含data，生命周期（mounted等），方法（methods）等，具体语法请看vue.js文档。
             C、style: 样式通过<style></style>包裹，默认是影响全局的，如需定义作用域只在
-        5、main.js  入口文件 main.js相当于Java中的main方法，是整个项目的入口js
+        6、main.js  入口文件 main.js相当于Java中的main方法，是整个项目的入口js
         
 ------------------------------
 分析main.js
@@ -99,3 +100,59 @@ export default {
     }
   }
 }
+
+
+-----------------------------
+工程级别文件夹
+        一般views文件夹对于还有api文件夹
+        每个页面对应api中一个js就是该组件与后台交互的api
+        ├── views                   // view
+                ├── login
+        ├── apis                // 入口页面
+                ├── login.js
+        
+        其他js放在common中
+        这样无论工程如何庞大都有迹可循
+        
+vue-element-admin后台结构
+├── build                      // 构建相关  
+├── config                     // 配置相关
+├── src                        // 源代码
+│   ├── api                    // 所有请求
+│   ├── assets                 // 主题 字体等静态资源
+│   ├── components             // 全局公用组件
+│   ├── directive              // 全局指令
+│   ├── filtres                // 全局 filter
+│   ├── icons                  // 项目所有 svg icons
+│   ├── lang                   // 国际化 language
+│   ├── mock                   // 项目mock 模拟数据
+│   ├── router                 // 路由
+│   ├── store                  // 全局 store管理
+│   ├── styles                 // 全局样式
+│   ├── utils                  // 全局公用方法
+│   ├── vendor                 // 公用vendor
+│   ├── views                   // view
+│   ├── App.vue                // 入口页面
+│   ├── main.js                // 入口 加载组件 初始化等
+│   └── permission.js          // 权限管理
+├── static                     // 第三方不打包资源
+│   └── Tinymce                // 富文本
+├── .babelrc                   // babel-loader 配置
+├── eslintrc.js                // eslint 配置项
+├── .gitignore                 // git 忽略项
+├── favicon.ico                // favicon图标
+├── index.html                 // html模板
+└── package.json               // package.json
+
+链接：https://juejin.im/post/59097cd7a22b9d0065fb61d2
+
+
+-------Day01
+插值表达式{{}}
+v-text
+v-html
+v-bind 简写：
+v-on   简写@
+v-cloak 指令设置样式，这些样式会在 Vue 实例编译结束时，从绑定的 HTML 元素上被移除(意思就是)
+        
+
