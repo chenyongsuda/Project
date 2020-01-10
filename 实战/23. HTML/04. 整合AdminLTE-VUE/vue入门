@@ -185,7 +185,66 @@ v-bind:style
 DOM事件流：
 默认采用时间冒泡,capture改为捕获
 
+--------------------------
+vue事件修饰符(.stop .capture .prevent  .self .once)的用法和解释：
 
+普通绑定事件
+<div id="app" style="background:red;" v-on:click="divclick">
+<input type="button" v-on:click="buttonclick" value="点我">
+</div>
+<!--默认事件顺序，将会显示"你刚才点击了一下button"再显示"你刚才点击了一下DIV" -->
+
+.stop事件修饰符
+<div id="app" style="background:red;" v-on:click="divclick">
+<input type="button" v-on:click.stop="buttonclick" value="点我">
+</div>
+<!--在button的v-on:click加上.stop后，将终止对外冒泡的执行，最终显示"你刚才点击了一下button"，不会触发后面div的点击 -->
+
+.capture事件修饰符
+<div id="app" style="background:red;" v-on:click.capture="divclick">
+<input type="button" v-on:click="buttonclick" value="点我">
+</div>
+
+<!--在DIV的v-on:click加上.capture后，将实现捕获触发事件，即从外到内执行事件。最终显示"你刚才点击了一下DIV"再显示"你刚才点击了一下button" -->
+.self事件修饰符
+<div id="app" style="background:red;" v-on:click.self="divclick">
+<input type="button" v-on:click.self="buttonclick" value="点我">
+</div>
+
+<!--在DIV的v-on:click加上.self后，只有点击自身元素时，才会执行自身绑定事件，不会执行父类或子类绑定的事件。" -->
+.prevent事件修饰符
+<div id="app" style="background:red;" v-on:click="divclick">
+<a href="http://www.beasure.com" v-on:click.prevent="aclick">本硕科技</a>
+</div>
+
+<!--在button的v-on:click加上.prevent后，将终止默认的事件，比如a链接将无法跳转 -->
+.once事件修饰符
+<div id="app" style="background:red;" v-on:click="divclick">
+<a href="http://www.beasure.com" v-on:click.prevent.once="aclick">本硕科技</a>
+</div>
+
+<!--在DIV的v-on:click加上.once后，只触发一次绑定事件，相当于点一下时候无法跳转链接，而第二次点击时候.prevent无效了，将会跳转链接。" -->
+以上测试匹配的vue实例代码
+<script>
+    var vm =new Vue{(
+        el:"#app",
+        data:{
+        },
+        methods:{
+            buttonclick:function(){
+               console.log("你刚才点击了一下button");
+            }
+
+            divclick:function(){
+               console.log("你刚才点击了一下DIV");
+            }
+
+            aclick:function(){
+               console.log("你刚才点击了一下A链接");
+            }
+        }
+    )}
+</script>
 
 
 
