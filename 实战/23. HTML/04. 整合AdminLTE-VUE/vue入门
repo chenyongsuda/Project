@@ -148,11 +148,48 @@ vue-element-admin后台结构
 
 
 -------Day01
+--赋值表达式
 插值表达式{{}}
 v-text
 v-html
 v-bind 简写：
 v-on   简写@
 v-cloak 指令设置样式，这些样式会在 Vue 实例编译结束时，从绑定的 HTML 元素上被移除(意思就是)
+v-model 只能运用于表单元素
+
+---控制语句
+v-for   会使用key
+v-if
+v-show
         
+--事件修饰符
+stop    使用.stop阻止事件的冒泡行为
+capture 使用.capture实现捕获触发事件的机制，即从外部事件开始执行
+prevent 使用.prevent阻止事件的默认行为
+self    使用.self实现只有点击当前元素才会触发事件处理函数
+once    使用.once实现事件的触发次数为一次
+
+.stop 是阻止冒泡行为,不让当前元素的事件继续往外触发,如阻止点击div内部事件,触发div事件
+.prevent 是阻止事件本身行为,如阻止超链接的点击跳转,form表单的点击提交
+.self 是只有是自己触发的自己才会执行,如果接受到内部的冒泡事件传递信号触发,会忽略掉这个信号
+.capture 是改变js默认的事件机制,默认是冒泡,capture功能是将冒泡改为倾听模式
+.once 是将事件设置为只执行一次,如 .click.prevent.once 代表只阻止事件的默认行为一次,当第二次触发的时候事件本身的行为会执行
+.passive 滚动事件的默认行为 (即滚动行为) 将会立即触发，而不会等待 onScroll 完成。这个 .passive 修饰符尤其能够提升移动端的性能。
+————————————————
+
+--样式
+v-bind:class
+v-bind:style
+
+===使用
+DOM事件流：
+默认采用时间冒泡,capture改为捕获
+
+
+
+
+
+
+
+
 
