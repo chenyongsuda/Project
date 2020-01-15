@@ -13,6 +13,7 @@ npm install mint-ui -S
 // 引入全部组件
 import Vue from 'vue';
 import Mint from 'mint-ui';
+import 'mint-ui/lib/style.css' //必须引入样式不然就没有效果
 Vue.use(Mint);
 // 按需引入部分组件
 import { Cell, Checklist } from 'mint-ui';
