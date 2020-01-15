@@ -5,7 +5,8 @@ npm install module_name -g 全局安装(命令行使用)
 npm install module_name 本地安装(将安装包放在 ./node_modules 下)
 
 放到开发环境还是生产环境的区别
-    你开发一个前端项目，在项目中你需要使用gulp构建你的开发和本地运行环境,这时你就要放到dependencies里。gulp是你用来压缩代码，打包等需要的工具，程序实际运行的时候并不需要，所以放到dev里就ok了。
+    你开发一个前端项目，在项目中你需要使用gulp构建你的开发和本地运行环境,这时你就要放到dependencies里。
+    gulp是你用来压缩代码，打包等需要的工具，程序实际运行的时候并不需要，所以放到dev里就ok了。
     你写程序要用element-ui,生产环境运行项目时肯定要用到element-ui,这时element-ui就应该安装到dependencies中去。
 
 本地安装
@@ -15,5 +16,35 @@ npm install module_name 本地安装(将安装包放在 ./node_modules 下)
   将安装包放在 /usr/local 下
   可以直接在命令行里使用
 
+npm ls 查看安装的模块
+基础语法
+npm ls [[<@scope>/]<pkg> ...]
+aliases: list, la, ll
+查看全局安装的模块及依赖 
+npm ls -g 
+
+npm init 在项目中引导创建一个package.json文件
+安装包的信息可保持到项目的package.json文件中，以便后续的其它的项目开发或者他人合作使用，也说package.json在项目中是必不可少的。
+npm init [-f|--force|-y|--yes]
+
 
 ==================
+搭建VUE2项目脚手架
+1.  下载node自带npm
+2.  配置淘宝镜像      npm install -g cnpm --registry=https://registry.npm.taobao.org
+3.  安装打包工具      npm install webpack –g
+4.  安装脚手架        npm install vue-cli -g
+5.  查看版本          Vue –V 查看vue版本
+6.  搭建项目          vue init webpack 项目名称
+
+安装项目依赖
+一定要从官方仓库安装，npm 服务器在国外所以这一步安装速度会很慢。
+npm install
+
+安装 vue 路由模块vue-router和网络请求模块vue-resource
+    cnpm install vue-router vue-resource --save
+    
+启动项目
+    npm run dev
+    
+================================================================
