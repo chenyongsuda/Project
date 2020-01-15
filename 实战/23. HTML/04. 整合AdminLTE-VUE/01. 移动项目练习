@@ -69,6 +69,17 @@ const router = new VueRouter({
   ]
 })
 
+***路由的两种方式
+1.this.$router.push()
+描述：跳转到不同的url，但这个方法回向history栈添加一个记录，点击后退会返回到上一个页面。
+
+2.this.$router.replace()
+描述：同样是跳转到指定的url，但是这个方法不会向history里面添加新的记录，点击返回，会跳转到上上一个页面。上一个记录是不存在的。
+
+3.this.$router.go(n)
+相对于当前页面向前或向后跳转多少个页面,类似 window.history.go(n)。n可为正数可为负数。正数返回上一个页面
+————————————————
+
 ***路由参数
 const User = {
   template: '<div>User {{ $route.params.id }}</div>'
@@ -313,6 +324,61 @@ export default new Router({
 设置为
 linkActiveClass: 'mui-active',
 
+======如果还是使用mint ui的话使用如下
+方案监听选中变化
+//页面 和 数据
+    <template>
+        <div id="main">
+            <mt-tabbar v-model="selected">
+                <mt-tab-item :id="home">
+                    首页
+                </mt-tab-item>
+                <mt-tab-item :id="car">
+                    购物车
+                </mt-tab-item>
+                <mt-tab-item :id="person">
+                    我的
+                </mt-tab-item>
+            </mt-tabbar>
+        </div>
+    </template>
+
+    <script>
+        export default {
+            data(){
+                return {
+                    //页面刷新取数据
+                    selected: sessionStorage.getItem('selected')? JSON.parse(sessionStorage.getItem('selected')):'首页',
+                    home: '首页',
+                    car: '购物车',
+                    person: '我的',      
+                }
+            }
+        }
+    </script>
+    
+===========   
+data(){
+       return {
+          //默认显示首页，但是一旦sessionStorage有数据 当浏览器刷新的时候，取出该值，就实现了刷新不跳转了
+          selected: sessionStorage.getItem('selected')? JSON.parse(sessionStorage.getItem('selected')):'首页'
+      }   
+ },
+ watch: {
+      selected(val, oldVal){
+          //一旦标签栏变化，把selected的值存到sessionStorage，保存当前值
+          sessionStorage.setItem('selected', JSON.stringify(val))
+          if(val === this.home){
+              //路由跳转 到首页
+              this.$router.replace('/home')          
+          }else if(val === this.car){
+              //路由跳转 到购物车
+              this.$router.replace('/car')            
+          }else if(val === this.person){
+              //路由跳转 到个人中心
+              this.$router.replace('/person')           
+          }
+      }
 
 
 
