@@ -176,5 +176,72 @@ UserSettings 组件的 <template> 部分应该是类似下面的这段代码：
 
 
 ======================
+项目开始
+***app.vue是初始模板
+<template>
+  <div id="app">
+    <router-view/>
+  </div>
+</template>
+
+想法是这样的这个一级模板可以放比如首页啊,登录啊等tab导航栏上建立一个模板页比如
+<head>
+<content>---------->view
+<tabs>
+建立一个二级模板页
+
+***模板 MainFrame.vue
+<template>
+  <div>
+    <!-- Header -->
+    <mt-header fixed title="fixed top"></mt-header>
+    <!-- Content -->
+    <router-view></router-view>
+    <!-- Footer -->
+    <mt-tabbar v-model="selected">
+        <mt-tab-item id="tab1">
+            <img slot="icon" src="">
+            tab1
+        </mt-tab-item>
+        <mt-tab-item id="tab2">
+            <img slot="icon" src="">
+            tab2
+        </mt-tab-item>
+        <mt-tab-item id="tab3">
+            <img slot="icon" src="">
+            tab3
+        </mt-tab-item>
+        <mt-tab-item id="tab4">
+            <img slot="icon" src="">
+            tab4
+        </mt-tab-item>
+    </mt-tabbar>
+  </div>
+</template>
+
+***route那边采用
+export default new Router({
+  routes: [
+    {
+      path: '/',
+      name: 'MainFrame',
+      component: MainFrame
+    },
+    {
+      path: '/pages',
+      name: 'MainFrame',
+      component: MainFrame,
+      children: [
+        { path: 'home', component: HomeContainer },
+        { path: 'member', component: MemberContainer },
+        { path: 'search', component: SearchContainer },
+        { path: 'shopcar', component: ShopCarContainer }
+      ]
+    }
+  ]
+})
+
+
+
 
 
