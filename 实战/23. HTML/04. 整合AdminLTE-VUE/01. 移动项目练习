@@ -241,6 +241,80 @@ export default new Router({
   ]
 })
 
+看了下这个tabs可以用
+
+还可以用MUI中的
+***使用MUI
+1. 下载MUI
+2. 拷贝MUI中的dist 目录中的文件到VUE中 在VUE中建立lib文件夹
+3. 在main.js中导入样式 如import './lib/mui/css/mui.min.css'
+4. 查看例子中源码程序赋值源码就行了
+
+使用如下的代替上面的tab
+<nav class="mui-bar mui-bar-tab">
+  <a class="mui-tab-item mui-active" href="#tabbar">
+    <span class="mui-icon mui-icon-home"></span>
+    <span class="mui-tab-label">首页</span>
+  </a>
+  <a class="mui-tab-item" href="#tabbar-with-chat">
+    <span class="mui-icon mui-icon-email"><span class="mui-badge">9</span></span>
+    <span class="mui-tab-label">消息</span>
+  </a>
+  <a class="mui-tab-item" href="#tabbar-with-contact">
+    <span class="mui-icon mui-icon-contact"></span>
+    <span class="mui-tab-label">通讯录</span>
+  </a>
+  <a class="mui-tab-item" href="#tabbar-with-map">
+    <span class="mui-icon mui-icon-gear"></span>
+    <span class="mui-tab-label">设置</span>
+  </a>
+</nav>
+
+改造超链接a 变成 route-link
+<nav class="mui-bar mui-bar-tab">
+  <router-link class="mui-tab-item mui-active" to="/pages/home">
+    <span class="mui-icon mui-icon-home"></span>
+    <span class="mui-tab-label">首页</span>
+  </router-link>
+  <router-link class="mui-tab-item" to="/pages/member">
+    <span class="mui-icon mui-icon-email"><span class="mui-badge">9</span></span>
+    <span class="mui-tab-label">消息</span>
+  </router-link>
+  <router-link class="mui-tab-item" to="/pages/search">
+    <span class="mui-icon mui-icon-contact"></span>
+    <span class="mui-tab-label">通讯录</span>
+  </router-link>
+  <router-link class="mui-tab-item" to="/pages/shopcar">
+    <span class="mui-icon mui-icon-gear"></span>
+    <span class="mui-tab-label">设置</span>
+  </router-link>
+</nav>
+
+
+***修改小图标
+如果要用扩展图标的话
+    icons-extra.css
+    mui-icons-extra.ttf
+    
+然后导入import './lib/mui/css/icons-extra.css'
+
+样式变为 mui-icon mui-icon-extra mui-icon-extra-order 完成
+
+
+***修改点击tab高亮切换
+通过设置link的activeclass实现
+export default new Router({
+  linkActiveClass: 'active',//设置 链接激活时使用的 CSS 类名。默认值可以通过路由的构造选项 linkActiveClass 来全局配置
+  routes: [
+    
+  ]
+})
+
+设置为
+linkActiveClass: 'mui-active',
+
+
+
 
 
 
