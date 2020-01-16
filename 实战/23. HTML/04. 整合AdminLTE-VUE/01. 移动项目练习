@@ -510,6 +510,42 @@ transition: property duration timing-function delay;
 
 或者参考https://blog.csdn.net/weixin_34396103/article/details/89018569
 
+========================
+添加轮播图
+引入依赖
+import { Swipe, SwipeItem } from 'mint-ui'
+Vue.component(Swipe.name, Swipe)
+Vue.component(SwipeItem.name, SwipeItem)
+
+加入组件
+<div class="home-container">
+    <mt-swipe :auto="4000">
+      <mt-swipe-item>1</mt-swipe-item>
+      <mt-swipe-item>2</mt-swipe-item>
+      <mt-swipe-item>3</mt-swipe-item>
+    </mt-swipe>
+</div>
+
+加入样式
+<style scoped>
+.mint-swipe {
+  height: 200px;
+}
+
+.mint-swipe-item:nth-child(1) {
+  background-color: red;
+}
+
+.mint-swipe-item:nth-child(2) {
+  background-color: pink;
+}
+
+.mint-swipe-item:nth-child(3) {
+  background-color: greenyellow;
+}
+
+</style>
+
 
 
 
