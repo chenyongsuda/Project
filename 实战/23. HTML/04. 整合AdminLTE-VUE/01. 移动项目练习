@@ -424,6 +424,98 @@ export default {
 如果用子组件的话用mui
 
 
+===========
+添加切换tab时候动画过渡效果
+什么是VUE动画
+Vue 在插入、更新或者移除 DOM 时，提供多种不同方式的应用过渡效果。
+把动画加在
+<transition name="tabs">
+  <router-view></router-view>
+</transition>
+再route切换的时候老的节点内容移除,新的内容插入.就可以使用动画
+
+语法
+transition: property duration timing-function delay;
+          transition-property	规定设置过渡效果的 CSS 属性的名称。
+          transition-duration	规定完成过渡效果需要多少秒或毫秒。
+          transition-timing-function	规定速度效果的速度曲线。
+          transition-delay	定义过渡效果何时开始。
+
+使用如下变化
+.tabs-enter, .tabs-leave-to {
+  opacity: 0;
+  transform: translateX(100%)
+}
+
+.tabs-enter-active, .tabs-leave-active {
+  transition:  .5s;
+}
+
+会发现在切换的时候两个DIV同时存在就会发现,两个div并排了,这样横向的就出现超宽了.
+那就在主容器加一个class 设置overflow hidden 解决同时出现非可视化区域宽度变大出现滚动条问题
+.app-container {
+  overflow: hidden;
+}
+任然存在两个div在两行,出去的div在第一行进来的在第二行
+
+了解绝对定位和相对定位
+1、relative：相对于原来位置移动，元素设置此属性之后仍然处在文档流中，不影响其他元素的布局
+2、absolute:元素会脱离文档流，如果设置偏移量，会影响其他元素的位置定位
+
+默认相对定位
+两个div就是两行
+我们需要的是
+[viewport]
+      [router1]   [router2]
+我们要先让两个 router 并排
+
+按理说两个 router 都是 left:0, top:0, 应该是重叠的是不是?
+对.
+所以我们对要进入的那个 router 做下 translate
+比如当前的是 router1, 点击要向前跳转到 router2, 那么对 router2 translateX(100%);
+这样两个 router 是不是就并排了.
+
+并排之后就是动起来, 也就是应用滑动效果.
+.tabs-enter, .tabs-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
+  position: absolute;
+}
+
+发现现在进入的时候是从100到显示位置,出去是从显示位置到100 应该是从显示位置到-100比较好
+将tabs-enter和tabs-leave-to分开
+然后再离开的那个加position为绝对定位,下面为最终的.有点小问题,如果设置时间为50s可以看到.小时的div突然变小了.
+.app-container {
+  overflow: hidden;
+}
+
+/* .tab-container {
+  width: 100%
+} */
+
+.tabs-enter {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.tabs-leave-to {
+  opacity: 0;
+  transform: translateX(-100%);
+  position: absolute;
+}
+
+.tabs-enter-active, .tabs-leave-active {
+  transition:  all .5s;
+}
+
+或者参考https://blog.csdn.net/weixin_34396103/article/details/89018569
+
+
+
+
+
+
+
 
 
 
