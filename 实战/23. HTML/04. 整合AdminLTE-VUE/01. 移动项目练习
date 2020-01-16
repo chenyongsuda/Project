@@ -550,7 +550,7 @@ Vue.component(SwipeItem.name, SwipeItem)
 拷贝mui的代码放进去
 设置下背景颜色和边框
 设置下小格子的边框
-.mui-table-view mui-grid-view {
+.mui-table-view .mui-grid-view {
   background-color: white;
   border: none
 }
