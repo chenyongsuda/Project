@@ -687,6 +687,24 @@ const router = new VueRouter({
     </a>
 </router-link>
 
+路由上加上
+{ path: 'newsItem/:id', component: NewsItem }
+然后页面上传参变成<router-link :to="'/pages/newsItem/' +  id" tag="div">
+
+
+
+=======================
+开始详情页构建
+大概思路是,构建一个结构
+<div class="news-container">
+	<div class="new-header"></div>
+	<div class="new-context" v-html="this.html"></div>
+</div>
+然后新闻内容为html从后台取出来.
+
+
+========================
+发送评论功能
 
 
 
