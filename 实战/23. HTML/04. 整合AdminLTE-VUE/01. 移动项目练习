@@ -571,6 +571,126 @@ Vue.component(SwipeItem.name, SwipeItem)
   margin-top: 40px;
 }
 
+=========================
+参考代码
+<template>
+    <ul class="mui-table-view mui-table-view-chevron">
+				<li class="mui-table-view-cell mui-media">
+					<a class="mui-navigate-right">
+						<img class="mui-media-object mui-pull-left" src="@/assets/image/shuijiao.jpg">
+						<div class="mui-media-body">
+							<h1 class="news-item-header">CBD</h1>
+							<p class='mui-ellipsis'>烤炉模式的城，到黄昏，如同打翻的调色盘一般.</p>
+						</div>
+					</a>
+				</li>
+				<li class="mui-table-view-cell mui-media">
+					<a class='mui-navigate-right' href="javascript:;">
+						<img class="mui-media-object mui-pull-left" src="@/assets/image/shuijiao.jpg">
+						<div class="mui-media-body">
+							<h1 class="news-item-header">远眺</h1>
+							<p class='mui-ellipsis'>静静的看这个世界，最后终于疯了</p>
+						</div>
+					</a>
+				</li>
+				<li class="mui-table-view-cell mui-media">
+					<a class="mui-navigate-right">
+						<img class="mui-media-object mui-pull-left" src="@/assets/image/shuijiao.jpg">
+						<div class="mui-media-body">
+							<h1 class="news-item-header">幸福</h1>
+							<p class='mui-ellipsis'>能和心爱的人一起睡觉，是件幸福的事情；可是，打呼噜怎么办？</p>
+						</div>
+					</a>
+				</li>
+			</ul>
+</template>
+
+<script>
+export default {
+  name: 'NewsList',
+  data () {
+    return {
+      msg: 'Welcome to Your Vue.js App'
+    }
+  }
+}
+</script>
+
+<!-- Add "scoped" attribute to limit CSS to this component only -->
+<style scoped>
+    .news-item-header {
+        font-size: 16px;
+    }
+</style>
+
+==========================
+加详情页跳转链接
+详情页
+<li class="mui-table-view-cell mui-media">
+                <a class="mui-navigate-right">
+                    <img class="mui-media-object mui-pull-left" src="@/assets/image/shuijiao.jpg">
+                    <div class="mui-media-body">
+                        <h1 class="news-item-header">CBD</h1>
+                        <p class='mui-ellipsis'>烤炉模式的城，到黄昏，如同打翻的调色盘一般.</p>
+                    </div>
+                </a>
+</li>
+
+怎么加超链接呢 直接将a 换成route-link 显示都显示不出来了.查阅文档
+而vue2.0版本里超链接标签由a标签被替换成了router-link标签，但最终在页面还是会被渲染成a标签的
+至于为什么要把a换成router-link原因还是有的，比如我们之前一直惯用的nav导航里面结构是（ul>li>a），router-link可以渲染为任何元素，这里可以直接渲染成li标签，同样能实现跳转效果，节省了a标签的使用，还有一个原因可能是因为a标签正常是链接的跳转的作用，点击a时可能会重载页面，使用router-link，此标签会被vue所监听，跳转链接时就不会刷新页面了。当然这个人理解，不对之处有望指正。
+
+"router-link"属性
+1.":to" 属 性
+相当于a标签中的"herf"属性，后面跟跳转链接所用
+<router-link :to="/home">Home</router-link>
+<!-- 渲染结果 -->
+<a href="/home">Home</a>
+
+2."replace" 属 性
+replace在routre-link标签中添加后，页面切换时不会留下历史记录
+<router-link :to="/home" replace></router-link>
+
+3."tag" 属 性
+具有tag属性的router-link会被渲染成相应的标签
+<router-link :to="/home" tag="li">Home</router-link>
+<!-- 渲染结果 -->
+<li>Home</li>
+此时页面的li同样会起到a链接跳转的结果，vue会自动为其绑定点击事件，并跳转页面
+
+4."active-class" 属 性
+这个属性是设置激活链接时class属性，也就是当前页面所有与当前地址所匹配的的链接都会被添加class属性
+<router-link :to="/home" active-class="u-link--Active">Home</router-link>
+active-class属性的默认值是router-link-active,所以如果没有设置，就会被渲染为这个class
+
+可以在router.js里面设置
+const router = new VueRouter({
+  mode: 'hash',
+  linkActiveClass: 'u-link--Active', // 这是链接激活时的class
+})
+
+5."exact" 属 性
+开启router-link的严格模式
+<router-link :to="/" exact>home</router-link>
+上面这个标签如果不加exact属性，则会在vue2.leenty.com/article页面下也会被匹配到，
+这却不是我们的本意,在加了这个属性后就会正确的匹配到vue2.leenty.com下
+
+=======================
+在外层加
+<router-link :to="'/pages/newsItem/' +  id" tag="div">
+    <a class="mui-navigate-right">
+        <img class="mui-media-object mui-pull-left" src="@/assets/image/shuijiao.jpg">
+        <div class="mui-media-body">
+            <h1 class="news-item-header">CBD</h1>
+            <p class='mui-ellipsis'>烤炉模式的城，到黄昏，如同打翻的调色盘一般.</p>
+        </div>
+    </a>
+</router-link>
+
+
+
+
+
 
 
 
