@@ -560,6 +560,17 @@ Vue.component(SwipeItem.name, SwipeItem)
 }
 
 ========================
+加入新闻列表页,从MUI查找media组件然后拷贝当做一个页面
+发现里面的子是居中的,原来APP根目录有居中属性改成默认左对齐
+#app {
+  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: left;
+  color: #2c3e50;
+  margin-top: 40px;
+}
+
 
 
 
