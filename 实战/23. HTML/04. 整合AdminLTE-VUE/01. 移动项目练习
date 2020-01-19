@@ -5,6 +5,8 @@ Mint UI 包含丰富的 CSS 和 JS 组件，能够满足日常的移动端开发
 注意：MUI并不能使用npm去下载，需要手动从github上下载现成的包，自己解压出来，然后手动拷贝到项目中去使用
 Mint-UI 官网：https://mint-ui.github.io/#!/zh-cn
 
+VsCode内置了Emmet语法
+
 ====================
 下载依赖
 # Vue 2.0
