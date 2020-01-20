@@ -43,6 +43,10 @@ npm install
 
 安装 vue 路由模块vue-router和网络请求模块vue-resource
     cnpm install vue-router vue-resource --save
+
+安装sass依赖
+cnpm install sass-loade --save-dev
+cnpm install node-sass --save-dev
     
 启动项目
     npm run dev
