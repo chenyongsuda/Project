@@ -743,6 +743,51 @@ const router = new VueRouter({
     </div>
 ========================
 发送评论功能
+========================
+商品列表
+<div class="items">
+        <div class="item">
+          <img src="../../../assets/image/shuijiao.jpg"/>
+          <p>新鲜礼物快来选购啊,快来啊 啊啊啊啊啊啊</p>
+          <div class="iteminfo">
+            <div class="info">
+              <span>19.8$</span>
+              <del>28.8$</del>
+            </div>
+            <span class="mui-icon-extra mui-icon-extra-cart"></span>
+          </div>
+        </div>
+</div>
+
+<style lang='scss' scoped>
+.items {
+  margin: 10px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  .item {
+    width: 49%;
+    margin-bottom: 10px;
+    img {
+        width: 100%;
+    };
+    .iteminfo {
+      display: flex;
+      justify-content: space-between;
+      del {
+        display: inline-block;
+        margin-left: 10px;
+      }
+    }
+  }
+}
+</style>
+
+每行两个模式
+
+================
+商品详情页
 
 
 
