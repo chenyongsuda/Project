@@ -45,8 +45,8 @@ npm install
     cnpm install vue-router vue-resource --save
 
 安装sass依赖
-cnpm install sass-loade --save-dev
-cnpm install node-sass --save-dev
+npm install sass-loader@7.3.1 --save-dev
+npm install node-sass --save-dev
     
 启动项目
     npm run dev
