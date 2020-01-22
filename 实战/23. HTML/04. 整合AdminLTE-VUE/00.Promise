@@ -1,0 +1,158 @@
+Promise的基本用法（一）
+
+1.Promise是什么？
+Promise是异步编程的一种解决方案，在ES6中Promise被列为了正式规范，统一了用法，原生提供了Promise对象。
+
+Promise打印出来的详细信息
+2.Promise的基本用法
+then中成功失败的执行
+// resolve代表成功 reject失败 都是一个函数
+
+let p = new Promise(function(reslove,reject){
+
+    //reslove('成功')  //状态由等待变为成功，传的参数作为then函数中成功函数的实参
+
+    reject('失败')  //状态由等待变为失败，传的参数作为then函数中失败函数的实参
+
+})
+
+//then中有2个参数，第一个参数是状态变为成功后应该执行的回调函数，第二个参数是状态变为失败后应该执行的回调函数。
+
+p.then((data)=>{
+
+    console.log('成功'+data)
+
+},(err)=>{
+
+    console.log('失败'+err)
+
+})
+Promise承诺：默认情况下是等待状态pending，如果有一天状态转变为成功就成功了，如果状态变成失败就失败了。状态一旦改变了就不能再改变了。
+如果then中返回了一个promise 会将promise的结果继续传给第二then中（如果结果是将状态改成成功就走下一个then的成功回调，状态改为失败就走下一个then的失败回调）
+function read( content ) {
+    return new Promise(function( reslove,reject ) {
+        setTimeout(function(){
+                if(content>4){
+                    resolve(content)
+                }else{
+                    reject('小于4')
+                }
+        },1000)
+    })
+}
+
+read(1).then(( data )=>{
+    console.log(data)
+},( err )=>{
+    console.log(err) //小于4
+    return read(2) //将状态改为了失败
+})
+.then(( data )=>{
+    console.log('data',data)
+},( err )=>{
+    console.log(err) //小于4
+})
+第一个then不管是走成功还是失败的回到函数，只要返回一个普通值（不抛出错误或者返回promise），都会执行下一个then的成功的回调。
+let p = new Promise(function(reslove,reject){
+    reject('失败1')
+})
+
+p.then((data)=>{
+    console.log('成功'+data)
+},(err)=>{
+    console.log('失败'+err) //失败失败1
+})
+.then((data)=>{
+    console.log('成功1'+data) //成功1undefined
+},(err)=>{
+    console.log('失败1'+err)
+})
+
+eg:抛出错误执行下一个then的失败
+
+let p = new Promise(function(reslove,reject){
+    reject('失败1')
+})
+
+p.then((data)=>{
+    console.log('成功'+data)
+},(err)=>{
+    console.log('失败'+err) //失败失败1
+})
+.then((data)=>{
+    console.log('成功1'+data) //成功1undefined
+    throw Error('下一个失败')
+},(err)=>{
+    console.log('失败1'+err)
+})
+.then((data)=>{
+    console.log('成功2'+data)
+},(err)=>{
+    console.log('失败2'+err) //失败2Error: 下一个失败
+})
+catch的用法
+catch可以实现错误的捕获 一般写在最后，如果上面有自己的err会走自己的error。如果没有写就会走到catch
+let p = new Promise(function(resolve,reject){
+    reject('失败')
+});
+
+p.then((data)=>{
+
+},(err)=>{
+    throw Error('错误')
+})
+.then((data)=>{
+
+},(err)=>{
+    console.log(err+'自己的err') //走自己的（输出：Error: 错误自己的err）
+    throw Error('错误自己抛出的')
+})
+.then((data)=>{
+//没有自己的失败处理函数，走catch
+}).catch(e=>{
+    console.log(e+'公共的err') //输出：Error: 错误自己抛出的公共的err
+})
+all的用法
+Promise.all方法执行后返回的依旧是promise, all两个全成功才表示成功 。
+function read(content) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+            resolve(content)
+        }, 1000)
+    })
+}
+
+let result = Promise.all([read(1), read(2)]);
+result.then((data) => {
+    console.log(data) //[ 1, 2 ]
+})
+有了all，就可以并行执行多个异步操作，并且在一个回调中处理所有的返回数据。返回的数据与传的参数数组的顺序是一样的。
+race的用法
+如果先成功了那就成功了, 如果先失败了那就失败了
+function read(content) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+            if(content>4){
+                resolve(content)
+            }else{
+                reject(content)
+            }
+        }, 1000*content)
+    })
+}
+
+let result = Promise.all([read(5), read(2)]);
+result.then((data) => {
+    console.log('成功'+data)
+},(err)=>{
+    console.log('失败'+err) //失败2
+})
+Promise的静态方法
+resolve：
+Promise.resolve([1,2,3]).then(function(data){
+    console.log(data); //[1,2,3]
+});
+reject:
+Promise.reject([1,2,3]).then(null,function(err){
+    console.log('err',err) //err [ 1, 2, 3 ]
+});
