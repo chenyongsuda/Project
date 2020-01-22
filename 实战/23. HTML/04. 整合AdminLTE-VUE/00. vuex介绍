@@ -1,0 +1,121 @@
+===State：
+const store = new Vuex.Store({
+  state: {
+    count: 1
+  }
+})
+vuex中的数据源，我们需要保存的数据就保存在这里，可以在页面通过 this.$store.state来获取我们定义的数据
+
+===Getters：
+Getter相当于vue中的computed计算属性，getter 的返回值会根据它的依赖被缓存起来，且只有当它的依赖值发生了改变才会被重新计算，
+这里我们可以通过定义vuex的Getter来获取，Getters 可以用于监听、state中的值的变化，返回计算后的结果，这里我们修改Hello World.vue文件如下：
+
+const store = new Vuex.Store({
+  state: {
+    count: 1
+  },
+  getters: {
+    getStateCount: function (state) {
+      return state.count
+    }
+  }
+})
+
+===Mutations：
+数据我们在页面是获取到了，但是如果我们需要修改count值怎么办？如果需要修改store中的值唯一的方法就是提交mutation来修改，
+我们现在Hello World.vue文件中添加两个按钮，一个加1，一个减1；这里我们点击按钮调用addFun（执行加的方法）和reductionFun（执行减法的方法），
+然后在里面直接提交mutations中的方法修改值：
+
+const store = new Vuex.Store({
+  state: {
+    count: 1
+  },
+  getters: {
+    getStateCount: function (state) {
+      return state.count
+    }
+  },
+  mutations: {
+    addCnt (state) {
+      state.count = state.count + 1
+    },
+    reduceCnt (state) {
+      state.count = state.count - 1
+    }
+  }
+})
+
+然后再页面或者组件上使用
+this.$store.commit("functionName")
+
+===Actions：
+我们看到，当点击三次后值从2变成了-1；页面上的值是改变了；我们达到了修改store中状态值的目的，但是，官方并不介意我们这样直接去修改store里面的值，
+而是让我们去提交一个actions，在actions中提交mutation再去修改状态值，接下来我们修改index.js文件，先定义actions提交mutation的函数：
+const store = new Vuex.Store({
+  state: {
+    count: 1
+  },
+  getters: {
+    getStateCount: function (state) {
+      return state.count
+    }
+  },
+  mutations: {
+    addCnt (state) {
+      state.count = state.count + 1
+    },
+    reduceCnt (state) {
+      state.count = state.count - 1
+    }
+  },
+  actions: {
+    addCnt (context) {
+      context.addCnt()
+    },
+    reduceCnt (context, n) {
+      context.reduceCnt()  
+    }
+  }
+})
+
+组件那边调用
+this.$store.dispatch("reduce",1)
+
+===mapState、mapGetters、mapActions
+如果我们不喜欢这种在页面上使用“this.$stroe.state.count”和“this.$store.dispatch('funName')”这种很长的写法，
+那么我们可以使用mapState、mapGetters、mapActions就不会这么麻烦了；
+import {mapState} from "vuex"; // 引入mapState 
+ export default {
+　　// 下面这三种写法都可以
+  computed: mapState({
+   // 箭头函数可使代码更简练
+    count: state => state.count
+  })
+ }
+
+但是，当项目中的 mutation 或者 action 过多的时候，这样一个个的写就显得比较麻烦。
+所以，vue提供了 mapActions和mapMutations 。两者使用方法相似，下面以 mapActions为例。
+
+一、引入 mapActions 
+import { mapActions } from 'vuex'
+
+二、进行解构赋值和拓展运算
+export default {
+  // ...
+  methods: {
+       //下述中的 ... 是拓展运算符
+       // 使用 [] 是解构赋值
+    ...mapActions([
+      'increment', // 将 `this.increment()` 映射为 `this.$store.dispatch('increment')`
+ 
+      // `mapActions` 也支持载荷：
+      'incrementBy' // 将 `this.incrementBy(amount)` 映射为 `this.$store.dispatch('incrementBy', amount)`
+    ]),
+    ...mapActions({
+      add: 'increment' // 将 `this.add()` 映射为 `this.$store.dispatch('increment')`
+    })
+  }
+}
+
+解析：
+1. mapActions 必须放在 methods中，因为 action 或者  mutation 都是方法.
