@@ -1,0 +1,7 @@
+1. flask 自定义命令
+  @app.cli.command()
+  def hello():
+  click.echo("hello")
+
+  cmd: flask hello
+  
