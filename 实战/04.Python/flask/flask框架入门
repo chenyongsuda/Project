@@ -18,3 +18,63 @@
     # Get Token From Forms
     if request.form.get('jwt'):
         jwt = request.form.get('jwt')
+
+
+3. restapi
+    Flask 学习笔记（二）：RESTful API
+    概括#
+    URL：需要操作的对象，也就是资源
+    HTTP method：我要对该对象做什么（POST 增、DELETE 删、GET 查、PUT 和 PATCH 改）
+    HTTP status code：操作的结果
+    做到这个，就达成了 REST 的第二层。
+
+    视图的定义方式#
+    一般视图都使用 app.route() 装饰器定义，但是这种方式显然不适合用于定义 restful api.
+    对于 restful 场景，flask 提供了 MethodView 类，可以用基于类的方法来定义视图函数：
+
+    Copy
+    class HttpMethodExample(MethodView):
+        def get(self):
+            return 'Send request with `GET` method'
+
+        def post(self):
+            return 'Send request with `POST` method'
+
+        def put(self):
+            return 'Send request with `PUT` method'
+
+        def patch(self):
+            return 'Send request with `PATCH` method'
+
+        def delete(self):
+            return 'Send request with `DELETE` method'
+
+
+    # 基于 MethodView 构造视图函数
+    example_view = HttpMethodExample.as_view('http_method_example2')
+
+    # 为该视图函数添加 url 规则
+    app.add_url_rule('/http-method-test2/', view_func=example_view)
+    flask 还提供了 jsonify 与 request.get_json() 用于序列化与反序列化数据。
+
+    flask-rest-api#
+    搜了一番 flask rest 库，发现比较流行的有 flask-restful、flask-restplus、flask-restless 等，刚开始打算用 flask-restplus，因为它能自动生成 swagger api 文档。
+    但是发现它的 schema 是用类似 argparser 的方法做的，而且整个响应解析模块，在新版将被移除，官方推荐用 marshmallow，但是这方面的资料很少。于是又重做打算。
+
+    找了一圈，最后找到个 flask-rest-api，这个模块使用 marshmallow 定义 schema，用 webargs 解析参数，用 apispec 生成 api 文档。虽然 stars 比较少，但是开发者正是 marshmallow 等几个流行库的 co-leader，感觉是有保障的。
+    当然新 lib 可能会遇到 bug，但是一是开发者很活跃，issue 基本都能很快得到回复，二是我当下做的也是个个人项目，真出点小毛病问题也不大。
+
+    于是就选择了它。这个库的 docs 写得很清晰易懂，而且显然很新手友好，这是我看中它的原因。目前正在使用它开发我的新项目。笔记就。。写完再说吧。项目都跑不动，就写笔记，感觉也不太靠谱。。。
+
+    画外 GraphQL#
+    待续
+
+    参考#
+    怎样用通俗的语言解释REST，以及RESTful？ - 知乎
+    如何给老婆解释什么是RESTful？ - 知乎
+    Github API - v3
+    PayPal API
+    flask-rest-api: build a REST API on Flask using Marshmallow
+    作者： 於清樂
+
+    出处：https://www.cnblogs.com/kirito-c/p/10333269.html
