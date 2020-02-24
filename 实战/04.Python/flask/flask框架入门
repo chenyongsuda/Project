@@ -5,3 +5,16 @@
 
   cmd: flask hello
   
+
+2. 获取请求参数
+    jwt = None
+    if request.headers.get('jwt'):
+        jwt = request.headers.get('jwt')
+
+    # Get Token From params
+    if request.args.get('jwt'):
+        jwt = request.args.get('jwt')
+
+    # Get Token From Forms
+    if request.form.get('jwt'):
+        jwt = request.form.get('jwt')
