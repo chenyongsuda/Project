@@ -167,5 +167,56 @@
 7. rest接口和错误处理
      
       
-          
-          
+=====================================        
+装饰器
+Flask-RESTful中装饰器的使用
+
+Flask-Restful的创建实例方法
+
+class flask_restful.Api(
+        app=None, 
+        prefix='',  
+        default_mediatype='application/json', 
+        # 装饰器函数定义处
+        decorators=None, 
+        catch_all_404s=False, serve_challenge_on_401=False, 
+        url_part_order='bae', errors=None)
+decorators (list) – Decorators to attach to every resource
+
+在这里定义的decorators是应用于所有的Resource的API
+
+2 针对每个Resource使用
+Flask-RESTful在扩展Flask-RESTful的使用提到这种使用场景。
+
+3 使用实例
+Flask-RESTful的装饰器可以用于许多场景，比如用户验证的场景或某些API需要特殊权限验证的地方。
+
+def global_cache(f):
+    @wraps(f)
+    def cacher(*args, **kwargs):
+        # caching stuff
+    return cacher
+    
+def resource_cache(f):
+    @wraps(f)
+    def cacher(*args, **kwargs):
+        # caching stuff
+    return cacher
+
+class PicHandler(restful.Resource):
+  # cache装饰器只用于/v1/pic的GET请求上
+    method_decorators = {'get': [resource_cache]}
+
+     def get(self, *args, **kwargs):
+        return something_interesting(*args, **kwargs)
+
+     def post(self, *args, **kwargs):
+        return create_something(*args, **kwargs)
+ 
+ app = Flask(__name__)
+api = Api(app, decorators=['global_cache'])
+api.add_resource(PicHandler, '/v1/pic/')
+** 需要注意的一点：**
+
+当既有全局的装饰器又有局部资源的装饰器时， 执行顺序是先全局装饰器，再局部装饰器
+当局部资源装饰器有多个时，按list里的顺序先后执行。         
