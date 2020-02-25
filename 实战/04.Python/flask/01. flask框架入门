@@ -162,6 +162,10 @@
       支持layout模板
       参考 00.jinjia2模板
       
+      然后使用bootstrap-flask 或者纯粹使用bootstrap等.
+      
+7. rest接口和错误处理
+     
       
           
           
