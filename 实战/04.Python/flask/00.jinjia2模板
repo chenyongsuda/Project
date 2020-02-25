@@ -1,0 +1,63 @@
+顺便学习了下jinjia2模板中的语法
+    {# 我是注释 #}
+    {# if 语句 #}
+    {% if xxxx %}
+    {% else %}
+    {% endif %}
+    {# for语句 #}
+    {% for x in xxx %}
+    {% endfor %}
+
+
+================================================
+jinja2对block模板的理解
+
+模板继承包含基本模板和子模板。其中基本模板里包含了你这个网站里的基本元素的基本骨架，但是里面有一些空的或者是不完善的块（block）需要用子模板来填充。
+
+如基本模板base.html为：
+
+<!doctype html public "-//w3c//dtd html 4.01//en">
+<html lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    {% block head %}
+    <link rel="stylesheet" href="style.css" />
+    <title>{% block title %}{% endblock %} - my webpage</title>
+    {% endblock %}
+</head>
+<body>
+    <div id="content">{% block content %}{% endblock %}</div>
+    <div id="footer">
+        {% block footer %}
+            &copy; copyright 2008 by <a href="http://domain.invalid/">you</a>.
+        {% endblock %}
+    </div>
+</body>
+ 
+
+其中用黑色粗体标出了许多块，head，title，content和footer块为空块需要子模板填充；
+head和footer本身有内容，可以填充也可以继承。head继承：- my webpage，footer继承&copy; copyright 2008 by <a href="http://domain.invalid/">you</a>.
+子模板如下：
+
+{% extends "base.html" %}
+{% block title %}index{% endblock %}
+{% block head %}
+    {{ super() }}
+    <style type="text/css">
+        .important { color: #336699; }
+    </style>
+{% endblock %}
+{% block content %}
+    <h1>index</h1>
+    <p class="important">
+      welcome on my awesome homepage.
+    </p>
+{% endblock %}
+
+成功运行后将把子模板中定义的各个子块填充到基本模板后输出。
+特别注意的是{{super()}}的意思是不仅用子模板中的内容填充，也要调用基本模板中的部分内容。
+该子模板并未定义footer块的内容，因此在输出的结果中footer块将保留基本模板中的内容。
+注意：
+
+{% extends "base.html" %}：模板将继承base.html
+{{ super() }}：在子模板中重写父模板的block中打印被重写的block的内容，本例中，重写了.important的ccs样式
