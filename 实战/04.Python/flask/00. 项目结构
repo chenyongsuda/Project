@@ -1,0 +1,20 @@
+shamate
+	apps # 通过 blueprint 切分模块
+		company
+			views.py
+		user
+			views.py
+		admin
+			views.py
+	models
+	service
+  templates
+	tasks.py
+	__init__.py
+	app.py
+	db.py
+	helpers.py
+	settings.py
+	worker.py
+  
+  
