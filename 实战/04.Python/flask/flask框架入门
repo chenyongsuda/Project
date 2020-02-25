@@ -78,3 +78,13 @@
     作者： 於清樂
 
     出处：https://www.cnblogs.com/kirito-c/p/10333269.html
+
+4. 添加路由的两种方式
+    1、使用注释方式
+      @app.route('/')
+      def hello():
+          return 'Hello World'
+    2、使用代码方式
+        api.add_url_rule('/login', view_func=AuthView.as_view('login'))
+    
+    
