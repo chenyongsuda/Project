@@ -1,0 +1,223 @@
+RESTful API实现方式两种
+1. 普通路由实现
+  =======
+      视图的定义方式#
+      一般视图都使用 app.route() 装饰器定义，但是这种方式显然不适合用于定义 restful api.
+      对于 restful 场景，flask 提供了 MethodView 类，可以用基于类的方法来定义视图函数：
+
+      class HttpMethodExample(MethodView):
+          def get(self):
+              return 'Send request with `GET` method'
+
+          def post(self):
+              return 'Send request with `POST` method'
+
+          def put(self):
+              return 'Send request with `PUT` method'
+
+          def patch(self):
+              return 'Send request with `PATCH` method'
+
+          def delete(self):
+              return 'Send request with `DELETE` method'
+
+
+      # 基于 MethodView 构造视图函数
+      example_view = HttpMethodExample.as_view('http_method_example2')
+
+      # 为该视图函数添加 url 规则
+      app.add_url_rule('/http-method-test2/', view_func=example_view)
+      flask 还提供了 jsonify 与 request.get_json() 用于序列化与反序列化数据。
+      
+  =========
+        #!/usr/bin/env python
+        # -*- coding: utf-8 -*-
+        # by vellhe 2017/7/9
+        from flask import Flask, abort, request, jsonify
+
+        app = Flask(__name__)
+
+        # 测试数据暂时存放
+        tasks = []
+
+        @app.route('/add_task/', methods=['POST'])
+        def add_task():
+            if not request.json or 'id' not in request.json or 'info' not in request.json:
+                abort(400)
+            task = {
+                'id': request.json['id'],
+                'info': request.json['info']
+            }
+            tasks.append(task)
+            return jsonify({'result': 'success'})
+
+
+        @app.route('/get_task/', methods=['GET'])
+        def get_task():
+            if not request.args or 'id' not in request.args:
+                # 没有指定id则返回全部
+                return jsonify(tasks)
+            else:
+                task_id = request.args['id']
+                task = filter(lambda t: t['id'] == int(task_id), tasks)
+                return jsonify(task) if task else jsonify({'result': 'not found'})
+
+
+        if __name__ == "__main__":
+            # 将host设置为0.0.0.0，则外网用户也可以访问到这个服务
+            app.run(host="0.0.0.0", port=8383, debug=True)
+            
+    ========
+
+
+2. 使用flask restful
+    使用flask的RESTful扩展库 flask-restful
+    安装Flask-RESTful库：
+
+    pip install flask-restful
+    demo
+    #!/usr/bin/env python
+    # -*- coding: utf-8 -*-
+    # by vellhe 2017/7/9
+    from flask import Flask
+    from flask_restful import reqparse, abort, Api, Resource
+
+    app = Flask(__name__)
+    api = Api(app)
+
+    TODOS = {
+        'todo1': {'task': 'build an API'},
+        'todo2': {'task': '哈哈哈'},
+        'todo3': {'task': 'profit!'},
+    }
+
+
+    def abort_if_todo_doesnt_exist(todo_id):
+        if todo_id not in TODOS:
+            abort(404, message="Todo {} doesn't exist".format(todo_id))
+
+
+    parser = reqparse.RequestParser()
+    parser.add_argument('task')
+
+
+    # # 操作（put / get / delete）单一资源Todo
+    # shows a single todo item and lets you delete a todo item
+    class Todo(Resource):
+        def get(self, todo_id):
+            abort_if_todo_doesnt_exist(todo_id)
+            return TODOS[todo_id]
+
+        def delete(self, todo_id):
+            abort_if_todo_doesnt_exist(todo_id)
+            del TODOS[todo_id]
+            return '', 204
+
+        def put(self, todo_id):
+            args = parser.parse_args()
+            task = {'task': args['task']}
+            TODOS[todo_id] = task
+            return task, 201
+
+
+    # # 操作（post / get）资源列表TodoList
+    # shows a list of all todos, and lets you POST to add new tasks
+    class TodoList(Resource):
+        def get(self):
+            return TODOS
+
+        def post(self):
+            args = parser.parse_args()
+            todo_id = int(max(TODOS.keys()).lstrip('todo')) + 1
+            todo_id = 'todo%i' % todo_id
+            TODOS[todo_id] = {'task': args['task']}
+            return TODOS[todo_id], 201
+
+
+
+    # 设置路由
+    api.add_resource(TodoList, '/todos')
+    api.add_resource(Todo, '/todos/<todo_id>')
+
+    if __name__ == '__main__':
+        app.run(debug=True)
+    （1）引入需要的库名、函数、变量等，并做简单的Application初始化：
+
+    from flask import Flask
+    from flask_restful import reqparse, abort, Api, Resource
+
+    app = Flask(__name__)
+    api = Api(app)
+    （2）定义我们需要操作的资源类型（都是json格式的）：
+
+    TODOS = {
+        'todo1': {'task': 'build an API'},
+        'todo2': {'task': '哈哈哈'},
+        'todo3': {'task': 'profit!'},
+    }
+    （3）Flask-RESTful提供了一个用于参数解析的RequestParser类，类似于Python中自带的argparse类，可以很方便的解析请求中的-d参数，并进行类型转换。
+
+    parser = reqparse.RequestParser()
+    parser.add_argument('task')
+    （4）我们观察标准的API接口，这里的接口可以分为两类：带有item_id的，和不带有item_id的。前者是操作单一资源，后者是操作资源列表或新建一个资源。
+
+    从操作单一资源开始，继承Resource类，并添加put / get / delete方法：
+
+    class Todo(Resource):
+        def get(self, todo_id):
+            abort_if_todo_doesnt_exist(todo_id)
+            return TODOS[todo_id]
+
+        def delete(self, todo_id):
+            abort_if_todo_doesnt_exist(todo_id)
+            del TODOS[todo_id]
+            return '', 204
+
+        def put(self, todo_id):
+            args = parser.parse_args()
+            task = {'task': args['task']}
+            TODOS[todo_id] = task
+            return task, 201
+    （5）继续操作资源列表，继承Resource类，并添加get / post方法：
+
+    class TodoList(Resource):
+        def get(self):
+            return TODOS
+
+        def post(self):
+            args = parser.parse_args()
+            todo_id = int(max(TODOS.keys()).lstrip('todo')) + 1
+            todo_id = 'todo%i' % todo_id
+            TODOS[todo_id] = {'task': args['task']}
+            return TODOS[todo_id], 201
+    （6）资源操作类定义完毕之后，需要设置路由，即告诉Python程序URL的对应关系。
+
+    api.add_resource(TodoList, '/todos')
+    api.add_resource(Todo, '/todos/<todo_id>')
+    这样当我们请求url时，就能根据url类型，找到相应的资源类，并调用对应方法。
+    
+    
+    Resource() 有一个叫做 method_decorators 的属性。你可以继承 Resource 并且添加你自己的装饰器，该装饰器将会被添加到资源里面所有 method 函数。举例来说，如果你想要为每一个请求建立自定义认证。
+    def authenticate(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if not getattr(func, 'authenticated', True):
+                return func(*args, **kwargs)
+
+            acct = basic_authentication()  # custom account lookup function
+
+            if acct:
+                return func(*args, **kwargs)
+
+            restful.abort(401)
+        return wrapper
+
+
+    class Resource(restful.Resource):
+        method_decorators = [authenticate]   # applies to all inherited resources
+        
+        
+    =======
+    自定义错误处理器
+    =======
+    自定义错误消息
