@@ -1,0 +1,70 @@
+直接用flask-restful API
+from flask import Flask
+from flask.ext.restful import Api, Resource, reqparse
+
+app = Flask(__name__)
+api = Api(app)
+
+
+def is_email_valid(address):
+    # Check if the e-mail address already exists in database.
+    return True  # or False
+
+def email(value):
+    if not is_email_valid(value):
+        raise ValueError("The e-mail address {} is already taken.".format(value))
+
+    return value
+
+class Users(Resource):
+    parser = reqparse.RequestParser()
+    parser.add_argument('email', type=email, help='Signup email')
+
+    def post(self):
+        args = self.parser.parse_args()
+        # Create the new user with args.items()
+        return "user representation", 201
+        
+api.add_resource(Users, '/users')
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+或者flask-resful 结合 WTF
+
+from flask import Flask, request
+from flask.ext.restful import Api, Resource, abort
+from wtforms import Form, fields, validators
+
+app = Flask(__name__)
+api = Api(app)
+
+
+# WTForms
+def is_email_valid(address):
+    # Check if the e-mail address already exists in database.
+    return True  # or False
+
+def user_email(form, field):
+    if not is_email_valid(field.data):
+        raise validators.ValidationError("The e-mail address {} is already taken.".format(field.data))
+
+class UserForm(Form):
+    email = fields.StringField('Email', [validators.Email(), user_email])
+
+
+# Flask-RESTful
+class Users(Resource):
+    def post(self):
+        form = UserForm(data=request.get_json())
+        if form.validate():
+            # Create the new user with form.populate_obj()
+            pass
+        else:
+            abort(400)
+        return "user representation", 201
+        
+api.add_resource(Users, '/users')
+
+if __name__ == '__main__':
+    app.run(debug=True)
