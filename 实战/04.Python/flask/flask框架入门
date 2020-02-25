@@ -87,4 +87,81 @@
     2、使用代码方式
         api.add_url_rule('/login', view_func=AuthView.as_view('login'))
     
+5. 初始化开始
+    from flask import Flask
+    app = Flask("Test")
+
+    @app.route('/')
+    def hello():
+        return 'Hello World'
     
+6. 使用模板
+    Flask 会在 templates 文件夹内寻找模板。因此，如果你的应用是一个模块， 那么模板文件夹应该在模块旁边；如果是一个包，那么就应该在包里面：
+    情形 1 : 一个模块:
+
+    /application.py
+    /templates
+        /hello.html
+    情形 2 : 一个包:
+
+    /application
+        /__init__.py
+        /templates
+            /hello.html
+    使用jinjia2模板
+    
+    顺便学习了下jinjia2模板中的语法
+    {# 我是注释 #}
+    {# if 语句 #}
+    {% if xxxx %}
+    {% else %}
+    {% endif %}
+    {# for语句 #}
+    {% for x in xxx %}
+    {% endfor %}
+    
+    使用模板
+    data = [
+          {
+              "author": "zhang san",
+              "title": "head001",
+              "post": "dnsakndklanfandf fds f sd fsd af dasd f",
+              "data": "2017-01-08"
+          },
+          {
+              "author": "zhang san",
+              "title": "head001",
+              "post": "dnsakndklanfandf fds f sd fsd af dasd f",
+              "data": "2017-01-08"
+          },
+          {
+              "author": "zhang san",
+              "title": "head001",
+              "post": "dnsakndklanfandf fds f sd fsd af dasd f",
+              "data": "2017-01-08"
+          }
+      ]
+
+      @app.route('/')
+      def hello():
+          return render_template('hello.html',data = data)
+          
+      ###@hello.html
+      <html>
+          <head></head>
+          <body>
+              {% for item in data%}
+              <h1>{{item.title}}</h1>
+              <p>{{item.post}}</p>
+              <p>{{item.author}} {{item.data}}</p>
+              {% endfor %}
+          </body>
+      </html>
+      
+      ==========================================================
+      支持layout模板
+      
+      
+      
+          
+          
