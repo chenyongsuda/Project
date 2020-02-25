@@ -1,4 +1,59 @@
+RESTful 设计标准：
+url 对应服务器上的一种资源，e.g. 数据，图片等，所以url 中只含有名词，通过HTTP动词来描述对资源的操作方式。
+url示例：https://api.example.com/v1/zoos
+
+HTTP 动词
+
+GET: 获取资源
+POST：创建或更新资源
+PUT: 创建或更新资源
+DELETE：删除资源
+HEAD：获取资源的元数据，不常用
+OPTIONS：获取信息，关于资源的哪些属性是客户端可以改变的， 不常用
+POST 和 PUT 都可以用于创建和修改资源，它们的区别是什么呢？
+
+引用stackoverflow 上的回答：
+
+POST:
+
+> modify and update a resource
+POST /questions/<existing_question> HTTP/1.1
+
+> create a resource:
+POST /questions HTTP/1.1
+
+> Note that the following is an error:
+POST /questions/<new_question> HTTP/1.1
+
+
+PUT:
+
+> To overwrite an existing resource:
+PUT /questions/<existing_question> HTTP/1.1
+
+> create a resource:
+PUT /questions/<new_question> HTTP/1.1
+在更新资源的操作上，POST 和 PUT 基本相同。
+
+在创建资源时，PUT可以指定资源路径，POST无法指定资源路径。
+
+因而，PUT是幂等的操作，即重复操作不会产生变化，10次PUT 的创建请求与1次PUT 的创建请求相同，只会创建一个资源，其实后面9次的请求只是对已创建资源的更新，且更新内容与原内容相同，所以不会产生变化。
+
+POST 的重复操作截然不同，10次POST请求将会创建10个资源。
+
+绝大多数的请求都可以通过POST实现，PUT 幂等的特性也可以在服务器端通过特殊处理来达到相同的效果，因而在API 设计时
+并不一定需要兼顾 PUT 和 POST, 但需要根据实际需求进行选择。
+
+参考：
+https://www.csdn.net/article/2013-06-13/2815744-RESTful-API
+https://stackoverflow.com/questions/630453/put-vs-post-in-rest
+————————————————
+版权声明：本文为CSDN博主「maxmao1024」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/maxmao1024/article/details/79591726
+
+============================
 RESTful API实现方式两种
+
 1. 普通路由实现
   =======
       视图的定义方式#
