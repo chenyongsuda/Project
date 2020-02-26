@@ -1,0 +1,24 @@
+================================
+flask 操作数据时，db的要在app.config设置之后声明：如app.config['SQLALCHEMY_DATABASE_URI'] 
+否则，运行程序时app.config里面做的设置就不会生效，就会提示各种参数没做设置
+因为db在声明的时候解释器就会去读数据库URI的值，如果此时没有读到，后面设置了也不会去读了
+
+#encoding=utf-8
+#from foo_orm import Model, Column, String
+from flask import Flask, render_template, flash, url_for, redirect
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+app = Flask(__name__)
+
+
+import os
+app.secret_key = os.getenv('SECRET_KEY','secret string')
+
+import os
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL','sqlite:///' + os.path.join(app.root_path, 'data.db'))
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)  # 在db对象创建后调用
+
+
