@@ -21,4 +21,117 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)  # 在db对象创建后调用
 
+=========================连接数据库
+创建数据库连接的配置：
+config.py
+
+DIALECT = 'mysql'
+DRIVER = 'pymysql'
+USERNAME = 'root'
+PASSWORD = '123456'
+HOST = '127.0.0.1'
+PORT = '3306'
+DATABASE = 'pythonflask'
+
+SQLALCHEMY_DATABASE_URI = "{}+{}://{}:{}@{}:{}/{}?charset=utf8".format(DIALECT, DRIVER, USERNAME, PASSWORD, HOST, PORT,
+                                                                       DATABASE)
+数据库的连接配置完成后，需要在主程序中设置如下：
+
+import uuid
+from flask import Flask, request, json, Response
+from flask_sqlalchemy import SQLAlchemy
+
+import config
+
+app = Flask(__name__)
+app.config.from_object(config)
+db = SQLAlchemy(app)
+
+class Article(db.Model):
+    __tablename__ = 'article'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+
+db.create_all()
+运行程序成功，出现了一个警告：
+
+FSADeprecationWarning: SQLALCHEMY_TRACK_MODIFICATIONS adds significant overhead and will be disabled by default in the future.  Set it to True or False to suppress this warning.
+  'SQLALCHEMY_TRACK_MODIFICATIONS adds significant overhead and '
+看着不舒服，可以在config.py中设置：
+
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+再次运行程序即可。
+这个时候去看表是否创建成功，下面我这个是成功的
+================================================
+
+Flask中使用flask-sqlalchemy时db.create_all()无法创建表
+ python flask-sqlalchemy flask
+如题，我在学习《Flask Web开发:基于Python的Web应用开发实战》这本书第七章的时候，在shell中使用db.create_all()创建sqlite数据库。但是发现这个命令只能创建出sqlite文件，不能创建数据库table。
+
+(venv) FlaskStudy$ python manage.py shell
+>>> from app import db
+>>> db.create_all()
+几次尝试过后，发现如果在执行db.create_all()前导入我创建的数据库模型，就能正常的创建出表了：
+
+(venv) FlaskStudy$ python manage.py shell
+>>> from app import db
+>>> from app.models import User, Role
+>>> db.create_all()
+或者在manage.py中导入数据库模型也可以：
+
+import os
+from app import create_app, db
+＃ 就是这一句
+from app.models import User, Role
+from flask.ext.script import Manager, Shell
+from flask.ext.migrate import Migrate, MigrateCommand
+
+app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+manager = Manager(app)
+migrate = Migrate(app, db)
+
+manager.add_command('db', MigrateCommand)
+
+if __name__ == '__main__':
+    manager.run()
+    
+    
+==============================================================
+python之flash-SQLalchemy框架中，阅读源代码解决db.create_all的问题！
+from flask import Flask
+from kirin_app.kirin_web.book.view import blueprint_web
+from kirin_app.models.database.db_book import db
+ 
+app = Flask(__name__)
+ 
+#配置文件必须放app创建完毕后的第一个位置，后续的挂在都是依赖配置文件来执行的！
+# 把配置文件转换成一个dict字典对象
+# 公开的信息的配置文件
+app.config.from_object("kirin_app.config.settings")
+#私有不能公开的信息的配置文件
+app.config.from_object("kirin_app.config.secure")
+ 
+#在app上注册一个blueprint_web蓝图
+app.register_blueprint(blueprint_web)
+ 
+#db数据库挂在到app对象上
+db.init_app(app)
+#创建所有的数据库表(推荐这种做法)
+db.create_all(app=app)
+ 
+/**
+#另外一种create_all()不传值，但是让current_app有值的情况
+with app.app_context():
+    #手动推入APPcontext上下文,这样current_app就有值了！
+    db.create_all()
+**/
+db.create_all方法要不要传app对象进入，我们查看官方源代码可以得知！
+1、如果使用db.init_app(app)来挂载数据库，那么必须使用db.create_all(app=app)，把app对象当做参数传入才能创建表成功！
+原因是：init_app函数并没有把app对象保存在SQLAlchemy属性中，用完就不管了，可以查看源代码！（当然，特殊情况，在最下面一张图中，如果current_app存在的话，不传也可以，但是current_app必须手动推入上下文用with语句）
+
+2、如果直接db.SQLAlchemy(app)，相当于创建SQLAlchemy对象的时候已经传入了app，创建表的时候，可以省略！
+
+
+================================================================
 
