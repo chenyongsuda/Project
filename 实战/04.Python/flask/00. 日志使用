@@ -10,3 +10,17 @@
     file_log_handler.setFormatter(formatter)
     # 为全局的日志工具对象（flaks app使用的）加载日志记录器
     logging.getLogger().addHandler(file_log_handler)
+
+
+
+
+=====================
+fileTimeName = time.strftime("%Y-%m-%d",time.localtime()) # 输出日期，设置log文件名字
+genpath = os.path.abspath("..") #获取到根目录
+logpath = os.path.join(genpath,"log") #拼接log文件路径
+logFileName = logpath+"/"+fileTimeName+".log"
+fh = logging.FileHandler(logFileName,mode="w",encoding="utf-8") #既然是写入文件，就需要传个文件路径和名字，mode是写入方式，encoding编码格式
+if os.path.exists(logpath): #判断路径是否存在，不存在则创建
+    pass
+else:
+    os.makedirs(logpath)
