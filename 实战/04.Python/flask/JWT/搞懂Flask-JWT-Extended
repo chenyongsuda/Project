@@ -1,0 +1,72 @@
+Flask-JWT-Extended
+教了那麼多flask-restful的套件，今天要來教授一下使用者驗證的套件，這套件叫做Flask-JWT-Extended，不過甚麼是JWT呢?請容我慢慢說明。
+
+本文同步放置於此
+
+甚麼是JWT
+究竟甚麼是JWT呢，他的原名是JSON Web Token是一種協定，簡單來說就是把JSON結構的資料加密後變成Token傳遞給Client端，嗣後透過這個Token來與伺服器端驗證身分用，相關的內容可以看以下連結：
+
+電腦玩瞎咪-JWT
+JWT-官網
+邦友-10程式中的說明
+Flask-JWT-Extended能做甚麼
+在說明了JWT接下來說明一下Flask-JWT-Extended能做甚麼，其實Flask-JWT-Extended就是實作JWT的套件，在flask的套件之中也有其他的jwt的套件，為什麼要選這個呢?就因為它的功能比較多，可以自由發揮又撰寫容易。
+
+Flask-JWT-Extended怎麼用
+要怎麼使用Flask-JWT-Extended呢?這部分讀者們可以看看我怎麼介紹，也可以直接看一下Flask-JWT-Extended官網怎麼說，不過首先我們還是先從安裝說起吧：
+
+安裝Flask-JWT-Extended
+這部分相信許多讀者都會安裝了，不過安裝前還是先看看Flask-JWT-Extended官網怎麼說，不過如果沒有那麼嚴厲要求的話(private/public key)我們可以依照之前安裝的方式安裝即可，可以參考以下例子：
+
+$ pip install flask-jwt-extended
+撰寫jwt.py
+在安裝完Flask-JWT-Extended之後的第一個步驟就是產生一個Flask-JWT-Extended實體jwt，存放於common.jwt內，這麼做的原因如同ma、db依樣是為了解決循環參考用的，jwt.py相關的內容如下：
+
+from flask_jwt_extended import JWTManager
+
+jwt = JWTManager()
+```ㄋ
+
+## 設定Flask-JWT-Extended
+
+撰寫完jwt.py後下個動作就是設定Flask-JWT-Extended，這裡我們會修改app.py，相關的內容如下：
+
+```python
+from common.jwt import jwt
+
+app.config['JWT_SECRET_KEY'] = 'this-is-any-key-you-setup'  # 改成你設定的密鑰
+jwt.init_app(app)
+如此就可以完成Flask-JWT-Extended的初始化，其中JWT_SECRET_KEY內放的是密鑰，也就是說產生的token透過這密鑰產生的。
+
+產生Token
+這邊我們先需要有一個login的方法，當驗證完使用者帳密後返還token，這裡驗證使用者帳密的動作就不贅述，讓讀者們自行實作，我們這邊專注於Flask-JWT-Extended的實作，所以說明如下：
+
+def login(self, username):
+    # 這裡請實作驗證的動作，不再贅述
+    # identity可以放所有可以序列化為json的東西
+    access_token = create_access_token(identity=username)
+    return {
+        'access_token': access_token
+    }, 200
+如此client端可以收到access_token，再放在header的Authorization的參數內，這套件是驗證Bearer的內容所以在Authorization內容放置Bearer {{token}}提交請求即可，這裡注意Bearer後面有個空格。
+
+驗證
+在設定完之後這部分教授大家如何要求client一定要提交token並驗證，這部分在一定要要求提交token的方法上加上裝飾器jwt_required即可，若是沒有提交token或是token內容有問題時會直接返還錯誤，關於程式碼如下：
+
+@jwt_required
+def protected():
+    # 方法內可透過get_jwt_identity之前放在token的identity內的內容
+    identity = get_jwt_identity()
+    return {
+        'identity': identity
+    }, 200
+如此相信讀者們可以收到當初登入的使用者名稱了。
+
+伺服器錯誤
+相信有些讀者沒有提交Authorization或是access_token長度不夠時會遇到伺服器錯誤的訊息，而且會有看到exception發生，如果遇到這個坑該如何處理呢?這部分修改app.py增加一個設定即可，修改內容如下：
+
+app.config['PROPAGATE_EXCEPTIONS'] = True
+這部分的處置是參考這個issue得來的，有興趣的讀者們可以看一下這個。
+
+小結
+今日的課程教授大家如何安裝、設定還有使用Flask-JWT-Extended，不過今日的課程僅是基本的用法，明日會更進一步教授大家如何自訂義Token以及如何透過Token取的我們藏在裡面的資料，敬請期待。
