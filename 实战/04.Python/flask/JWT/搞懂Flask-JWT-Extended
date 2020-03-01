@@ -70,3 +70,57 @@ app.config['PROPAGATE_EXCEPTIONS'] = True
 
 小結
 今日的課程教授大家如何安裝、設定還有使用Flask-JWT-Extended，不過今日的課程僅是基本的用法，明日會更進一步教授大家如何自訂義Token以及如何透過Token取的我們藏在裡面的資料，敬請期待。
+
+==================================================================
+JWT重刷(接上一篇)
+access_token如果设为一直有效，无法防止用户盗用
+
+access_token有过期时间，如果过期了，让用户重新登录有时候感受不太好
+
+我们需要一个为已登录用户重新刷新access_token的机制
+
+一种方式是将过期时间配置的长一点，配置JWT ACCESS TOKEN过期时间 (默认是15分钟）
+
+# JWT ACCESS TOKEN过期时间（单位秒）
+JWT_ACCESS_TOKEN_EXPIRES=300
+编写过期错误处理器
+在application.common.error_handler中加入
+
+@jwt.expired_token_loader
+def expired_token_callback(expired_token):
+    token_type = expired_token['type']
+    return jsonify({
+        'code': ERROR_PARAM,
+        'msg': 'The {} token has expired'.format(token_type)
+    })
+    
+第二种方式：生成refresh token
+# application.api.users.views
+from flask_jwt_extended import jwt_required, create_access_token, jwt_refresh_token_required, create_refresh_token, get_jwt_identity
+# login 方法里面
+        jwt_token = create_access_token(identity=username)
+        refresh_token = create_refresh_token(identity=username)
+        return jsonify({'code': SUCCESS, 'message': '成功', 'token': jwt_token, 'refresh_token': refresh_token})        
+刷新token的方法 （只有用refresh token能调用）
+
+@api_users.route('/refresh', methods=['POST'])
+@jwt_refresh_token_required
+def refresh():
+    current_user = get_jwt_identity()
+    ret = {
+        'access_token': create_access_token(identity=current_user)
+    }
+    return jsonify(ret), 200
+
+刷新token的过期时间默认为30天，可以配置(单位是秒）
+
+JWT_REFRESH_TOKEN_EXPIRES=xxx
+新鲜度模式 (防止刷新token被盗后刷新生成token问题）
+
+# 刷新生成的用这个fresh=False
+new_token = create_access_token(identity=current_user, fresh=False)
+
+# 登录生成的 fresh=True
+
+如果只有新鲜的可以访问,也就是说只有登录生成的token才能执行，刷新生成的不能访问，视图方法上加装饰器，比如说下单之类的
+@fresh_jwt_required
