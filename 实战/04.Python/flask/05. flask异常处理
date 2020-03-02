@@ -1,0 +1,60 @@
+Flask中实现统一异常处理
+
+写JavaEE项目多了，形成了一定的流程样式，异常处理也是很重要的环节。
+现在开始写python，相信肯定有一样的实现。没错，flask有这样的功能。
+创建一个Flask项目后，默认的情况下，可以在app上注册errorhandler错误处理器，如：
+
+@app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
+可以看出，这个errorhandler处理器注册在app上，只能对app使用。
+
+那么，问题来了，在一个项目中，单一的app局限性太强了，肯定要分各种模块蓝本，那么，每个模块蓝本该怎么使用统一的errorhandler呢？
+
+首先，可以先开发一个公共模块蓝本，例如common
+
+from flask import Blueprint, jsonify
+
+cbp = Blueprint('common', __name__)
+然后，在common模块蓝本中添加自定义异常处理类：
+
+class InvalidUsage(Exception):
+    status_code = 400
+
+    def __init__(self, message, status_code=None, payload=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.payload = payload
+
+    def to_dict(self):
+        rv = dict(self.payload or ())
+        rv['message'] = self.message
+        return rv
+接下来就是重点了，要把整个项目中所有web的异常统一处理了。
+
+@cbp.app_errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
+看出与前面的那个errorhandler有什么不同了吗？主要是注解那里，使用了cbp的蓝本，注册到全局的errorhandler方式是app_errorhandler。
+
+至此，全局的就可以这么实现了。
+
+如何使用呢？
+
+首先，要在使用的地方引入异常类
+
+from common import InvalidUsage
+然后在代码中抛出这个异常：
+
+@app.route('/')
+def hello_world():
+    if True:
+        raise InvalidUsage('This view is gone', status_code=410)
+    return 'Hello World!'
+这样就OK了
