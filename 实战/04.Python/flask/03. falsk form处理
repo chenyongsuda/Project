@@ -68,3 +68,125 @@ api.add_resource(Users, '/users')
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+============================================================================
+Web表单
+web表单是web应用程序的基本功能。
+
+它是HTML页面中负责数据采集的部件。表单有三个部分组成：表单标签、表单域、表单按钮。表单允许用户输入数据，负责HTML页面数据采集，通过表单将用户输入的数据提交给服务器。
+
+在Flask中，为了处理web表单，我们一般使用Flask-WTF扩展，它封装了WTForms，并且它有验证表单数据的功能
+
+WTForms支持的HTML标准字段
+字段对象	说明
+StringField	文本字段
+TextAreaField	多行文本字段
+PasswordField	密码文本字段
+HiddenField	隐藏文件字段
+DateField	文本字段，值为 datetime.date 文本格式
+DateTimeField	文本字段，值为 datetime.datetime 文本格式
+IntegerField	文本字段，值为整数
+DecimalField	文本字段，值为decimal.Decimal
+FloatField	文本字段，值为浮点数
+BooleanField	复选框，值为True 和 False
+RadioField	一组单选框
+SelectField	下拉列表
+SelectMutipleField	下拉列表，可选择多个值
+FileField	文件上传字段
+SubmitField	表单提交按钮
+FormField	把表单作为字段嵌入另一个表单
+FieldList	一组指定类型的字段
+WTForms常用验证函数
+验证函数	说明
+DataRequired	确保字段中有数据
+EqualTo	比较两个字段的值，常用于比较两次密码输入
+Length	验证输入的字符串长度
+NumberRange	验证输入的值在数字范围内
+URL	验证URL
+AnyOf	验证输入值在可选列表中
+NoneOf	验证输入值不在可选列表中
+使用Flask-WTF需要配置参数SECRET_KEY。
+
+CSRF_ENABLED是为了CSRF（跨站请求伪造）保护。 SECRET_KEY用来生成加密令牌，当CSRF激活的时候，该设置会根据设置的密匙生成加密令牌。在HTML页面中直接写form表单：
+
+在HTML页面中直接写form表单：
+<form method='post'>
+    <input type="text" name="username" placeholder='Username'>
+    <input type="password" name="password" placeholder='password'>
+    <input type="submit">
+</form>
+使用Flask-WTF实现表单。
+配置参数：
+ app.config['SECRET_KEY'] = 'SECRET_KEY'
+ # 生成secret_key最简单的方式
+>>> import os
+>>> os.urandom(24)
+'\xca\x0c\x86\x04\x98@\x02b\x1b7\x8c\x88]\x1b\xd7"+\xe6px@\xc3#\\'
+
+# 设置方法
+app.config['SECRET_KEY'] = '\xca\x0c\x86\x04\x98@\x02b\x1b7\x8c\x88]\x1b\xd7"+\xe6px@\xc3#\\'
+# or
+app.secret_key = '\xca\x0c\x86\x04\x98@\x02b\x1b7\x8c\x88]\x1b\xd7"+\xe6px@\xc3#\\'
+# or
+app.config.update(SECRET_KEY='\xca\x0c\x86\x04\x98@\x02b\x1b7\x8c\x88]\x1b\xd7"+\xe6px@\xc3#\\')
+视图函数：
+from flask import Flask,request,render_template,url_for,redirect,session,flash
+
+from flask_wtf import FlaskForm
+from wtforms import StringField,PasswordField,SubmitField
+from wtforms.validators import EqualTo,DataRequired
+from config import config
+app = Flask(__name__)
+app.config.from_object(config["baseconfig"])
+
+
+class webform(FlaskForm):
+
+    username = StringField(label='用户名',validators=[DataRequired()], render_kw={'placeholder':'请输入用户名'})
+    password = PasswordField(label='密码',validators=[DataRequired()],render_kw={'placeholder':'请输入密码'})
+    re_password = PasswordField(label='确认密码',validators=[DataRequired(),EqualTo('password','密码不一致')],render_kw={'placeholder':'确认密码'})
+    submit = SubmitField(label='提交')
+
+
+@app.route("/",methods=['POST','GET'])
+def login():
+    form = webform()
+    if request.method == "POST":
+        if form.validate_on_submit():
+            username = form.username.data
+            password = form.password.data
+            print(username,password)
+            return '%s-%s' % (username,password)
+        else:
+            message = form.errors
+            # form中所有的错误信息都被errors捕捉。
+            flash(message)
+    return render_template('login.html',form=form)
+
+if __name__ == '__main__':
+    app.run()
+登录页面：
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form method="post">
+    {{ form.csrf_token() }}
+    {{ form.username.label }}{{ form.username }}
+    {{ form.password.label }}{{ form.password }}
+    {{ form.re_password.label }}{{ form.re_password }}
+    {{ form.submit }}
+    {% for message in get_flashed_messages() %}
+        {{ message }}
+    {% endfor %}
+</form>
+</body>
+</html>
+0人点赞
+flask
+
+
