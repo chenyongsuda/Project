@@ -1,0 +1,14 @@
+需要go升级到1.12或以上
+
+mkdir gomodtest
+cd gomodtest
+go mod init gomodtest
+创建一个server.go
+
+package main
+import "github.com/astaxie/beego"
+func main() {
+    beego.Run()
+}
+复制代码
+go run server.go
