@@ -3,9 +3,6 @@
 go env -w GOPROXY=https://goproxy.io,direct
 go env -w GO111MODULE="on"
 
-2 ) 下载源码，手动安装
-目录下载到${GOPATH}/src/github.com/beego/  (进入src目录下载)
-git clone https://github.com/beego/bee
 
 手动安装bee工具
 go install github.com/beego/bee
