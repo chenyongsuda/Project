@@ -1,3 +1,8 @@
+设置Go代理
+
+go env -w GOPROXY=https://goproxy.io,direct
+go env -w GO111MODULE="on"
+
 Go语言具有“部署简单、并发性好、语言设计良好、执行性能好”等优势，
 
 Go语言没有类和继承的概念，Go语言有一个清晰易懂的轻量级类型系统，在类型之间也没有层级之说
