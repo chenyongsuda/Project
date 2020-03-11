@@ -27,6 +27,36 @@ go env -w GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
 手动安装bee工具
 go install github.com/beego/bee
 
+
+
+
+=========================================
+
+一、创建一个 go mod 下的文件夹
+mkdir test
+cd test
+go mod init test
+二、在 go.mod 内把 bee 的源替换掉，如下所示：
+github.com/realguan/bee 是我 fork 了 github.com/beego/bee 的源码，进行了源代码更改：
+
+module test
+replace github.com/beego/bee v1.10.0 => github.com/realguan/bee v1.12.1
+go 1.12
+三、开始正式安装 beego 和 bee
+export GOPROXY=https://goproxy.io	
+go get -u github.com/astaxie/beego
+go get -u github.com/beego/bee
+以上如果没报错，那就成功了。
+
+四、接下来测试：
+cd test
+bee new hello	// 创建项目
+cd src/hello	// 进入项目目录
+go mod init hello
+bee run	// 大功告成
+
+=============================================
+
 Go语言具有“部署简单、并发性好、语言设计良好、执行性能好”等优势，
 
 Go语言没有类和继承的概念，Go语言有一个清晰易懂的轻量级类型系统，在类型之间也没有层级之说
