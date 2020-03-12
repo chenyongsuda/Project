@@ -56,6 +56,21 @@ go mod init hello
 bee run	// 大功告成
 
 =============================================
+配置自动提示功能
+配置到workspace Setting里面。
+
+{
+    "window.zoomLevel": 1,
+    "go.autocompleteUnimportedPackages": true,
+    "go.gocodePackageLookupMode": "go",
+    "go.gotoSymbol.includeImports": true,
+    "go.useCodeSnippetsOnFunctionSuggest": true,
+    "go.inferGopath": true,
+    "go.gopath":"/usr/local/bin/golang19/gopath/",
+    "go.useCodeSnippetsOnFunctionSuggestWithoutType": true,
+}
+
+=============================================
 
 Go语言具有“部署简单、并发性好、语言设计良好、执行性能好”等优势，
 
