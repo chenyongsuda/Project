@@ -139,3 +139,16 @@ beego.AutoRouter(&controllers.ObjectController{})
 /controller/simple.json
 /controller/simple.xml
 可以通过 this.Ctx.Input.Param(":ext") 获取后缀名。
+
+===================================================
+一般也可以这个用 设置映射的方法
+beego.Router("/", &controllers.BlogController{}, "*:Home")
+beego.Router("/home", &controllers.BlogController{}, "*:Home")
+beego.Router("/article", &controllers.BlogController{}, "*:Article")
+beego.Router("/detail", &controllers.BlogController{}, "*:Detail")
+beego.Router("/about", &controllers.BlogController{}, "*:About")
+beego.Router("/timeline", &controllers.BlogController{}, "*:Timeline")
+beego.Router("/resource", &controllers.BlogController{}, "*:Resource")
+beego.Router("/comment", &controllers.BlogController{}, "post:Comment")
+
+beego.AutoRouter(&controllers.AdminController{})
