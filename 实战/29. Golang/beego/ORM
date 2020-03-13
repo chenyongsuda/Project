@@ -44,6 +44,14 @@ func init() {
     // create table
     orm.RunSyncdb("default", false, true)
 }
+
+==============
+// 4.根据注册的模型创建表
+// 第一个参数: 数据库的别名(在哪个数据库中创建)
+// 第二个参数: 是否强制更新(销毁过去的再重新创建)
+// 第三个参数: 是否显示创建SQL语句
+orm.RunSyncdb("default", false, true)
+}
  
 func main() {
     o := orm.NewOrm()
