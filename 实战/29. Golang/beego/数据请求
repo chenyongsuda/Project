@@ -5,13 +5,14 @@ $.ajax({
         success:function(data){
             
         },
+        error: function (data) {
+            
+        },
         complete: function () {
             layer.close(this.layerIndex);
         },
     });
-
-
-
+==================================================================
 $.ajax({
         url:url,
         type:'post',
