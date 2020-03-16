@@ -1,0 +1,18 @@
+1、子页面更改父页面的DOM元素
+$('#aa').on('click', function(){
+    parent.layui.$('#parentIframe').text('我被改变了');
+    parent.layer.tips('Look here', '#parentIframe', {time: 5000});
+    parent.layer.close(index);
+})
+
+
+2、子页面调用父页面的方法
+parent.方法名();   // 该方法名在页面的layui.config外面
+
+3、子页面刷新父页面的数据表格
+parent.layui.table.reload('tableID');  // tableID为要刷新表格的id
+parent.layui.table.reload('tableID',{page: {curr: 1}}) // 带配置参数的刷新
+
+
+4、子页面刷新父页面
+parent.window.location.reload();
