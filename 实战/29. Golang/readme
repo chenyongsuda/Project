@@ -1,3 +1,5 @@
+学习参考网站 https://www.liwenzhou.com/posts/Go/01_var_and_const/
+
 设置Go代理
 
 go env -w GOPROXY=https://goproxy.io,direct
