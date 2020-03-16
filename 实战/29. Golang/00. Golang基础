@@ -1,0 +1,589 @@
+=======================Go语言基础之变量和常量
+===标准声明
+Go语言的变量声明格式为：
+
+var 变量名 变量类型
+变量声明以关键字var开头，变量类型放在变量的后面，行尾无需分号。 举个例子：
+
+var name string
+var age int
+var isOk bool
+
+===批量声明
+每声明一个变量就需要写var关键字会比较繁琐，go语言中还支持批量变量声明：
+
+var (
+    a string
+    b int
+    c bool
+    d float32
+)
+
+===变量的初始化
+Go语言在声明变量的时候，会自动对变量对应的内存区域进行初始化操作。每个变量会被初始化成其类型的默认值，例如： 整型和浮点型变量的默认值为0。
+字符串变量的默认值为空字符串。 布尔型变量默认为false。 切片(测试后切片不会初始化为nil)、函数、指针变量的默认为nil
+
+当然我们也可在声明变量的时候为其指定初始值。变量初始化的标准格式如下：
+var 变量名 类型 = 表达式
+举个例子：
+var name string = "Q1mi"
+var age int = 18
+或者一次初始化多个变量
+var name, age = "Q1mi", 20
+
+类型推导
+有时候我们会将变量的类型省略，这个时候编译器会根据等号右边的值来推导变量的类型完成初始化。
+
+var name = "Q1mi"
+var age = 18
+
+===短变量声明
+在函数内部，可以使用更简略的 := 方式声明并初始化变量。
+
+package main
+import (
+	"fmt"
+)
+// 全局变量m
+var m = 100
+
+func main() {
+	n := 10
+	m := 200 // 此处声明局部变量m
+	fmt.Println(m, n)
+}
+
+===常量
+相对于变量，常量是恒定不变的值，多用于定义程序运行期间不会改变的那些值。 常量的声明和变量声明非常类似，只是把var换成了const，常量在定义的时候必须赋值。
+const pi = 3.1415
+const e = 2.7182
+声明了pi和e这两个常量之后，在整个程序运行期间它们的值都不能再发生变化了。
+
+多个常量也可以一起声明：
+const (
+    pi = 3.1415
+    e = 2.7182
+)
+
+const同时声明多个常量时，如果省略了值则表示和上面一行的值相同。 例如：
+const (
+    n1 = 100
+    n2
+    n3
+)
+上面示例中，常量n1、n2、n3的值都是100。
+几个常见的iota示例:
+使用_跳过某些值
+const (
+		n1 = iota //0
+		n2        //1
+		_
+		n4        //3
+	)
+  
+iota声明中间插队
+const (
+		n1 = iota //0
+		n2 = 100  //100
+		n3 = iota //2
+		n4        //3
+	)
+	const n5 = iota //0
+定义数量级 （这里的<<表示左移操作，1<<10表示将1的二进制表示向左移10位，也就是由1变成了10000000000，也就是十进制的1024。同理2<<2表示将2的二进制表示向左移2位，也就是由10变成了1000，也就是十进制的8。）
+
+const (
+		_  = iota
+		KB = 1 << (10 * iota)
+		MB = 1 << (10 * iota)
+		GB = 1 << (10 * iota)
+		TB = 1 << (10 * iota)
+		PB = 1 << (10 * iota)
+	)
+  
+多个iota定义在一行
+const (
+		a, b = iota + 1, iota + 2 //1,2
+		c, d                      //2,3
+		e, f                      //3,4
+	)
+  
+  ======================================Go语言基础之基本数据类型
+  
+  ======================================Go语言基础之流程控制
+  if条件判断基本写法
+  Go语言中if条件判断的格式如下：
+
+  if 表达式1 {
+      分支1
+  } else if 表达式2 {
+      分支2
+  } else{
+      分支3
+  }
+  
+  if条件判断特殊写法
+  if条件判断还有一种特殊的写法，可以在 if 表达式之前添加一个执行语句，再根据变量值进行判断，举个例子：
+
+  func ifDemo2() {
+    if score := 65; score >= 90 {
+      fmt.Println("A")
+    } else if score > 75 {
+      fmt.Println("B")
+    } else {
+      fmt.Println("C")
+    }
+  }
+  
+  for(循环结构)
+  Go 语言中的所有循环类型均可以使用for关键字来完成。
+
+  for循环的基本格式如下：
+
+  for 初始语句;条件表达式;结束语句{
+      循环体语句
+  }
+  
+  条件表达式返回true时循环体不停地进行循环，直到条件表达式返回false时自动退出循环。
+  func forDemo() {
+    for i := 0; i < 10; i++ {
+      fmt.Println(i)
+    }
+  }
+  
+  for循环的初始语句可以被忽略，但是初始语句后的分号必须要写，例如：
+  func forDemo2() {
+    i := 0
+    for ; i < 10; i++ {
+      fmt.Println(i)
+    }
+  }
+  
+  for循环的初始语句和结束语句都可以省略，例如：
+  func forDemo3() {
+    i := 0
+    for i < 10 {
+      fmt.Println(i)
+      i++
+    }
+  }
+  
+  无限循环
+  for {
+      循环体语句
+  }
+  
+  for range(键值循环)
+  Go语言中可以使用for range遍历数组、切片、字符串、map 及通道（channel）。 通过for range遍历的返回值有以下规律：
+
+  数组、切片、字符串返回索引和值。
+  map返回键和值。
+  通道（channel）只返回通道内的值。
+  
+  
+  switch case
+  使用switch语句可方便地对大量的值进行条件判断。
+
+  func switchDemo1() {
+    finger := 3
+    switch finger {
+    case 1:
+      fmt.Println("大拇指")
+    case 2:
+      fmt.Println("食指")
+    case 3:
+      fmt.Println("中指")
+    case 4:
+      fmt.Println("无名指")
+    case 5:
+      fmt.Println("小拇指")
+    default:
+      fmt.Println("无效的输入！")
+    }
+  }
+  Go语言规定每个switch只能有一个default分支。
+
+  一个分支可以有多个值，多个case值中间使用英文逗号分隔。
+
+  func testSwitch3() {
+    switch n := 7; n {
+    case 1, 3, 5, 7, 9:
+      fmt.Println("奇数")
+    case 2, 4, 6, 8:
+      fmt.Println("偶数")
+    default:
+      fmt.Println(n)
+    }
+  }
+  分支还可以使用表达式，这时候switch语句后面不需要再跟判断变量。例如：
+
+  func switchDemo4() {
+    age := 30
+    switch {
+    case age < 25:
+      fmt.Println("好好学习吧")
+    case age > 25 && age < 35:
+      fmt.Println("好好工作吧")
+    case age > 60:
+      fmt.Println("好好享受吧")
+    default:
+      fmt.Println("活着真好")
+    }
+  }
+  fallthrough语法可以执行满足条件的case的下一个case，是为了兼容C语言中的case设计的。
+
+  func switchDemo5() {
+    s := "a"
+    switch {
+    case s == "a":
+      fmt.Println("a")
+      fallthrough
+    case s == "b":
+      fmt.Println("b")
+    case s == "c":
+      fmt.Println("c")
+    default:
+      fmt.Println("...")
+    }
+  }
+  输出：
+
+  a
+  b
+  
+  
+  =======================数组
+  Array(数组)
+  数组是同一种数据类型元素的集合。 在Go语言中，数组从声明时就确定，使用时可以修改数组成员，但是数组大小不可变化。 基本语法：
+
+  // 定义一个长度为3元素类型为int的数组a
+  var a [3]int
+  
+  数组的初始化
+  var numArray = [3]int{1, 2}
+  
+  var numArray = [...]int{1, 2}
+  
+  a := [...]int{1: 1, 3: 5}
+  fmt.Println(a)                  // [0 1 0 5]
+	fmt.Printf("type of a:%T\n", a) //type of a:[4]int
+  
+  数组的遍历
+  遍历数组a有以下两种方法：
+
+  func main() {
+    var a = [...]string{"北京", "上海", "深圳"}
+    // 方法1：for循环遍历
+    for i := 0; i < len(a); i++ {
+      fmt.Println(a[i])
+    }
+
+    // 方法2：for range遍历
+    for index, value := range a {
+      fmt.Println(index, value)
+    }
+  }
+  
+  
+  二维数组的定义
+  func main() {
+    a := [3][2]string{
+      {"北京", "上海"},
+      {"广州", "深圳"},
+      {"成都", "重庆"},
+    }
+    fmt.Println(a) //[[北京 上海] [广州 深圳] [成都 重庆]]
+    fmt.Println(a[2][1]) //支持索引取值:重庆
+  }
+  二维数组的遍历
+  func main() {
+    a := [3][2]string{
+      {"北京", "上海"},
+      {"广州", "深圳"},
+      {"成都", "重庆"},
+    }
+    for _, v1 := range a {
+      for _, v2 := range v1 {
+        fmt.Printf("%s\t", v2)
+      }
+      fmt.Println()
+    }
+  }
+  输出：
+
+  北京	上海	
+  广州	深圳	
+  成都	重庆	
+  注意： 多维数组只有第一层可以使用...来让编译器推导数组长度。例如：
+
+  //支持的写法
+  a := [...][2]string{
+    {"北京", "上海"},
+    {"广州", "深圳"},
+    {"成都", "重庆"},
+  }
+  //不支持多维数组的内层使用...
+  b := [3][...]string{
+    {"北京", "上海"},
+    {"广州", "深圳"},
+    {"成都", "重庆"},
+  }
+  
+  数组是值类型
+  数组是值类型，赋值和传参会复制整个数组。因此改变副本的值，不会改变本身的值。
+  
+  
+  =======================Go语言基础之切片
+  var name []T
+  func main() {
+	// 声明切片类型
+	var a []string              //声明一个字符串切片
+	var b = []int{}             //声明一个整型切片并初始化
+	var c = []bool{false, true} //声明一个布尔切片并初始化
+	var d = []bool{false, true} //声明一个布尔切片并初始化
+	fmt.Println(a)              //[]
+	fmt.Println(b)              //[]
+	fmt.Println(c)              //[false true]
+	fmt.Println(a == nil)       //true
+	fmt.Println(b == nil)       //false
+	fmt.Println(c == nil)       //false
+	// fmt.Println(c == d)   //切片是引用类型，不支持直接比较，只能和nil比较
+}
+
+  使用copy()函数复制切片
+  首先我们来看一个问题：
+
+  func main() {
+    a := []int{1, 2, 3, 4, 5}
+    b := a
+    fmt.Println(a) //[1 2 3 4 5]
+    fmt.Println(b) //[1 2 3 4 5]
+    b[0] = 1000
+    fmt.Println(a) //[1000 2 3 4 5]
+    fmt.Println(b) //[1000 2 3 4 5]
+  }
+  由于切片是引用类型，所以a和b其实都指向了同一块内存地址。修改b的同时a的值也会发生变化。
+
+  Go语言内建的copy()函数可以迅速地将一个切片的数据复制到另外一个切片空间中，copy()函数的使用格式如下：
+
+  copy(destSlice, srcSlice []T)
+  其中：
+
+  srcSlice: 数据来源切片
+  destSlice: 目标切片
+  举个例子：
+
+  func main() {
+    // copy()复制切片
+    a := []int{1, 2, 3, 4, 5}
+    c := make([]int, 5, 5)
+    copy(c, a)     //使用copy()函数将切片a中的元素复制到切片c
+    fmt.Println(a) //[1 2 3 4 5]
+    fmt.Println(c) //[1 2 3 4 5]
+    c[0] = 1000
+    fmt.Println(a) //[1 2 3 4 5]
+    fmt.Println(c) //[1000 2 3 4 5]
+  }
+  从切片中删除元素
+  Go语言中并没有删除切片元素的专用方法，我们可以使用切片本身的特性来删除元素。 代码如下：
+
+  func main() {
+    // 从切片中删除元素
+    a := []int{30, 31, 32, 33, 34, 35, 36, 37}
+    // 要删除索引为2的元素
+    a = append(a[:2], a[3:]...)
+    fmt.Println(a) //[30 31 33 34 35 36 37]
+  }
+  总结一下就是：要从切片a中删除索引为index的元素，操作方法是a = append(a[:index], a[index+1:]...)
+  
+==============================Go语言fmt.Printf使用指南
+===Print
+  Print系列函数会将内容输出到系统的标准输出，区别在于Print函数直接输出内容，Printf函数支持格式化输出字符串，Println函数会在输出内容的结尾添加一个换行符。
+
+  func Print(a ...interface{}) (n int, err error)
+  func Printf(format string, a ...interface{}) (n int, err error)
+  func Println(a ...interface{}) (n int, err error)
+  举个简单的例子：
+
+  func main() {
+    fmt.Print("在终端打印该信息。")
+    name := "沙河小王子"
+    fmt.Printf("我是：%s\n", name)
+    fmt.Println("在终端打印单独一行显示")
+  }
+  执行上面的代码输出：
+
+  在终端打印该信息。我是：沙河小王子
+  在终端打印单独一行显示
+  
+===Fprint
+  Fprint系列函数会将内容输出到一个io.Writer接口类型的变量w中，我们通常用这个函数往文件中写入内容。
+
+  func Fprint(w io.Writer, a ...interface{}) (n int, err error)
+  func Fprintf(w io.Writer, format string, a ...interface{}) (n int, err error)
+  func Fprintln(w io.Writer, a ...interface{}) (n int, err error)
+  举个例子：
+
+  // 向标准输出写入内容
+  fmt.Fprintln(os.Stdout, "向标准输出写入内容")
+  fileObj, err := os.OpenFile("./xx.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+  if err != nil {
+    fmt.Println("打开文件出错，err:", err)
+    return
+  }
+  name := "沙河小王子"
+  // 向打开的文件句柄中写入内容
+  fmt.Fprintf(fileObj, "往文件中写如信息：%s", name)
+  注意，只要满足io.Writer接口的类型都支持写入。
+  
+   ===Sprint
+  Sprint系列函数会把传入的数据生成并返回一个字符串。
+
+  func Sprint(a ...interface{}) string
+  func Sprintf(format string, a ...interface{}) string
+  func Sprintln(a ...interface{}) string
+  简单的示例代码如下：
+
+  s1 := fmt.Sprint("沙河小王子")
+  name := "沙河小王子"
+  age := 18
+  s2 := fmt.Sprintf("name:%s,age:%d", name, age)
+  s3 := fmt.Sprintln("沙河小王子")
+  fmt.Println(s1, s2, s3)
+  
+  Errorf
+  Errorf函数根据format参数生成格式化字符串并返回一个包含该字符串的错误。
+
+  func Errorf(format string, a ...interface{}) error
+  通常使用这种方式来自定义错误类型，例如：
+
+  err := fmt.Errorf("这是一个错误")
+  Go1.13版本为fmt.Errorf函数新加了一个%w占位符用来生成一个可以包裹Error的Wrapping Error。
+
+  e := errors.New("原始错误e")
+  w := fmt.Errorf("Wrap了一个错误%w", e)
+  
+  
+  ============================Go语言标准库flag基本使用
+  os.Args
+  如果你只是简单的想要获取命令行参数，可以像下面的代码示例一样使用os.Args来获取命令行参数。
+
+  package main
+
+  import (
+    "fmt"
+    "os"
+  )
+
+  //os.Args demo
+  func main() {
+    //os.Args是一个[]string
+    if len(os.Args) > 0 {
+      for index, arg := range os.Args {
+        fmt.Printf("args[%d]=%v\n", index, arg)
+      }
+    }
+  }
+  将上面的代码执行go build -o "args_demo"编译之后，执行：
+
+  $ ./args_demo a b c d
+  args[0]=./args_demo
+  args[1]=a
+  args[2]=b
+  args[3]=c
+  args[4]=d
+  os.Args是一个存储命令行参数的字符串切片，它的第一个元素是执行文件的名称。
+  
+  
+  定义命令行flag参数
+  有以下两种常用的定义命令行flag参数的方法。
+
+  flag.Type()
+  基本格式如下：
+
+  flag.Type(flag名, 默认值, 帮助信息)*Type 例如我们要定义姓名、年龄、婚否三个命令行参数，我们可以按如下方式定义：
+
+  name := flag.String("name", "张三", "姓名")
+  age := flag.Int("age", 18, "年龄")
+  married := flag.Bool("married", false, "婚否")
+  delay := flag.Duration("d", 0, "时间间隔")
+  需要注意的是，此时name、age、married、delay均为对应类型的指针。
+
+  flag.TypeVar()
+  基本格式如下： flag.TypeVar(Type指针, flag名, 默认值, 帮助信息) 例如我们要定义姓名、年龄、婚否三个命令行参数，我们可以按如下方式定义：
+
+  var name string
+  var age int
+  var married bool
+  var delay time.Duration
+  flag.StringVar(&name, "name", "张三", "姓名")
+  flag.IntVar(&age, "age", 18, "年龄")
+  flag.BoolVar(&married, "married", false, "婚否")
+  flag.DurationVar(&delay, "d", 0, "时间间隔")
+  flag.Parse()
+  通过以上两种方法定义好命令行flag参数后，需要通过调用flag.Parse()来对命令行参数进行解析。
+
+  支持的命令行参数格式有以下几种：
+
+  -flag xxx （使用空格，一个-符号）
+  --flag xxx （使用空格，两个-符号）
+  -flag=xxx （使用等号，一个-符号）
+  --flag=xxx （使用等号，两个-符号）
+  其中，布尔类型的参数必须使用等号的方式指定。
+
+  Flag解析在第一个非flag参数（单个”-“不是flag参数）之前停止，或者在终止符”–“之后停止。
+
+  flag其他函数
+  flag.Args()  ////返回命令行参数后的其他参数，以[]string类型
+  flag.NArg()  //返回命令行参数后的其他参数个数
+  flag.NFlag() //返回使用的命令行参数个数
+  完整示例
+  定义
+  func main() {
+    //定义命令行参数方式1
+    var name string
+    var age int
+    var married bool
+    var delay time.Duration
+    flag.StringVar(&name, "name", "张三", "姓名")
+    flag.IntVar(&age, "age", 18, "年龄")
+    flag.BoolVar(&married, "married", false, "婚否")
+    flag.DurationVar(&delay, "d", 0, "延迟的时间间隔")
+
+    //解析命令行参数
+    flag.Parse()
+    fmt.Println(name, age, married, delay)
+    //返回命令行参数后的其他参数
+    fmt.Println(flag.Args())
+    //返回命令行参数后的其他参数个数
+    fmt.Println(flag.NArg())
+    //返回使用的命令行参数个数
+    fmt.Println(flag.NFlag())
+  }
+  使用
+  命令行参数使用提示：
+
+  $ ./flag_demo -help
+  Usage of ./flag_demo:
+    -age int
+          年龄 (default 18)
+    -d duration
+          时间间隔
+    -married
+          婚否
+    -name string
+          姓名 (default "张三")
+  正常使用命令行flag参数：
+
+  $ ./flag_demo -name 沙河娜扎 --age 28 -married=false -d=1h30m
+  沙河娜扎 28 false 1h30m0s
+  []
+  0
+  4
+  使用非flag命令行参数：
+
+  $ ./flag_demo a b c
+  张三 18 false 0s
+  [a b c]
+  3
+  0
+  
