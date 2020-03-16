@@ -587,3 +587,45 @@ const (
   3
   0
   
+==================================转换
+Go语言内置包之strconv
+===字符串和数字型互转
+s1 := "100"
+i1, err := strconv.Atoi(s1)
+
+i2 := 200
+s2 := strconv.Itoa(i2)
+
+===字符串转指定类型
+Parse类函数用于转换字符串为给定类型的值：ParseBool()、ParseFloat()、ParseInt()、ParseUint()。
+
+b, err := strconv.ParseBool("true")
+f, err := strconv.ParseFloat("3.1415", 64)
+i, err := strconv.ParseInt("-2", 10, 64)
+u, err := strconv.ParseUint("2", 10, 64)
+
+===Format系列函数实现了将给定类型数据格式化为string类型数据的功能。
+FormatBool()
+func FormatBool(b bool) string
+根据b的值返回”true”或”false”。
+
+FormatInt()
+func FormatInt(i int64, base int) string
+返回i的base进制的字符串表示。base 必须在2到36之间，结果中会使用小写字母’a’到’z’表示大于10的数字。
+
+FormatUint()
+func FormatUint(i uint64, base int) string
+是FormatInt的无符号整数版本。
+
+FormatFloat()
+func FormatFloat(f float64, fmt byte, prec, bitSize int) string
+
+s1 := strconv.FormatBool(true)
+s2 := strconv.FormatFloat(3.1415, 'E', -1, 64)
+s3 := strconv.FormatInt(-2, 16)
+s4 := strconv.FormatUint(2, 16)
+
+
+
+
+
