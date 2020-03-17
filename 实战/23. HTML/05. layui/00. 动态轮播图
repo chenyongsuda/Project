@@ -1,0 +1,43 @@
+最近接触了一个项目，要实现一个轮播图的功能，因为是在原有的项目上进行二次开发，项目前端用的是layui框架，楼主是后台方向，没怎么接触过前端，在用layui实现轮播图时，发现异步从后台获取数据，但是轮播图片不显示，显示如下:
+用浏览器调试发现，<div carousel-item="">下面已经有几个<div>了，说明是有数据的。那怎么不显示呢？后来发现是在获取数据之前，页面已经初始化了，当然不能显示啦，这是时候需要在获取数据填充html时，回调reload(options)方法。
+
+先贴上HTML代码：
+<div class="layui-carousel" id="test1" lay-filter="test1">
+ <div carousel-item="">
+  <script id="charts" type="text/html">
+    这里是动态遍历的代码
+  </script>
+ </div>
+</div>
+
+
+解决问题的代码示例：
+layui.use('carousel', function(){
+ var carousel = layui.carousel;
+ //建造实例
+ var ins = carousel.render({
+  elem: '#test1'
+  ,width: '100%' //设置容器宽度
+  ,arrow: 'always' //始终显示箭头
+  //,anim: 'updown' //切换动画方式
+ });
+  
+ //这里是用jQuery异步获取数据的大致代码
+ $.get("请求的URL",function (data) {
+      var tpl = $("#charts").html();
+      laytpl(tpl).render(data,function (html) {
+        $("#test1").children('div').html(html);
+        //下面这步很重要
+         ins.reload({elem: '#test1'});//重置轮播图
+      });
+    });
+});
+
+至于为啥用
+$("#test1").children('div').html(html);
+因为<div carousel-item="">加idname会报错，所以没用下面这种方式填充html
+
+$("#idname").html(html);
+
+=================================
+或者直接用后台数据渲染好 用golang的模板
