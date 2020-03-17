@@ -258,3 +258,44 @@ type User struct {
     Status int `orm:"default(1)"`
     ...
 }
+
+
+================================================================
+Operators
+在beego ORM中也有类似于SQL语句中的操作符，欲善其事，必利其器，我们先来了解他们，beego ORM目前支持的操作符为:
+
+操作符	说明	等同Sql操作符
+gt	greater的缩写，表示大于的意思	>
+gte	greater than or equal的缩写，即大于等于	>=
+lt	less than的缩写，表示小于	<
+lte	less thanor equal的缩写，小于等于	<=
+in	等同与sql语言中的in	in
+exact	等于	=
+contains	包含，一般用于字符类型，如包含某某字符	like '%查询内容%'
+startswith	以…起始，一般用于字符类型，如从什么字符开始	like '开始字符%'
+endswith	以…结束 ，一般用于字符类型，如以什么字符结束	like '%结束字符'
+isnull	表示改字段不能为空
+在beego中 操作符前面添加 字母 i 表示忽略大小写，如 iexact、icontains 、istartswith 和iendswith 
+
+exact
+我们最先演示下exact 它相当于 = ，现在我们需要通过它查询出 stu_id =3 的一条数据。
+
+func (this *OperatorsController) GetExact() {
+    orm := orm.NewOrm()
+    // 获取表句柄
+    stu := Student{}
+    qs := orm.QueryTable("student")
+    // select * from student where id =3;
+    err := qs.Filter("stu_id__exact", 3).One(&stu) // 过滤器
+    if err != nil {
+        this.Ctx.WriteString(strconv.Itoa(stu.StuId) + " " + stu.Name + " " + stu.Age + " " + stu.Hobby)
+    }else{
+        this.Ctx.WriteString("查询失败")    
+    }
+}
+
+
+上面的代码相当于sql语句 ：
+
+select * from student where id =3;
+————————————————
