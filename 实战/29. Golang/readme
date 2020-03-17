@@ -1,5 +1,8 @@
 学习参考网站 https://www.liwenzhou.com/posts/Go/01_var_and_const/
 
+数据库
+基于 sqlx 封装的 Golang 数据库操作 gosql
+
 设置Go代理
 
 go env -w GOPROXY=https://goproxy.io,direct
