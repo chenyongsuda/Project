@@ -598,3 +598,241 @@ func main() {
     // 3, 释放锁(取消自动续租, 释放租约)
     // defer 会把租约释放掉, 关联的KV就被删除了
 }
+
+
+=====================================================
+https://yuerblog.cc/2017/12/12/etcd-v3-sdk-usage/
+
+Txn事务
+etcd中事务是原子执行的，只支持if … then … else …这种表达，能实现一些有意思的场景。
+
+首先，我们需要开启一个事务，这是通过KV对象的方法实现的：
+txn := kv.Txn(context.TODO())
+txn := kv.Txn(context.TODO())
+我写了如下的测试代码，Then和Else还比较好理解，If是比较陌生的。
+
+	txnResp, err := txn.If(clientv3.Compare(clientv3.Value("/hi"), "=", "hello")).
+			Then(clientv3.OpGet("/hi")).
+			Else(clientv3.OpGet("/test/", clientv3.WithPrefix())).
+			Commit()
+
+	txnResp, err := txn.If(clientv3.Compare(clientv3.Value("/hi"), "=", "hello")).
+			Then(clientv3.OpGet("/hi")).
+			Else(clientv3.OpGet("/test/", clientv3.WithPrefix())).
+			Commit()
+我们先看下Txn支持的方法：
+
+type Txn interface {
+	// If takes a list of comparison. If all comparisons passed in succeed,
+	// the operations passed into Then() will be executed. Or the operations
+	// passed into Else() will be executed.
+	If(cs ...Cmp) Txn
+
+	// Then takes a list of operations. The Ops list will be executed, if the
+	// comparisons passed in If() succeed.
+	Then(ops ...Op) Txn
+
+	// Else takes a list of operations. The Ops list will be executed, if the
+	// comparisons passed in If() fail.
+	Else(ops ...Op) Txn
+
+	// Commit tries to commit the transaction.
+	Commit() (*TxnResponse, error)
+}
+
+type Txn interface {
+	// If takes a list of comparison. If all comparisons passed in succeed,
+	// the operations passed into Then() will be executed. Or the operations
+	// passed into Else() will be executed.
+	If(cs ...Cmp) Txn
+ 
+	// Then takes a list of operations. The Ops list will be executed, if the
+	// comparisons passed in If() succeed.
+	Then(ops ...Op) Txn
+ 
+	// Else takes a list of operations. The Ops list will be executed, if the
+	// comparisons passed in If() fail.
+	Else(ops ...Op) Txn
+ 
+	// Commit tries to commit the transaction.
+	Commit() (*TxnResponse, error)
+}
+Txn必须是这样使用的：If(满足条件) Then(执行若干Op) Else(执行若干Op)。
+
+If中支持传入多个Cmp比较条件，如果所有条件满足，则执行Then中的Op（上一节介绍过Op），否则执行Else中的Op。
+
+在我的例子中只传入了1个比较条件：
+
+clientv3.Compare(clientv3.Value("/hi"), "=", "hello")
+
+clientv3.Compare(clientv3.Value("/hi"), "=", "hello")
+Value(“/hi”)是指key=/hi对应的value，它是条件表达式的”主语”，类型是Cmp：
+
+func Value(key string) Cmp {
+	return Cmp{Key: []byte(key), Target: pb.Compare_VALUE}
+}
+
+
+func Value(key string) Cmp {
+	return Cmp{Key: []byte(key), Target: pb.Compare_VALUE}
+}
+这个Value(“/hi”)返回的Cmp表达了：”/hi这个key对应的value”。
+
+接下来，利用Compare函数来继续为”主语”增加描述，形成了一个完整条件语句，即”/hi这个key对应的value”必须等于”hello”。
+
+Compare函数实际上是对Value返回的Cmp对象进一步修饰，增加了”=”与”hello”两个描述信息：
+
+func Compare(cmp Cmp, result string, v interface{}) Cmp {
+	var r pb.Compare_CompareResult
+
+	switch result {
+	case "=":
+		r = pb.Compare_EQUAL
+	case "!=":
+		r = pb.Compare_NOT_EQUAL
+	case ">":
+		r = pb.Compare_GREATER
+	case "<":
+		r = pb.Compare_LESS
+	default:
+		panic("Unknown result op")
+	}
+
+	cmp.Result = r
+	switch cmp.Target {
+	case pb.Compare_VALUE:
+		val, ok := v.(string)
+		if !ok {
+			panic("bad compare value")
+		}
+		cmp.TargetUnion = &pb.Compare_Value{Value: []byte(val)}
+	case pb.Compare_VERSION:
+		cmp.TargetUnion = &pb.Compare_Version{Version: mustInt64(v)}
+	case pb.Compare_CREATE:
+		cmp.TargetUnion = &pb.Compare_CreateRevision{CreateRevision: mustInt64(v)}
+	case pb.Compare_MOD:
+		cmp.TargetUnion = &pb.Compare_ModRevision{ModRevision: mustInt64(v)}
+	case pb.Compare_LEASE:
+		cmp.TargetUnion = &pb.Compare_Lease{Lease: mustInt64orLeaseID(v)}
+	default:
+		panic("Unknown compare type")
+	}
+	return cmp
+}
+
+
+func Compare(cmp Cmp, result string, v interface{}) Cmp {
+	var r pb.Compare_CompareResult
+ 
+	switch result {
+	case "=":
+		r = pb.Compare_EQUAL
+	case "!=":
+		r = pb.Compare_NOT_EQUAL
+	case ">":
+		r = pb.Compare_GREATER
+	case "<":
+		r = pb.Compare_LESS
+	default:
+		panic("Unknown result op")
+	}
+ 
+	cmp.Result = r
+	switch cmp.Target {
+	case pb.Compare_VALUE:
+		val, ok := v.(string)
+		if !ok {
+			panic("bad compare value")
+		}
+		cmp.TargetUnion = &pb.Compare_Value{Value: []byte(val)}
+	case pb.Compare_VERSION:
+		cmp.TargetUnion = &pb.Compare_Version{Version: mustInt64(v)}
+	case pb.Compare_CREATE:
+		cmp.TargetUnion = &pb.Compare_CreateRevision{CreateRevision: mustInt64(v)}
+	case pb.Compare_MOD:
+		cmp.TargetUnion = &pb.Compare_ModRevision{ModRevision: mustInt64(v)}
+	case pb.Compare_LEASE:
+		cmp.TargetUnion = &pb.Compare_Lease{Lease: mustInt64orLeaseID(v)}
+	default:
+		panic("Unknown compare type")
+	}
+	return cmp
+}
+Cmp可以用于描述”key=xxx的yyy属性，必须=、!=、<、>，kkk值”，比如：
+
+key=xxx的value，必须!=，hello。
+key=xxx的create版本号，必须=，11233。
+key=xxx的lease id，必须=，12319231231238。
+经过Compare函数修饰的Cmp对象，内部包含了完整的条件信息，传递给If函数即可。
+
+类似于Value的函数用于指定yyy属性，有这么几个方法：
+
+func CreateRevision(key string) Cmp：key=xxx的创建版本必须满足…
+func LeaseValue(key string) Cmp：key=xxx的Lease ID必须满足…
+func ModRevision(key string) Cmp：key=xxx的最后修改版本必须满足…
+func Value(key string) Cmp：key=xxx的创建值必须满足…
+func Version(key string) Cmp：key=xxx的累计更新次数必须满足…
+最后Commit提交整个Txn事务，我们需要判断txnResp获知If条件是否成立：
+
+	if txnResp.Succeeded { // If = true
+		fmt.Println("~~~", txnResp.Responses[0].GetResponseRange().Kvs)
+	} else { // If =false
+		fmt.Println("!!!", txnResp.Responses[0].GetResponseRange().Kvs)
+	}
+
+	if txnResp.Succeeded { // If = true
+		fmt.Println("~~~", txnResp.Responses[0].GetResponseRange().Kvs)
+	} else { // If =false
+		fmt.Println("!!!", txnResp.Responses[0].GetResponseRange().Kvs)
+	}
+Succeed=true表示If条件成立，接下来我们需要获取Then或者Else中的OpResponse列表（因为可以传多个Op），可以看一下txnResp的结构：
+
+type TxnResponse struct {
+	Header *ResponseHeader `protobuf:"bytes,1,opt,name=header" json:"header,omitempty"`
+	// succeeded is set to true if the compare evaluated to true or false otherwise.
+	Succeeded bool `protobuf:"varint,2,opt,name=succeeded,proto3" json:"succeeded,omitempty"`
+	// responses is a list of responses corresponding to the results from applying
+	// success if succeeded is true or failure if succeeded is false.
+	Responses []*ResponseOp `protobuf:"bytes,3,rep,name=responses" json:"responses,omitempty"`
+}
+
+
+type TxnResponse struct {
+	Header *ResponseHeader `protobuf:"bytes,1,opt,name=header" json:"header,omitempty"`
+	// succeeded is set to true if the compare evaluated to true or false otherwise.
+	Succeeded bool `protobuf:"varint,2,opt,name=succeeded,proto3" json:"succeeded,omitempty"`
+	// responses is a list of responses corresponding to the results from applying
+	// success if succeeded is true or failure if succeeded is false.
+	Responses []*ResponseOp `protobuf:"bytes,3,rep,name=responses" json:"responses,omitempty"`
+}
+每个Op有一个ResponseOp对象，而ResponseOp的结构我们在前面贴过，可以翻回去看看。
+
+===================================================================================
+
+//m.pfx是前缀，比如"service/lock/"
+//s.Lease()是一个64位的整数值，etcd v3引入了lease（租约）的概念，concurrency包基于lease封装了session，每一个客户端都有自己的lease，也就是说每个客户端都有一个唯一的64位整形值
+//m.myKey类似于"service/lock/12345"
+m.myKey = fmt.Sprintf("%s%x", m.pfx, s.Lease())
+
+
+//etcdv3新引入的多键条件事务，替代了v2中Compare-And-put操作。etcdv3的多键条件事务的语意是先做一个比较（compare）操作，如果比较成立则执行一系列操作，如果比较不成立则执行另外一系列操作。有类似于C语言中的条件表达式。
+//接下来的这部分实现了如果不存在这个key，则将这个key写入到etcd，如果存在则读取这个key的值这样的功能。
+//下面这一句，是构建了一个compare的条件，比较的是key的createRevision，如果revision是0，则存入一个key，如果revision不为0，则读取这个key。
+//revision是etcd一个全局的序列号，每一个对etcd存储进行改动都会分配一个这个序号，在v2中叫index，createRevision是表示这个key创建时被分配的这个序号。当key不存在时，createRivision是0。
+cmp := v3.Compare(v3.CreateRevision(m.myKey), "=", 0)
+put := v3.OpPut(m.myKey, "", v3.WithLease(s.Lease()))
+get := v3.OpGet(m.myKey)
+resp, err := client.Txn(ctx).If(cmp).Then(put).Else(get).Commit()
+if err != nil {
+    return err
+}
+m.myRev = resp.Header.Revision
+if !resp.Succeeded {
+    m.myRev = resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision
+}
+
+//如果上面的code操作成功了，则myRev是当前客户端创建的key的revision值。
+//waitDeletes等待匹配m.pfx （"service/lock/"）这个前缀（可类比在这个目录下的）并且createRivision小于m.myRev-1所有key被删除
+//如果没有比当前客户端创建的key的revision小的key，则当前客户端者获得锁
+//如果有比它小的key则等待，比它小的被删除
+err = waitDeletes(ctx, client, m.pfx, m.myRev-1)
