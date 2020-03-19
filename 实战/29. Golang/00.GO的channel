@@ -1,1 +1,21 @@
 https://www.jianshu.com/p/6471c6029172
+
+管道总结
+1. 无缓冲chan 信息输入法和信息输出方都是要阻塞
+   一旦关闭后 信息收取放返回的值为0值 但是会有个ok的标志值
+
+2. 有缓存chan 信息放入不需要阻塞除非队列满了 输出也是
+
+3. for range 的话 会一直循环 知道队列关闭才退出
+   一般队列在消息生产方关闭
+
+4. chan的收取先协程安全的
+
+sync的一些包
+waitinggroup
+mutex
+rwmutex
+cond
+once
+pool
+
