@@ -1,1 +1,8 @@
+基本几个命令
+etcdctl version
+
+etcdctl put hello world
+
+etcdctl get hello
+
 
