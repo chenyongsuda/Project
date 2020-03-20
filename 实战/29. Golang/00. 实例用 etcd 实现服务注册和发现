@@ -1,0 +1,138 @@
+用 etcd 实现服务注册和发现
+
+系统中实现服务注册与发现所需的基本功能有
+服务注册：同一 service 的所有节点注册到相同目录下，节点启动后将自己的信息注册到所属服务的目录中。
+健康检查：服务节点定时发送心跳，注册到服务目录中的信息设置一个较短的 TTL，运行正常的服务节点每隔一段时间会去更新信息的 TTL。
+服务发现：通过名称能查询到服务提供外部访问的 IP 和端口号。比如网关代理服务时能够及时的发现服务中新增节点、丢弃不可用的服务节点，同时各个服务间也能感知对方的存在。
+在分布式系统中，如何管理节点间的状态一直是一个难题，etcd 是由开发并维护的，它使用 Go 语言编写，并通过 Raft 一致性算法处理日志复制以保证强一致性。etcd 像是专门为集群环境的服务发现和注册而设计，它提供了数据 TTL 失效、数据改变监视、多值、目录监听、分布式锁原子操作等功能，可以方便的跟踪并管理集群节点的状态。
+
+我们写两个 Demo 程序，一个服务充当 service，一个客户端程序充当网关代理。服务运行后会去 etcd 以自己服务名命名的目录中注册服务节点，并定时续租（更新 TTL）。客户端从 etcd 查询服务目录中的节点信息代理服务的请求，并且会在协程中实时监控服务目录中的变化，维护到自己的服务节点信息列表中。
+
+// 将服务注册到etcd上
+func RegisterServiceToETCD(ServiceTarget string, value string) {
+    dir = strings.TrimRight(ServiceTarget, "/") + "/"
+
+    client, err := clientv3.New(clientv3.Config{
+        Endpoints:   []string{"localhost:2379"},
+        DialTimeout: 5 * time.Second,
+    })
+    if err != nil {
+    panic(err)
+    }
+
+    kv := clientv3.NewKV(client)
+    lease := clientv3.NewLease(client)
+    var curLeaseId clientv3.LeaseID = 0
+
+    for {
+        if curLeaseId == 0 {
+            leaseResp, err := lease.Grant(context.TODO(), 10)
+            if err != nil {
+              panic(err)
+            }
+
+            key := ServiceTarget + fmt.Sprintf("%d", leaseResp.ID)
+            if _, err := kv.Put(context.TODO(), key, value, clientv3.WithLease(leaseResp.ID)); err != nil {
+                  panic(err)
+            }
+            curLeaseId = leaseResp.ID
+        } else {
+      // 续约租约，如果租约已经过期将curLeaseId复位到0重新走创建租约的逻辑
+            if _, err := lease.KeepAliveOnce(context.TODO(), curLeaseId); err == rpctypes.ErrLeaseNotFound {
+                curLeaseId = 0
+                continue
+            }
+        }
+        time.Sleep(time.Duration(1) * time.Second)
+    }
+}
+type HelloService struct {}
+
+func (p *HelloService) Hello(request string, reply *string) error {
+    *reply = "hello:" + request
+    return nil
+}
+
+var serviceTarget = "Hello"
+var port = ":1234"
+var host = "remote_host"// 伪代码
+
+func main() {
+    rpc.RegisterName("HelloService", new(HelloService))
+
+    listener, err := net.Listen("tcp", port)
+    if err != nil {
+        log.Fatal("ListenTCP error:", err)
+    }
+
+    conn, err := listener.Accept()
+    if err != nil {
+        log.Fatal("Accept error:", err)
+    }
+
+    go RegisterServiceToETCD(serviceTarget,  host + port)
+    rpc.ServeConn(conn)
+}
+
+网关通过 etcd 获取到服务目录下的所有节点的信息，将他们初始化到自身维护的可访问服务节点列表中。然后使用 Watch 机制监听 etcd 上服务对应的目录的更新，根据通道发送过来的 PUT 和 DELETE 事件来增加和删除服务的可用节点列表。
+var serviceTarget = "Hello"
+type remoteService struct {
+  name string
+  nodes map[string]string
+  mutex sync.Mutex
+}
+
+// 获取服务目录下所有key初始化到服务的可用节点列表中
+func getService(etcdClient clientv3.Client) *remoteService {
+    service = &remoteService {
+      name: serviceTarget
+    } 
+    kv := clientv3.NewKV(etcdClient)
+    rangeResp, err := kv.Get(context.TODO(), service.name, clientv3.WithPrefix())
+    if err != nil {
+       panic(err)
+    }
+
+    service.mutex.Lock()
+    for _, kv := range rangeResp.Kvs {
+        service.nodes[string(kv.Key)] = string(kv.Value)
+    }
+    service.mutex.Unlock()
+
+    go watchServiceUpdate(etcdClient, service)
+}
+
+// 监控服务目录下的事件
+func watchServiceUpdate(etcdClient clientv3.Client, service *remoteService) {
+    watcher := clientv3.NewWatcher(client)
+    // Watch 服务目录下的更新
+    watchChan := watcher.Watch(context.TODO(), service.name, clientv3.WithPrefix())
+    for watchResp := range watchChan {
+          for _, event := range watchResp.Events {
+                service.mutex.Lock()
+                switch (event.Type) {
+                case mvccpb.PUT://PUT事件，目录下有了新key
+                      service.nodes[string(event.Kv.Key)] = string(event.Kv.Value)
+            case mvccpb.DELETE://DELETE事件，目录中有key被删掉(Lease过期，key 也会被删掉)
+                      delete(service.nodes, string(event.Kv.Key))
+                }
+                service.mutex.Unlock()
+          }
+    }
+}
+
+func main () {
+  client, err := clientv3.New(clientv3.Config{
+        Endpoints:   []string{"remote_host:2379"},
+        DialTimeout: 5 * time.Second,
+    })
+  service := getService(client)// 获取服务的可用节点
+  ......
+  // 每次有请求过来从服务节点中选取一个连接，然后给节点发送请求
+  rpcClient, _ = rpc.Dial("tcp", service.nodes[i])
+  var reply string
+  rpcClient.Call("HelloService.hello", &reply)
+  ......
+
+}
+除了上面说的客户端或者网关发现系统中的已存服务外，系统中的各个服务之间也需要感知到其他角色的存在，服务间的发现方法与上面的例子类似，每个服务都能作为客户端在 etcd 中发现其他服务的存在。
