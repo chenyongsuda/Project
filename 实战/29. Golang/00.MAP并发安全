@@ -1,0 +1,178 @@
+如题，有个逻辑设计，在遍历map的同时需要并发的修改map的值
+
+解决
+先说下解决，那就是把map重新复制一份，不是同一个map自然也就不存在并发安全和死锁的问题了，但是因为不是同一个map了，自然是需要注意数据还是否有效的问题了。这个可以通过加锁之后的再次判断来解决。
+
+需求问题
+并发的读写map会出现panic：fatal error: concurrent map iteration and map write
+因为既要通过range进行遍历，又要在另一个goroutine中进行修改，所以range的时候没法加锁，因为修改的时候要加锁，如果在range的整个过程加锁，那具体的修改时候就会造成死锁
+也考虑过 go1.9 之后提供的 sync.Map，但是这个类型没有获取map长度的方法，所以也没法满足我的需求
+并发问题举例1 - panic
+package main
+
+import (
+	"fmt"
+	"strconv"
+	"testing"
+)
+
+func TestRangeMap(t *testing.T) {
+	tmpMap := make(map[int]string, 0)
+	tmpMap[1] = "1"
+	tmpMap[2] = "2"
+	tmpMap[3] = "3"
+	tmpMap[4] = "4"
+	go func() {
+		for i := 0; i < 10000; i++ {
+			//map并发的写
+			tmpMap[i] = strconv.Itoa(i)
+		}
+	}()
+	//遍历map，相当于读
+	for k, v := range tmpMap {
+		fmt.Println(k, v)
+	}
+}
+结果：
+
+=== RUN   TestRangeMap
+1 1
+2 2
+fatal error: concurrent map iteration and map write
+
+goroutine 33 [running]:
+runtime.throw(0x113fe01, 0x26)
+......
+
+并发问题举例2 - 死锁
+package main
+
+import (
+	"strconv"
+	"sync"
+	"testing"
+)
+
+type DataMap struct {
+	Data map[int]string
+	Mux  *sync.Mutex
+}
+
+func changeMap(data DataMap) {
+	//修改时又加锁
+	//因为进入该方法前，已经加锁了，所以这里肯定会死锁
+	data.Mux.Lock()
+	data.Data[0] = strconv.Itoa(0)
+	data.Mux.Unlock()
+}
+
+func TestRangeMap(t *testing.T) {
+	data := DataMap{
+		Data: make(map[int]string),
+		Mux:  &sync.Mutex{},
+	}
+	data.Data[1] = "1"
+	data.Data[2] = "2"
+	data.Data[3] = "3"
+	data.Data[4] = "4"
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		//遍历前加锁
+		data.Mux.Lock()
+		//遍历完成后解锁
+		defer data.Mux.Unlock()
+		for range data.Data {
+			//遍历的同时，具体内部逻辑还要修改map，修改时又加锁
+			changeMap(data)
+		}
+	}()
+
+	wg.Wait()
+}
+结果：
+
+=== RUN   TestRangeMap
+fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [chan receive]:
+testing.(*T).Run(0xc0000c8100, 0x113ae67, 0xc, 0x11427a8, 0x1069e26)
+......
+
+
+通过复制map解决问题
+/**
+*  Created with GoLand
+*  User: zhuxinquan
+*  Date: 2018-12-06
+*  Time: 下午6:11
+**/
+package main
+
+import (
+	"strconv"
+	"sync"
+	"testing"
+)
+
+type DataMap struct {
+	Data map[int]string
+	Mux  *sync.Mutex
+}
+
+func changeMap(data DataMap) {
+	//修改时又加锁
+	//因为进入该方法前，已经加锁了，所以这里肯定会死锁
+	data.Mux.Lock()
+	data.Data[0] = strconv.Itoa(0)
+	data.Mux.Unlock()
+}
+
+func TestRangeMap(t *testing.T) {
+	data := DataMap{
+		Data: make(map[int]string),
+		Mux:  &sync.Mutex{},
+	}
+	data.Data[1] = "1"
+	data.Data[2] = "2"
+	data.Data[3] = "3"
+	data.Data[4] = "4"
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	tmpMap := make(map[int]string)
+	//复制map, 复制之前加锁
+	data.Mux.Lock()
+	for k, v := range data.Data {
+		tmpMap[k] = v
+	}
+	data.Mux.Unlock()
+
+	go func() {
+		defer wg.Done()
+		//因为遍历的是临时复制的map, 所以不用加锁
+		for range tmpMap {
+			//遍历的同时，具体内部逻辑还要修改map，修改时加锁
+			changeMap(data)
+		}
+	}()
+
+	wg.Wait()
+}
+结果：
+
+=== RUN   TestRangeMap
+--- PASS: TestRangeMap (0.00s)
+PASS
+
+Process finished with exit code 0
+没有异常了！
+
+后记
+map并发是不安全的，加锁需要谨慎注意死锁的问题，range操作是对map的读，同时并发的读写会panic，以上复制的方案只是绕过了同时读写的问题，但是就变成了两个map了，所以需要在具体操作之前校验下数据的正确性(可能已经失效)，具体操作的时候，因为是加锁之后再进行的操作，所以相对来说，校验有效性就根据具体逻辑来做就行。
+
+sync.Map 没有length方法真的比较鸡肋, 最起码我现在1.12.7的版本还没有，不知道后面go官方是否会实现这个方法。
