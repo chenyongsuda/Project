@@ -209,6 +209,14 @@ $ curl http://localhost:9999/arr
 Gin默认使用模板Go语言标准库的模板text/template和html/template，语法与标准库一致，支持各种复杂场景的渲染。
 参考官方文档text/template，html/template
 
+在web开发中肯定要用到html文件，gin提供了c.html()方法来加载html文件。但是需要事先定义好模板文件的路径
+r.LoadHTMLGlob("template/*")//此处加载html路径只能指定一次，如果指定多次只有最后一次有效
+r.LoadHTMLGlob("view/*")此处重新设置了html的路径，所以template中的html就无法起作用。
+r.LoadHTMLGlob("template/**/*")此处匹配两层文件夹，即template下文件夹的文件
+r.GET("/fuck",func(c *gin.Context){
+c.HTML(http.StatusOK,"fuck.html",gin.H{})})
+
+
 ================================================================================
 Gin 中间件
 无中间件
