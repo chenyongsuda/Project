@@ -25,6 +25,31 @@ func main() {
 路由方法有 GET, POST, PUT, PATCH, DELETE 和 OPTIONS，还有Any，可匹配以上任意类型的请求。
 无参数
 //========= 无参数
+举例使用
+func main() {
+    router := gin.Default()
+    router.NoRoute(func(c *gin.Context) {
+        path := c.Request.URL.Path
+        method := c.Request.Method
+        fmt.Println(path)
+        fmt.Println(method)
+        if strings.HasPrefix(path, "/show") {
+            fmt.Println("ok")
+        }
+    })
+    router.Run()
+}
+
+
+
+
+
+
+
+
+
+
+
 r.GET("/", func(c *gin.Context) {
 	c.String(http.StatusOK, "Who are you?")
 })
@@ -385,3 +410,8 @@ router.GET("/", func(context *gin.Context) {
 
 router.Run()
 }
+
+========================404 405处理
+要想在404, 405添加处理过程, 可以通过NoRoute(), NoMethod()来处理.
+
+
