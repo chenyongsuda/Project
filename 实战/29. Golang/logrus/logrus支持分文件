@@ -1,0 +1,105 @@
+在实际开发过程中,为了节省磁盘,日志需要按照时间或者大小维度进行切割分成多分,归档过期的日志,删除久远的日志.这个就是在日常开发中经常遇见的日志滚动(log rotation)
+
+那么在 logrus 中我们该如何实现这个功能呢? logrus本身并没有实现滚动日志功能,但是我们可以使用第三方滚动插件实现.
+
+滚动日志
+我们需要使用lumberjack实现logrus的滚动日志,具体实现如下:
+
+package main
+
+import (
+	log "github.com/Sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
+)
+
+func main() {
+	logger := &lumberjack.Logger{
+    // 日志输出文件路径
+		Filename:   "/var/log/myapp/foo.log", 
+    // 日志文件最大 size, 单位是 MB
+		MaxSize:    500, // megabytes
+    // 最大过期日志保留的个数
+		MaxBackups: 3,
+    // 保留过期文件的最大时间间隔,单位是天
+		MaxAge:     28,   //days
+    // 是否需要压缩滚动日志, 使用的 gzip 压缩
+		Compress:   true, // disabled by default
+	}
+  log.SetOutput(logger) //调用 logrus 的 SetOutput()函数
+}
+滚动日志的各项参数如注释所示, logrus的setOutput()函数的入参是io.Writer类型, lumberjack.Logger实现了该接口.下文我们将对lumberjack.Logger的部分重要结构和函数稍作解释.
+
+lumberjack
+logger 结构
+type Logger struct {
+	// 日志文件路径
+	Filename string `json:"filename" yaml:"filename"`
+	// 最大文件 size, 默认 100MB
+	MaxSize int `json:"maxsize" yaml:"maxsize"`
+  // 保留过期文件的最大时间间隔,单位是天(24h)
+	MaxAge int `json:"maxage" yaml:"maxage"`
+	// 最大过期日志保留的个数,默认都保留
+	MaxBackups int `json:"maxbackups" yaml:"maxbackups"`
+	// 是否使用时间戳命名 backup 日志, 默认使用 UTC 格式
+	LocalTime bool `json:"localtime" yaml:"localtime"`
+	// 是否压缩过期日志
+	Compress bool `json:"compress" yaml:"compress"`
+	size int64
+	file *os.File
+	mu   sync.Mutex
+
+	millCh    chan bool
+	startMill sync.Once
+}
+
+写日志操作
+func (l *Logger) Write(p []byte) (n int, err error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	writeLen := int64(len(p))
+	if writeLen > l.max() {
+		return 0, fmt.Errorf(
+			"write length %d exceeds maximum file size %d", writeLen, l.max(),
+		)
+	}
+
+	if l.file == nil {
+		if err = l.openExistingOrNew(len(p)); err != nil {
+			return 0, err
+		}
+	}
+	// 比较文件 size,超过指定最大 size 就需要滚动一次
+	if l.size+writeLen > l.max() {
+    // rotate 其实就是重新创建了一个新文件
+		if err := l.rotate(); err != nil {
+			return 0, err
+		}
+	}
+
+	n, err = l.file.Write(p)
+	l.size += int64(n)
+
+	return n, err
+}
+滚动日志:
+
+func (l *Logger) rotate() error {
+  // 关闭当前文件句柄
+	if err := l.close(); err != nil {
+		return err
+	}
+  // 创建并打开新文件
+	if err := l.openNew(); err != nil {
+		return err
+	}
+  // 压缩日志文件,删除过期日志文件,内部是个协程去做过期日志清理任务
+	l.mill()
+	return nil
+}
+关闭日志文件
+func (l *Logger) Close() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.close()
+}
