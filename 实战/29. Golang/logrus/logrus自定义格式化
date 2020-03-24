@@ -1,0 +1,70 @@
+自定义输出格式
+package cclog
+
+import (
+    "bytes"
+    "fmt"
+    "strings"
+
+    "github.com/sirupsen/logrus"
+)
+
+type Formatter struct{}
+
+func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
+    var out string
+    if entry.HasCaller() {
+        var pkg bytes.Buffer
+        for _, t := range strings.Split(entry.Caller.File, "/") {
+                        if len(t) == 0 {
+                           continue;
+                         }
+            pkg.WriteString(t[:1])
+            pkg.WriteString(".")
+        }
+        pkg.WriteString(entry.Caller.Function)
+
+        out = fmt.Sprintf("[%s][%s] %s(%d) %s\n", entry.Level.String()[:4], entry.Time.Format("2006-01-02 15:03:04.000"), pkg.String(), entry.Caller.Line, entry.Message)
+    } else {
+        out = fmt.Sprintf("[%s][%s] %s\n", entry.Level.String()[:4], entry.Time.Format("2006-01-02 15:03:04.000"), entry.Message)
+    }
+    return []byte(out), nil
+}
+配置类
+
+import (
+    "time"
+    log "github.com/sirupsen/logrus"
+    "gopkg.in/natefinch/lumberjack.v2"
+    "hello_gin/cclog"
+)
+
+func init() {
+    log.SetFormatter(new(cclog.Formatter))
+    log.SetReportCaller(true)
+    log.SetOutput(&lumberjack.Logger{
+        Filename:   "./logs/api.log",
+        MaxSize:    100, // megabytes
+        MaxBackups: 3,
+        MaxAge:     28,   // days
+        Compress:   true, // disabled by default
+    })
+    // log.SetOutput(os.Stdout)
+    log.SetLevel(log.DebugLevel)
+}
+
+func main() {
+    r := gin.Default()
+    r.GET("/app", handleApp)
+    r.Run(":80")
+}
+func handleApp(c *gin.Context) {
+    log.Info("good luck")
+    c.JSON(200, gin.H{"code": 300, "msg": "OK"})
+}
+
+打印输出:
+
+[info][2019-09-10 15:03:50.330] D.g.s.h.m.main.handleApp(67) good luck
+
+
