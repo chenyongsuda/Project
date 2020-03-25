@@ -8,3 +8,15 @@ https://ant.design/docs/spec/introduce-cn
 
 layui
 https://github.com/zhongshaofa/layuimini
+
+
+PDMAN 数据库设计工具
+参考的开源代码
+站在巨人的肩上，PDMan的推出，离不开开源的支持，主要使用到的技术如下：
+React(https://reactjs.org/)
+Electron(https://github.com/electron/electron)
+font-awesome(http://www.fontawesome.com.cn)
+AntV-G6 (http://antvis.github.io/g6/doc/index.html)
+highlightjs(https://highlightjs.org)
+ace editor(https://ace.c9.io)
+doT.js(http://olado.github.io)
