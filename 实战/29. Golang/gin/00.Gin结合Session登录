@@ -109,3 +109,40 @@ session中间件开发
 session模块设计：
 本质上k-v系统，同key进行增删改查 2. session可以存储在内存和redis
 session服务的关系图
+
+
+===========================================================================
+全局变量store
+var store = cookie.NewStore([]byte("secret"))
+使用中间件
+	r := gin.Default()
+	r.Use(sessions.Sessions("sessionid", store))
+初始化sessions
+session := sessions.Default(c)
+
+设置sessions参数
+option := sessions.Options{MaxAge: 3600}
+session.Options(option)
+ 
+生成sessions并保存
+session.Set("sessionid", username)
+err := session.Save()
+ 
+服务器端检查一下是否成功
+if err != nil {
+	fmt.Println("Fail to save session")
+} else {
+	fmt.Println("Succeed to save session")
+}
+v := session.Get("sessionid")
+fmt.Println("sessionid:", v)
+
+获取sessions
+session := sessions.Default(c)
+v := session.Get("sessionid")
+fmt.Println("sessionid:", v)
+ 
+响应头
+c.Header("Access-Control-Allow-Origin", "*")
+c.Header("Access-Control-Allow-Credentials", "true")
+其实https://github.com/gin-contrib/sessions中的例子很好，代码很简洁，也是很实用的教程，可以仔细看看（用sessions包以后代码就不复杂了
