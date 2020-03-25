@@ -1,0 +1,54 @@
+main.go
+package main
+
+import (
+	"os"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/sirupsen/logrus"
+)
+
+var log = logrus.New() // 创建一个log示例
+
+func initLogrus() (err error) { // 初始化log的函数
+	log.Formatter = &logrus.JSONFormatter{}                                       // 设置为json格式的日志
+	f, err := os.OpenFile("./zdc.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644) // 创建一个log日志文件
+	if err != nil {
+		return
+	}
+	log.Out = f                  // 设置log的默认文件输出
+	gin.SetMode(gin.ReleaseMode) // 线上模式，控制台不会打印信息
+	gin.DefaultWriter = log.Out  // gin框架自己记录的日志也会输出
+	log.Level = logrus.InfoLevel // 设置日志级别
+	return
+}
+
+func main() {
+	err := initLogrus()
+	if err != nil {
+		panic(err)
+	}
+
+	r := gin.Default()
+	r.GET("/index", func(c *gin.Context) {
+		log.WithFields(logrus.Fields{
+			"msg": "测试的错误",
+		}).Warn("这是一个warnning级别的日志")
+
+		c.JSON(200, gin.H{
+			"code": 0,
+			"data": gin.H{
+				"name": "zdc",
+				"age":  18,
+			},
+		})
+	})
+	_ = r.Run()
+}
+
+log文件：
+{"fields.msg":"测试的错误","level":"warning","msg":"这是一个warnning级别的日志","time":"2019-08-28T18:49:07+08:00"}
+[GIN] 2019/08/28 - 18:49:07 | 200 |     20.0011ms |       127.0.0.1 | GET      /index
+{"fields.msg":"测试的错误","level":"warning","msg":"这是一个warnning级别的日志","time":"2019-08-28T18:49:09+08:00"}
+[GIN] 2019/08/28 - 18:49:09 | 200 |            0s |       127.0.0.1 | GET      /index
