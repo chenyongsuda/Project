@@ -57,6 +57,46 @@ res_id
 
 
 8. 统一错误返回
+定义protocol方法
+type Gin struct {
+	c *gin.Context
+}
+
+type response struct {
+	Code string      `json "code"`
+	Data interface{} `json "data"`
+	Msg  string      `json "msg"`
+}
+
+func NewNetTools(c *gin.Context) *Gin {
+	return &Gin{c}
+}
+
+func (this *Gin) SendNoramlResponse(code string, msg string, data interface{}) {
+	this.c.JSON(200,
+		response{
+			Code: code,
+			Data: data,
+			Msg:  msg})
+}
+
+func (this *Gin) SendErrorResponse(err_rsp response) {
+	this.c.JSON(
+		200,
+		err_rsp
+	)
+}
+
+定义error
+var (
+	ErrorNoAuthUser   = &response{Code: "401", Msg: "No Auth User!!!", Data: ""}
+	ErrorNoPermitUser = &response{Code: "403", Msg: "No Auth User!!!", Data: ""}
+)
+
+使用
+common.NewNetTools(c).SendResponse("200", "log", "")
+common.NewNetTools(c).SendErrorResponse(common.ErrorNoAuthUser)
+
 
 
 
