@@ -93,8 +93,76 @@ CREATE TABLE user(
 ) COMMENT='用户信息';
 
 ========================
+使用sqlx
+type User struct {
+	Id         int64     `db:"id"`
+	Name       string    `db:"name"`
+	Password   string    `db:"password"`
+	Roleids    string    `db:"roleids"`
+	Stat       int8      `db:"stat"`
+	CreateTime time.Time `db:"create_time"`
+	UpdateTime time.Time `db:"update_time"`
+}
+
+func (this *UserService) AddUser(user User) (err error) {
+	var (
+		execSQL string
+		// result    sql.Result
+	)
+	execSQL = "INSERT INTO user (name,password,roleids,stat) VALUES (?, ?, ?, ?)"
+	if _, err = DB.Exec(execSQL, user.Name, user.Password, user.Roleids, user.Stat); err != nil {
+		return
+	}
+	return
+}
+
+func (this *UserService) DeleteUser(user User) (err error) {
+	var (
+		execSQL string
+		// result    sql.Result
+	)
+	execSQL = "DELETE FROM user WHERE id = ?"
+	if _, err = DB.Exec(execSQL, user.Id); err != nil {
+		return
+	}
+	return
+}
+
+func (this *UserService) UpdateUser(user User) (err error) {
+	var (
+		execSQL string
+		// result    sql.Result
+	)
+	execSQL = "UPDATE user SET name= ? ,password=? ,roleids = ?,stat = ? WHERE id = ?"
+	if _, err = DB.Exec(execSQL, user.Name, user.Password, user.Roleids, user.Stat, user.Id); err != nil {
+		return
+	}
+	return
+}
+
+func TestUserUpdate(t *testing.T) {
+	var (
+		srv  *UserService
+		user User
+	)
+
+	user = User{}
+	user.Id = 1
+	user.Name = "admin"
+	user.Password = "xxx"
+	user.Roleids = "1"
+	user.Stat = 0
+	srv = &UserService{}
+	srv.UpdateUser(user)
+}
+
+==================================
+使用GORM
 
 
+
+
+========================
 3. 配置文件读取
 
 
