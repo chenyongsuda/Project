@@ -53,6 +53,7 @@ res_id
 //5、否则检测uri是否在roleauth中,如果是则通过,否则鉴权失败
 
 =========================
+DROP TABLE IF EXISTS `user`;
 CREATE TABLE resource(
   id INT PRIMARY KEY AUTO_INCREMENT COMMENT 'id',
   pid INT COMMENT '父节点',
