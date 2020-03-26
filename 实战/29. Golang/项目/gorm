@@ -1,0 +1,777 @@
+1. 创建
+import (
+    "github.com/jinzhu/gorm"
+    _ "github.com/jinzhu/gorm/dialects/mysql"
+)
+
+func main() {
+  db, err := gorm.Open("mysql", "user:password@/dbname?charset=utf8&parseTime=True&loc=Local")
+  defer db.Close()
+}
+
+2. 映射定义
+type User struct {
+	Id         int64     `gorm:"column:id;primary_key"`
+	Name       string    `gorm:"column:name"`
+	Password   string    `gorm:"column:password"`
+	Roleids    string    `gorm:"column:roleids"`
+	Stat       int8      `gorm:"column:stat"`
+	CreateTime time.Time `gorm:"column:create_time;default:'0000-00-00 00:00:00'"`
+	UpdateTime time.Time `gorm:"column:update_time;default:'0000-00-00 00:00:00'"`
+}
+
+func (User) TableName() string {
+	return "user"
+}
+
+
+3.插入
+您可以在gorm tag中定义默认值，然后插入SQL将忽略具有默认值的这些字段，并且其值为空，并且在将记录插入数据库后，gorm将从数据库加载这些字段的值。
+
+映射使用 - 的话插入查询都会不查
+如果设置default的插入的时候不会插入但是查询的时候能查出数据库的值
+
+===============================================================================
+快速入门
+1.概述
+GORM是Golang目前比较热门的数据库ORM操作库，对开发者也比较友好，使用非常方便简单，使用上主要就是把struct类型和数据库表记录进行映射，操作数据库的时候不需要直接手写Sql代码，这里主要介绍MySQL数据库。
+GORM库github地址：https://github.com/jinzhu/gorm
+
+2.简单例子
+我们先看个简单的例子了解下GORM大概怎么使用
+
+2.1. 安装依赖包
+操作MySQL需要安装两个包：
+
+MySQL驱动包
+GORM包 使用go get命令安装依赖包
+//安装MySQL驱动
+go get github.com/go-sql-driver/mysql
+//安装gorm包
+go get github.com/jinzhu/gorm
+2.2. 导入依赖包
+import (
+    //导入MYSQL数据库驱动，这里使用的是GORM库封装的MYSQL驱动导入包，实际上大家看源码就知道，这里等价于导入github.com/go-sql-driver/mysql
+    //这里导入包使用了 _ 前缀代表仅仅是导入这个包，但是我们在代码里面不会直接使用。
+    _ "github.com/jinzhu/gorm/dialects/mysql"
+    //导入gorm
+    "github.com/jinzhu/gorm"
+)
+2.3. GORM操作MYSQL例子
+使用gorm库操作MYSQL步骤：
+
+使用struct定义模型，模型主要用在golang中代表mysql表
+使用gorm创建数据库连接
+使用gorm操作数据库。
+下面是例子用到的users表结构定义
+
+CREATE TABLE `users` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `username` varchar(30) NOT NULL COMMENT '账号',
+  `password` varchar(100) NOT NULL COMMENT '密码',
+  `createtime` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间',
+   PRIMARY KEY (`id`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+代码示例
+
+package main
+
+import (
+	//导入MYSQL数据库驱动，这里使用的是GORM库封装的MYSQL驱动导入包，实际上大家看源码就知道，这里等价于导入github.com/go-sql-driver/mysql
+	//这里导入包使用了 _ 前缀代表仅仅是导入这个包，但是我们在代码里面不会直接使用。
+	"fmt"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"time"
+)
+
+//定义User模型，绑定users表，ORM库操作数据库，需要定义一个struct类型和MYSQL表进行绑定或者叫映射，struct字段和MYSQL表字段一一对应
+//在这里User类型可以代表mysql users表
+type User struct {
+	//通过在字段后面的标签说明，定义golang字段和表字段的关系
+	//例如 `gorm:"column:username"` 标签说明含义是: Mysql表的列名（字段名)为username
+	//这里golang定义的Username变量和MYSQL表字段username一样，他们的名字可以不一样。
+	Username string `gorm:"column:username"`
+	Password string `gorm:"column:password"`
+	//创建时间，时间戳
+	CreateTime int64 `gorm:"column:createtime"`
+}
+
+//设置表名，可以通过给struct类型定义 TableName函数，返回当前struct绑定的mysql表名是什么
+func (u User) TableName() string {
+	//绑定MYSQL表名为users
+	return "users"
+}
+
+func main()  {
+	//配置MySQL连接参数
+	username := "root"  //账号
+	password := "123456" //密码
+	host := "127.0.0.1" //数据库地址，可以是Ip或者域名
+	port := 3306 //数据库端口
+	Dbname := "tizi365" //数据库名
+
+	//通过前面的数据库参数，拼接MYSQL DSN， 其实就是数据库连接串（数据源名称）
+	//MYSQL dsn格式： {username}:{password}@tcp({host}:{port})/{Dbname}?charset=utf8&parseTime=True&loc=Local
+	//类似{username}使用花括号包着的名字都是需要替换的参数
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True&loc=Local", username, password, host, port, Dbname)
+	//连接MYSQL
+	db, err := gorm.Open("mysql", dsn)
+	if err != nil {
+		panic("连接数据库失败, error=" + err.Error())
+	}
+
+	//定义一个用户，并初始化数据
+	u := User{
+		Username:"tizi365",
+		Password:"123456",
+		CreateTime:time.Now().Unix(),
+	}
+
+	//插入一条用户数据
+	//下面代码会自动生成SQL语句：INSERT INTO `users` (`username`,`password`,`createtime`) VALUES ('tizi365','123456','1540824823')
+	if err := db.Create(u).Error; err != nil {
+		fmt.Println("插入失败", err)
+		return
+	}
+
+	//查询并返回第一条数据
+	//定义需要保存数据的struct变量
+	u = User{}
+	//自动生成sql： SELECT * FROM `users`  WHERE (username = 'tizi365') LIMIT 1
+	isNotFound := db.Where("username = ?", "tizi365").First(&u).RecordNotFound()
+	if isNotFound {
+		fmt.Println("找不到记录")
+		return
+	}
+	//打印查询到的数据
+	fmt.Println(u.Username,u.Password)
+
+	//更新
+	//自动生成Sql: UPDATE `users` SET `password` = '654321'  WHERE (username = 'tizi365')
+	db.Model(User{}).Where("username = ?", "tizi365").Update("password", "654321")
+
+	//删除
+	//自动生成Sql： DELETE FROM `users`  WHERE (username = 'tizi365')
+	db.Where("username = ?", "tizi365").Delete(User{})
+}
+
+3. gorm错误处理
+gorm库在执行数据库操作的时候，如果出现错误，则会更新gorm.DB的Error属性，Error属性默认为nil，因此在执行数据库操作后检测下Error属性是否为nil即可知道有没有错误发生。
+//插入记录后，检测Error是否为nil
+if err := db.Create(u).Error; err != nil {
+		fmt.Println("插入失败", err)
+		return
+
+=======================================================================================
+模型定义
+1.前言
+ORM框架操作数据库都需要预先定义模型，模型可以理解成数据模型，作为操作数据库的媒介。
+例如：
+
+从数据库读取的数据会先保存到预先定义的模型对象，然后我们就可以从模型对象得到我们想要的数据。
+插入数据到数据库也是先新建一个模型对象，然后把想要保存的数据先保存到模型对象，然后把模型对象保存到数据库。
+在golang中gorm模型定义是通过struct实现的，这样我们就可以通过gorm库实现struct类型和mysql表数据的映射。
+
+提示：gorm负责将对模型的读写操作翻译成sql语句，然后gorm再把数据库执行sql语句后返回的结果转化为我们定义的模型对象。
+
+2.gorm模型定义
+gorm模型定义主要就是在struct类型定义的基础上增加字段标签说明实现，下面看个完整的例子。
+假如有个商品表，表结构如下
+
+CREATE TABLE `food` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID，商品Id',
+  `name` varchar(30) NOT NULL COMMENT '商品名',
+  `price` decimal(10,2) unsigned  NOT NULL COMMENT '商品价格',
+  `type_id` int(10) unsigned NOT NULL COMMENT '商品类型Id',
+  `createtime` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间',
+   PRIMARY KEY (`id`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+模型定义如下
+
+//字段注释说明了gorm库把struct字段转换为表字段名长什么样子。
+type Food struct {
+	Id         int  //表字段名为：id
+	Name       string //表字段名为：name
+	Price      float64 //表字段名为：price
+	TypeId     int  //表字段名为：type_id
+	//字段定义后面使用两个反引号``包裹起来的字符串部分叫做标签定义，这个是golang的基础语法，不同的库会定义不同的标签，有不同的含义
+	CreateTime int64 `gorm:"column:createtime"`  //表字段名为：createtime
+}
+默认gorm对struct字段名使用Snake Case命名风格转换成mysql表字段名(需要转换成小写字母)。
+根据gorm的默认约定，上面例子只需要使用gorm:"column:createtime"标签定义为CreateTime字段指定表字段名，其他使用默认值即可。
+提示：Snake Case命名风格，就是各个单词之间用下划线（_）分隔，例如： CreateTime的Snake Case风格命名为create_time
+
+3.gorm模型标签
+通过上面的例子，大家看到可以通过类似gorm:"column:createtime"这样的标签定义语法，定义struct字段的列名（表字段名）。
+gorm标签语法：gorm:"标签定义"
+标签定义部分，多个标签定义可以使用分号（;）分隔
+
+例如定义列名：
+gorm:"column:列名"
+
+gorm常用标签如下：
+标签	说明	例子
+column	指定列名	gorm:"column:createtime"
+PRIMARY_KEY	指定主键	gorm:"column:id; PRIMARY_KEY"
+-	忽略字段	gorm:"-" 可以忽略struct字段，被忽略的字段不参与gorm的读写操作
+4.定义表名
+可以通过定义struct类型的TableName函数实现定义模型的表名
+
+接上面的例子：
+
+//设置表名，可以通过给Food struct类型定义 TableName函数，返回一个字符串作为表名
+func (v Food) TableName() string {
+	return "food"
+}
+建议: 默认情况下都给模型定义表名，有时候定义模型只是单纯的用于接收手写sql查询的结果，这个时候是不需要定义表名；手动通过gorm函数Table()指定表名，也不需要给模型定义TableName函数。
+
+===============================
+一.gorm连接mysql数据库
+gorm支持多种数据库，这里主要介绍mysql,连接mysql主要有两个步骤:
+
+配置DSN (Data Source Name)
+使用gorm.Open连接数据库
+1. 配置DSN (Data Source Name)
+gorm库使用dsn作为连接数据库的参数，dsn翻译过来就叫数据源名称，用来描述数据库连接信息。一般都包含数据库连接地址，账号，密码之类的信息。
+
+DSN格式：
+
+[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
+mysql连接dsn例子：
+
+//mysql dsn格式
+//涉及参数:
+//username   数据库账号
+//password   数据库密码
+//host       数据库连接地址，可以是Ip或者域名
+//port       数据库端口
+//Dbname     数据库名
+username:password@tcp(host:port)/Dbname?charset=utf8&parseTime=True&loc=Local
+
+//填上参数后的例子
+//username = root
+//password = 123456
+//host     = localhost
+//port     = 3306
+//Dbname   = tizi365
+//后面K/V键值对参数含义为：
+//  charset=utf8 客户端字符集为utf8
+//  parseTime=true 支持把数据库datetime和date类型转换为golang的time.Time类型
+//  loc=Local 使用系统本地时区
+root:123456@tcp(localhost:3306)/tizi365?charset=utf8&parseTime=True&loc=Local
+
+//gorm 设置mysql连接超时参数
+//开发的时候经常需要设置数据库连接超时参数，gorm是通过dsn的timeout参数配置
+//例如，设置10秒后连接超时，timeout=10s
+//下面是完成的例子
+root:123456@tcp(localhost:3306)/tizi365?charset=utf8&parseTime=True&loc=Local&timeout=10s
+
+//设置读写超时时间
+// readTimeout - 读超时时间，0代表不限制
+// writeTimeout - 写超时时间，0代表不限制
+root:123456@tcp(localhost:3306)/tizi365?charset=utf8&parseTime=True&loc=Local&timeout=10s&readTimeout=30s&writeTimeout=60s
+2. 使用gorm.Open连接数据库
+有了上面配置的dsn参数，就可以使用gorm连接数据库，下面是连接数据库的例子
+
+package main
+
+import (
+	//导入MYSQL数据库驱动，这里使用的是GORM库封装的MYSQL驱动导入包，实际上大家看源码就知道，这里等价于导入github.com/go-sql-driver/mysql
+	//这里导入包使用了 _ 前缀代表仅仅是导入这个包，但是我们在代码里面不会直接使用。
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"github.com/jinzhu/gorm"
+)
+
+func main()  {
+    //配置MySQL连接参数
+	username := "root"  //账号
+	password := "123456" //密码
+	host := "127.0.0.1" //数据库地址，可以是Ip或者域名
+	port := 3306 //数据库端口
+	Dbname := "tizi365" //数据库名
+	timeout := "10s" //连接超时，10秒
+	
+	//拼接下dsn参数, dsn格式可以参考上面的语法，这里使用Sprintf动态拼接dsn参数，因为一般数据库连接参数，我们都是保存在配置文件里面，需要从配置文件加载参数，然后拼接dsn。
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True&loc=Local&timeout=%s", username, password, host, port, Dbname, timeout)
+	//连接MYSQL, 获得DB类型实例，用于后面的数据库读写操作。
+	db, err := gorm.Open("mysql", dsn)
+	if err != nil {
+		panic("连接数据库失败, error=" + err.Error())
+	}
+	//延时关闭数据库连接
+	defer db.Close()
+}
+3. gorm调试模式
+为了方便调试，了解gorm操作到底执行了怎么样的sql语句，开发的时候需要打开调试日志，这样gorm会打印出执行的每一条sql语句。
+使用LogMode函数，设置打印gorm执行的sql语句。
+例子：
+
+db.LogMode(true)
+二.gorm连接池
+在高并发实践中，为了提高数据库连接的使用率，避免重复建立数据库连接带来的性能消耗，会经常使用数据库连接池技术来维护数据库连接。
+gorm自带了数据库连接池使用非常简单只要设置下数据库连接池参数即可。
+
+数据库连接池使用例子：
+定义tools包，负责数据库初始化工作
+
+//定义一个工具包，用来管理gorm数据库连接池的初始化工作。
+package tools
+
+//定义全局的db对象，我们执行数据库操作主要通过他实现。
+var _db *gorm.DB
+
+//包初始化函数，golang特性，每个包初始化的时候会自动执行init函数，这里用来初始化gorm。
+func init() {
+    ...忽略dsn配置，请参考上面例子...
+    
+    //连接MYSQL, 获得DB类型实例，用于后面的数据库读写操作。
+    _db, err := gorm.Open("mysql", dsn)
+    if err != nil {
+		panic("连接数据库失败, error=" + err.Error())
+	}
+	
+	//设置数据库连接池参数
+	_db.DB().SetMaxOpenConns(100)   //设置数据库连接池最大连接数
+	_db.DB().SetMaxIdleConns(20)   //连接池最大允许的空闲连接数，如果没有sql任务需要执行的连接数大于20，超过的连接会被连接池关闭。
+}
+
+//获取gorm db对象，其他包需要执行数据库查询的时候，只要通过tools.getDB()获取db对象即可。
+//不用担心协程并发使用同样的db对象会共用同一个连接，db对象在调用他的方法的时候会从数据库连接池中获取新的连接
+func GetDB() *gorm.DB {
+	return _db
+}
+使用例子：
+package main
+//导入tools包
+import tools
+func main() {
+    //获取DB
+    db := tools.GetDB()
+    
+    //执行数据库查询操作
+    u = User{}
+	//自动生成sql： SELECT * FROM `users`  WHERE (username = 'tizi365') LIMIT 1
+	db.Where("username = ?", "tizi365").First(&u)
+}
+注意：使用连接池技术后，千万不要使用完db后调用db.Close关闭数据库连接，这样会导致整个数据库连接池关闭，导致连接池没有可用的连接。
+
+==================
+插入数据
+一、gorm新增记录
+//定义一个用户，并初始化数据
+u := User{
+	Username:"tizi365",
+	Password:"123456",
+	CreateTime:time.Now().Unix(),
+}
+
+//插入一条用户数据
+//下面代码会自动生成SQL语句：INSERT INTO `users` (`username`,`password`,`createtime`) VALUES ('tizi365','123456','1540824823')
+
+db.Create(u)
+
+//一般项目中我们会类似下面的写法，通过Error对象检测，插入数据有没有成功，如果没有错误那就是数据写入成功了。
+if err := db.Create(u).Error; err != nil {
+	fmt.Println("插入失败", err)
+	return
+}
+二、gorm如何获取新插入记录的自增Id
+gorm库默认不会自动返回新插入记录的id，需要我们自己额外处理。
+我们想获取刚插入数据的自增Id，本质上是通过sql语句：SELECT LAST_INSERT_ID() 获取上一条插入语句的自增id
+
+那么gorm新增记录后获取自增id的步骤如下：
+
+使用db.Create插入记录
+执行sql语句SELECT LAST_INSERT_ID()，获取Id
+实例代码：
+
+//定义一个用户，并初始化数据
+u := User{...忽略初始化代码...} 
+//插入记录
+db.Create(u)
+//获取插入记录的Id
+var id []int
+db.Raw("select LAST_INSERT_ID() as id").Pluck("id", &id)
+
+//因为Pluck函数返回的是一列值，返回结果是slice类型，我们这里只有一个值，所以取第一个值即可。
+fmt.Println(id[0])
+提示：如果gorm设置了数据库连接池，那么每次执行数据库查询的时候都会从数据库连接池申请一个数据库连接，那么上述代码必须使用数据库事务，确保插入数据和查询自增id两条sql语句是在同一个数据库连接下执行，否则在高并发场景下，可能会查询不到自增id，或者查询到错误的id。
+
+
+======================================
+
+一、前言
+gorm查询数据本质上就是提供一组函数，帮我们快速拼接sql语句，尽量减少编写sql语句的工作量。
+gorm查询结果我们一般都是保存到结构体(struct)变量，所以在执行查询操作之前需要根据自己想要查询的数据定义结构体类型。
+
+提示：gorm库是协程安全的，gorm提供的函数可以并发的在多个协程安全的执行。
+
+下面是教程用到的foods表结构定义：
+
+CREATE TABLE `foods` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '商品id',
+  `title` varchar(100) NOT NULL COMMENT '商品名',
+  `price` float DEFAULT '0' COMMENT '商品价格',
+  `stock` int(11) DEFAULT '0' COMMENT '商品库存',
+  `type` int(11) DEFAULT '0' COMMENT '商品类型',
+  `create_time` datetime NOT NULL COMMENT '商品创建时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+下面是foods表对应的golang结构体类型
+
+//商品
+type Food struct {
+	Id         int
+	Title      string
+	Price      float32
+	Stock      int
+	Type       int
+	//mysql datetime, date类型字段，可以和golang time.Time类型绑定， 详细说明请参考：gorm连接数据库章节。
+	CreateTime time.Time
+}
+
+//为Food绑定表名
+func (v Food) TableName() string {
+	return "foods"
+}
+二、使用gorm链式操作函数查询数据
+gorm查询主要由以下几个部分的函数组成，这些函数可以串起来组合sql语句，使用起来类似编写sql语句的习惯。
+
+1.query
+执行查询的函数，gorm提供下面几个查询函数：
+
+Take
+查询一条记录
+例子：
+
+//定义接收查询结果的结构体变量
+food := Food{}
+
+//等价于：SELECT * FROM `foods`   LIMIT 1  
+db.Take(&food)
+First
+查询一条记录，根据主键ID排序(正序)，返回第一条记录
+例子：
+
+//等价于：SELECT * FROM `foods`   ORDER BY `foods`.`id` ASC LIMIT 1    
+db.First(&food)
+Last
+查询一条记录, 根据主键ID排序(倒序)，返回第一条记录
+//等价于：SELECT * FROM `foods`   ORDER BY `foods`.`id` DESC LIMIT 1   
+//语义上相当于返回最后一条记录
+db.Last(&food)
+Find
+查询多条记录，Find函数返回的是一个数组
+//因为Find返回的是数组，所以定义一个商品数组用来接收结果
+var foods []Food
+
+//等价于：SELECT * FROM `foods`
+db.Find(&foods)
+Pluck
+查询一列值
+//商品标题数组
+var titles []string
+
+//返回所有商品标题
+//等价于：SELECT title FROM `foods`
+//Pluck提取了title字段，保存到titles变量
+//这里Model函数是为了绑定一个模型实例，可以从里面提取表名。
+db.Model(Food{}).Pluck("title", &titles)
+查询错误处理
+通过db.Error属性判断查询结果是否出错, Error属性不等于nil表示有错误发生。
+
+例子：
+if err := db.Take(&food).Error; err != nil {
+    fmt.Println("查询失败", err)
+}
+错误特例：
+查询不到数据, gorm也会当成错误处理, 如果查询不到数据, 上面的例子会打印 查询失败 record not found
+
+在实际开发中查询不到数据，我们不一定会当成错误处理, gorm库提供了下面两种办法检测Error是不是查询不到数据.
+
+gorm.IsRecordNotFoundError
+例子:
+err := db.Take(&food).Error
+if gorm.IsRecordNotFoundError(err) {
+    fmt.Println("查询不到数据")
+} else if err != nil {
+//如果err不等于record not found错误，又不等于nil，那说明sql执行失败了。
+	fmt.Println("查询失败", err)
+}
+
+db.RecordNotFound
+例子:
+//链式操作，先查询，然后检测查询结果
+if db.Take(&food).RecordNotFound {
+    fmt.Println("查询不到数据")
+}
+2.where
+上面的例子都没有指定where条件，这里介绍下如何设置where条件，主要通过db.Where函数设置条件.
+函数说明：
+db.Where(query interface{}, args ...interface{})
+
+参数说明:
+
+参数名	说明
+query	sql语句的where子句, where子句中使用问号(?)代替参数值，则表示通过args参数绑定参数
+args	where子句绑定的参数，可以绑定多个参数
+例子1:
+//等价于: SELECT * FROM `foods`  WHERE (id = '10') LIMIT 1
+//这里问号(?), 在执行的时候会被10替代
+db.Where("id = ?", 10).Take(&food)
+
+//例子2:
+// in 语句 
+//等价于: SELECT * FROM `foods`  WHERE (id in ('1','2','5','6')) LIMIT 1 
+//args参数传递的是数组
+db.Where("id in (?)", []int{1,2,5,6}).Take(&food)
+
+//例子3:
+//等价于: SELECT * FROM `foods`  WHERE (create_time >= '2018-11-06 00:00:00' and create_time <= '2018-11-06 23:59:59')
+//这里使用了两个问号(?)占位符，后面传递了两个参数替换两个问号。
+db.Where("create_time >= ? and create_time <= ?", "2018-11-06 00:00:00", "2018-11-06 23:59:59").Find(&foods)
+
+//例子4:
+//like语句
+//等价于: SELECT * FROM `foods`  WHERE (title like '%可乐%')
+db.Where("title like ?", "%可乐%").Find(&foods)
+3.select
+设置select子句, 指定返回的字段
+
+//例子1:
+//等价于: SELECT id,title FROM `foods`  WHERE `foods`.`id` = '1' AND ((id = '1')) LIMIT 1  
+db.Select("id,title").Where("id = ?", 1).Take(&food)
+
+//这种写法是直接往Select函数传递数组，数组元素代表需要选择的字段名
+db.Select([]string{"id", "title"}).Where("id = ?", 1).Take(&food)
+
+
+//例子2:
+//可以直接书写聚合语句
+//等价于: SELECT count(*) as total FROM `foods`
+total := []int{}
+
+//Model函数，用于指定绑定的模型，这里生成了一个Food{}变量。目的是从模型变量里面提取表名，Pluck函数我们没有直接传递绑定表名的结构体变量，gorm库不知道表名是什么，所以这里需要指定表名
+//Pluck函数，主要用于查询一列值
+db.Model(Food{}).Select("count(*) as total").Pluck("total", &total)
+
+fmt.Println(total[0])
+4.order
+设置排序语句，order by子句
+
+//例子:
+//等价于: SELECT * FROM `foods`  WHERE (create_time >= '2018-11-06 00:00:00') ORDER BY create_time desc
+db.Where("create_time >= ?", "2018-11-06 00:00:00").Order("create_time desc").Find(&foods)
+5.limit & Offset
+设置limit和Offset子句，分页的时候常用语句。
+
+//等价于: SELECT * FROM `foods` ORDER BY create_time desc LIMIT 10 OFFSET 0 
+db.Order("create_time desc").Limit(10).Offset(0).Find(&foods)
+6.count
+Count函数，直接返回查询匹配的行数。
+
+//例子:
+total := 0
+//等价于: SELECT count(*) FROM `foods` 
+//这里也需要通过model设置模型，让gorm可以提取模型对应的表名
+db.Model(Food{}).Count(&total)
+fmt.Println(total)
+7.分组
+设置group by子句
+
+//例子:
+//统计每个商品分类下面有多少个商品
+//定一个Result结构体类型，用来保存查询结果
+type Result struct {
+    Type  int
+    Total int
+}
+
+var results []Result
+//等价于: SELECT type, count(*) as  total FROM `foods` GROUP BY type HAVING (total > 0)
+db.Model(Food{}).Select("type, count(*) as  total").Group("type").Having("total > 0").Scan(&results)
+
+//scan类似Find都是用于执行查询语句，然后把查询结果赋值给结构体变量，区别在于scan不会从传递进来的结构体变量提取表名.
+//这里因为我们重新定义了一个结构体用于保存结果，但是这个结构体并没有绑定foods表，所以这里只能使用scan查询函数。
+提示：Group函数必须搭配Select函数一起使用
+
+三、直接执行sql语句
+对于复杂的查询，例如多表连接查询，我们可以直接编写sql语句，然后执行sql语句。
+gorm通过db.Raw设置sql语句，通过Scan执行查询。
+
+例子:
+sql := "SELECT type, count(*) as  total FROM `foods` where create_time > ? GROUP BY type HAVING (total > 0)"
+//因为sql语句使用了一个问号(?)作为绑定参数, 所以需要传递一个绑定参数(Raw第二个参数).
+//Raw函数支持绑定多个参数
+db.Raw(sql, "2018-11-06 00:00:00").Scan(&results)
+fmt.Println(results)
+
+===========================================
+为方便描述教程例子，这里给出mysql表结构定义和golang结构体定义。
+
+下面是教程用到的foods表结构定义：
+
+CREATE TABLE `foods` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '商品id',
+  `title` varchar(100) NOT NULL COMMENT '商品名',
+  `price` float DEFAULT '0' COMMENT '商品价格',
+  `stock` int(11) DEFAULT '0' COMMENT '商品库存',
+  `type` int(11) DEFAULT '0' COMMENT '商品类型',
+  `create_time` datetime NOT NULL COMMENT '商品创建时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+下面是foods表对应的golang结构体类型
+
+//商品
+type Food struct {
+	Id         int
+	Title      string
+	Price      float32
+	Stock      int
+	Type       int
+	//mysql datetime, date类型字段，可以和golang time.Time类型绑定， 详细说明请参考：gorm连接数据库章节。
+	CreateTime time.Time
+}
+
+//为Food绑定表名
+func (v Food) TableName() string {
+	return "foods"
+}
+二、gorm更新记录常用方法
+1. Save
+用于保存模型变量的值。
+
+提示: 相当于根据主键id，更新所有模型字段值。
+
+food := Food{}
+//先查询一条记录, 保存在模型变量food
+//等价于: SELECT * FROM `foods`  WHERE (id = '2') LIMIT 1
+db.Where("id = ?", 2).Take(&food)
+
+//修改food模型的值
+food.Price = 100
+
+//等价于: UPDATE `foods` SET `title` = '可乐', `type` = '0', `price` = '100', `stock` = '26', `create_time` = '2018-11-06 11:12:04'  WHERE `foods`.`id` = '2'
+db.Save(&food)
+2. Update
+更新单个字段值
+
+//例子1:
+//更新food模型对应的表记录
+//等价于: UPDATE `foods` SET `price` = '25'  WHERE `foods`.`id` = '2'
+db.Model(&food).Update("price", 25)
+//通过food模型的主键id的值作为where条件，更新price字段值。
+
+
+//例子2:
+//上面的例子只是更新一条记录，如果我们要更全部记录怎么办？
+//等价于: UPDATE `foods` SET `price` = '25'
+db.Model(Food{}).Update("price", 25)
+//注意这里的Model参数，使用的是Food{}，新生成一个空白的模型变量，没有绑定任何记录。
+//因为Food{}的id为空，gorm库就不会以id作为条件，where语句就是空的
+
+//例子3:
+//根据自定义条件更新记录，而不是根据主键id
+//等价于: UPDATE `foods` SET `price` = '25'  WHERE (create_time > '2018-11-06 20:00:00') 
+db.Model(Food{}).Where("create_time > ?", "2018-11-06 20:00:00").Update("price", 25)
+3. Updates
+更新多个字段值
+
+//例子1：
+//通过结构体变量设置更新字段
+updataFood := Food{
+		Price:120,
+		Title:"柠檬雪碧",
+	}
+
+//根据food模型更新数据库记录
+//等价于: UPDATE `foods` SET `price` = '120', `title` = '柠檬雪碧'  WHERE `foods`.`id` = '2'
+//Updates会忽略掉updataFood结构体变量的零值字段, 所以生成的sql语句只有price和title字段。
+db.Model(&food).Updates(&updataFood)
+
+//例子2:
+//根据自定义条件更新记录，而不是根据模型id
+updataFood := Food{
+		Stock:120,
+		Title:"柠檬雪碧",
+	}
+	
+//设置Where条件，Model参数绑定一个空的模型变量
+//等价于: UPDATE `foods` SET `stock` = '120', `title` = '柠檬雪碧'  WHERE (price > '10') 
+db.Model(Food{}).Where("price > ?", 10).Updates(&updataFood)
+
+//例子3:
+//如果想更新所有字段值，包括零值，就是不想忽略掉空值字段怎么办？
+//使用map类型，替代上面的结构体变量
+
+//定义map类型，key为字符串，value为interface{}类型，方便保存任意值
+data := make(map[string]interface{})
+data["stock"] = 0 //零值字段
+data["price"] = 35
+
+//等价于: UPDATE `foods` SET `price` = '35', `stock` = '0'  WHERE (id = '2')
+db.Model(Food{}).Where("id = ?", 2).Updates(data)
+提示： 通过结构体变量更新字段值, gorm库会忽略零值字段。就是字段值等于0, nil, "", false这些值会被忽略掉，不会更新。如果想更新零值，可以使用map类型替代结构体。
+
+4. 更新表达式
+UPDATE foods SET stock = stock + 1 WHERE id = '2'
+这样的带计算表达式的更新语句gorm怎么写？
+
+gorm提供了Expr函数用于设置表达式
+
+//等价于: UPDATE `foods` SET `stock` = stock + 1  WHERE `foods`.`id` = '2'
+db.Model(&food).Update("stock", gorm.Expr("stock + 1"))
+
+=====================================
+1. 删除模型数据
+删除模型数据一般用于删除之前查询出来的模型变量绑定的记录。
+用法：db.Delete(模型变量)
+
+//例子：
+food := Food{}
+//先查询一条记录, 保存在模型变量food
+//等价于: SELECT * FROM `foods`  WHERE (id = '2') LIMIT 1
+db.Where("id = ?", 2).Take(&food)
+
+//删除food对应的记录，通过主键Id标识记录
+//等价于： DELETE from `foods` where id=2;
+db.Delete(&food)
+2. 根据Where条件删除数据
+用法：db.Where(条件表达式).Delete(空模型变量指针)
+
+//等价于：DELETE from `foods` where (`type` = 5);
+db.Where("type = ?", 5).Delete(&Food{})
+提示：这里Delete函数需要传递一个空的模型变量指针，主要用于获取模型变量绑定的表名。 不能传递一个非空的模型变量，否则就变成删除指定的模型数据，自动在where语句加上类似id = 2这样的主键约束条件。
+
+
+=========================================
+事务处理
+在开发中经常需要数据库事务来保证多个数据库写操作的原子性。例如电商系统中的扣减库存和保存订单。
+gorm事务用法：
+
+// 开启事务
+tx := db.Begin()
+
+//在事务中执行数据库操作，使用的是tx变量，不是db。
+
+//库存减一
+//等价于: UPDATE `foods` SET `stock` = stock - 1  WHERE `foods`.`id` = '2' and stock > 0
+//RowsAffected用于返回sql执行后影响的行数
+rowsAffected := tx.Model(&food).Where("stock > 0").Update("stock", gorm.Expr("stock - 1")).RowsAffected
+if rowsAffected == 0 {
+    //如果更新库存操作，返回影响行数为0，说明没有库存了，结束下单流程
+    //这里回滚作用不大，因为前面没成功执行什么数据库更新操作，也没什么数据需要回滚。
+    //这里就是举个例子，事务中可以执行多个sql语句，错误了可以回滚事务
+    tx.Rollback()
+    return
+}
+err := tx.Create(保存订单).Error
+
+//保存订单失败，则回滚事务
+if err != nil {
+    tx.Rollback()
+} else {
+    tx.Commit()
+}
+
