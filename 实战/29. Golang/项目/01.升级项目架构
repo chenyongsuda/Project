@@ -89,7 +89,7 @@ CREATE TABLE user(
   stat INT COMMENT '状态',
   create_time datetime DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
   update_time datetime DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP
-) COMMENT='关系信息';
+) COMMENT='用户信息';
 
 ========================
 
