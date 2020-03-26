@@ -52,6 +52,47 @@ res_id
 //4、判断uri是否在allauth中,如果不在,则表面无需鉴权,通过,
 //5、否则检测uri是否在roleauth中,如果是则通过,否则鉴权失败
 
+=========================
+CREATE TABLE resource(
+  id INT PRIMARY KEY AUTO_INCREMENT COMMENT 'id',
+  pid INT COMMENT '父节点',
+  type INT COMMENT '资源类型',
+  name VARCHAR(50) COMMENT '资源名',
+  icon VARCHAR(50) COMMENT '图标',
+  path VARCHAR(50) COMMENT '路径',
+  stat INT COMMENT '状态',
+  create_time datetime DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP
+) COMMENT='资源信息';
+
+CREATE TABLE role(
+  id INT PRIMARY KEY AUTO_INCREMENT COMMENT 'id',
+  name VARCHAR(50) COMMENT '角色名',
+  stat INT COMMENT '状态',
+  create_time datetime DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP
+) COMMENT='角色信息';
+
+CREATE TABLE role_resource(
+  id INT PRIMARY KEY AUTO_INCREMENT COMMENT 'id',
+  roleid INT COMMENT '角色ID',
+  resourceid INT COMMENT '资源ID',
+  create_time datetime DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP
+) COMMENT='关系信息';
+
+CREATE TABLE user(
+  id INT PRIMARY KEY AUTO_INCREMENT COMMENT 'id',
+  name VARCHAR(50) COMMENT '用户名',
+  password VARCHAR(200) COMMENT '密码',
+  roleids VARCHAR(100) COMMENT '角色IDS',
+  stat INT COMMENT '状态',
+  create_time datetime DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP
+) COMMENT='关系信息';
+
+========================
+
 
 3. 配置文件读取
 
