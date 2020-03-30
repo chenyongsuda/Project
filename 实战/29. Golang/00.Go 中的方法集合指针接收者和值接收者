@@ -1,0 +1,75 @@
+在Go语言中，可以给用户定义的类型添加新的行为。方法其实也是函数，只是在声明时，在关键字func和方法名之间增加了一个参数，可以先简单理解为类型也作为了参数传递入了函数中，如下代码所示：
+
+type user struct {
+    name string
+    email string
+}
+
+// 值接收者
+func (u user) notify() {
+    log.Printf("sending User Email to %s<%s>\n", u.name, u.email)
+}
+
+// 引用接收者
+func (u *user) notifyPointer() {
+    log.Printf("sending User Email to %s<%s>\n", u.name, u.email)
+}
+与普通的函数相比，又有一些不同：值接收者声明的方法，调用时会使用这个值的一个副本去执行，而指针接收者在调用者会共享调用方法时接收者所指向的值，即可以修改指向的值。
+在使用时，值类型的接收者也可以使用指针类型的调用，如下：
+
+func (u user) notify() {
+    log.Printf("sending User Email to %s<%s>\n", u.name, u.email)
+}
+
+func main() {
+    tom := &user{"tom", "tom@email.com"}
+    tom.notify()
+}
+其实在Go的代码背后，已经对改类型进行了转换
+
+(*tom).notify()
+所以有如下的对照关系
+
+方法接收者	实际可用类型
+(t T)	T and *T
+(t *T)	*T
+因此在如下的代码执行时，会报错，因为interface声明了notify方法，而方法接收者使用的是指针类型，因而只有*user实现了notify方法，user并没有实现，所以sendNotification的参数应该是&u，而不是u。
+
+
+package main
+
+import (
+    "log"
+)
+
+type notifier interface {
+    notify()
+}
+
+type user struct {
+    name  string
+    email string
+}
+
+func (u *user) notify() {
+    log.Printf("Sending user email to %s", u.name)
+}
+
+func main() {
+    u := user{"Bill", "bill@email.com"}
+
+    sendNotification(u)
+}
+func sendNotification(n notifier) {
+    n.notify()
+}
+执行结果
+
+# command-line-arguments
+./main.go:23: cannot use u (type user) as type notifier in argument to sendNotification:
+        user does not implement notifier (notify method has pointer receiver)
+
+作者：莫Y兮
+链接：https://www.jianshu.com/p/7811d96c7eeb
+来源：简书
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
