@@ -1,0 +1,32 @@
+Golang语言中存在一个关键字type，type又有两种使用方式，一种是类型别名，一种是类型定义，是不是熟悉的C语言（define和typedef）味道？
+
+类型定义
+type Student struct {
+  name String
+  age int
+}
+
+type I int
+类型别名
+type Sdt = Student
+type I = int
+他们之间有什么区别呢？区别就是类型定义是完全定义了一种新的类型，而类型别名只是给现有的类型取了一个别名alias
+
+type I int
+type D = int
+拿上面的例子来说，I是一种全新的类型，和现有的int类型完全不一样，即I类型的指针不能只想int类型的指针，反之亦然，类似于C语言中的typedef。而D只是int的一个别名，相当于编译期会预处理替换为int，类似于C语言中的#define。
+可能上面的例子太特殊了，看下面的例子
+
+type Student struct {
+  name String
+  age int
+}
+
+type Teacher Student
+相当于定义了一个新的Teacher类型，和下面的代码是等价的。虽然两个类型内存布局完全一样，但是从概念上来说，他们是完全不同的两个类型，不能相互兼容。
+
+type Teacher struct {
+  name String
+  age int
+}
+类型别名这个功能非常有用，鉴于go中有些类型写起来非常繁琐，比如json相关的操作中，经常用到map[string]interface {}这种类型，写起来是不是很繁琐，没关系，给它起个简单的别名!这样用起来爽多了。
