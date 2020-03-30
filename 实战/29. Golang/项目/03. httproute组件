@@ -1,0 +1,207 @@
+httprouter
+httprouter 是一个高性能、可扩展的HTTP路由，上面我们列举的net/http默认路由的不足，都被httprouter 实现，我们先用一个例子，认识下 httprouter 这个强大的 HTTP 路由。
+
+安装：
+
+1
+go get -u github.com/julienschmidt/httprouter
+在这个例子中，首先通过httprouter.New()生成了一个*Router路由指针,然后使用GET方法注册一个适配/路径的Index函数，最后*Router作为参数传给ListenAndServe函数启动HTTP服务即可。
+
+package main
+ 
+import (
+    "log"
+    "net/http"
+ 
+    "github.com/julienschmidt/httprouter"
+)
+ 
+func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+    w.Write([]byte("Index"))
+}
+ 
+func main() {
+    router := httprouter.New()
+    router.GET("/", Index)
+    log.Fatal(http.ListenAndServe(":8080", router))
+}
+httprouter 为所有的HTTP Method 提供了快捷的使用方式，只需要调用对应的方法即可。
+
+func (r *Router) GET(path string, handle Handle) {
+    r.Handle("GET", path, handle)
+}
+ 
+func (r *Router) HEAD(path string, handle Handle) {
+    r.Handle("HEAD", path, handle)
+}
+ 
+func (r *Router) OPTIONS(path string, handle Handle) {
+    r.Handle("OPTIONS", path, handle)
+}
+ 
+func (r *Router) POST(path string, handle Handle) {
+    r.Handle("POST", path, handle)
+}
+ 
+func (r *Router) PUT(path string, handle Handle) {
+    r.Handle("PUT", path, handle)
+}
+ 
+func (r *Router) PATCH(path string, handle Handle) {
+    r.Handle("PATCH", path, handle)
+}
+ 
+func (r *Router) DELETE(path string, handle Handle) {
+    r.Handle("DELETE", path, handle)
+}
+现代的API，基本上都是Restful API，httprouter提供的命名参数的支持，可以很方便的帮助我们开发Restful API。比如我们设计的API/user/flysnow，这这样一个URL，可以查看flysnow这个用户的信息，如果要查看其他用户的，比如zhangsan,我们只需要访问API/user/zhangsan即可。
+
+URL包括两种匹配模式：/user/:name精确匹配、/user/*name匹配所有的模式。
+
+package main
+ 
+import (
+  "github.com/julienschmidt/httprouter"
+  "net/http"
+  "log"
+  "fmt"
+)
+ 
+ 
+func main()  {
+  router:=httprouter.New()
+  router.GET("/MainData", func (w http.ResponseWriter,r *http.Request,_ httprouter.Params)  {
+    w.Write([]byte("default get"))
+  })
+  router.POST("/MainData",func (w http.ResponseWriter,r *http.Request,_ httprouter.Params)  {
+    w.Write([]byte("default post"))
+  })
+  //精确匹配
+  router.GET("/user/name",func (w http.ResponseWriter,r *http.Request,p httprouter.Params)  {
+    w.Write([]byte("user name:"+p.ByName("name")))
+  })
+  //匹配所有
+  router.GET("/employee/*name",func (w http.ResponseWriter,r *http.Request,p httprouter.Params)  {
+    w.Write([]byte("employee name:"+p.ByName("name")))
+  })
+  http.ListenAndServe(":8081", router)
+}
+Handler处理链处理不同二级域名
+
+package main
+ 
+import (
+    "fmt"
+    "log"
+    "net/http"
+ 
+    "github.com/julienschmidt/httprouter"
+)
+ 
+type HostMap map[string]http.Handler
+ 
+func (hs HostMap) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("222")
+    //根据域名获取对应的Handler路由，然后调用处理（分发机制）
+    if handler := hs[r.Host]; handler != nil {
+        handler.ServeHTTP(w, r)
+    } else {
+        http.Error(w, "Forbidden", 403)
+    }
+}
+ 
+func main() {
+    userRouter := httprouter.New()
+    userRouter.GET("/", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+        w.Write([]byte("play"))
+    })
+ 
+    dataRouter := httprouter.New()
+    dataRouter.GET("/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+        w.Write([]byte("tool"))
+    })
+ 
+    //分别用于处理不同的二级域名
+    hs := make(HostMap)
+    hs["user.localhost:12345"] = userRouter
+    hs["data.localhost:12345"] = dataRouter
+ 
+    log.Fatal(http.ListenAndServe(":12345", hs))
+}
+httprouter提供了很方便的静态文件服务，可以把一个目录托管在服务器上，以供访问。
+
+router.ServeFiles("/static/*filepath",http.Dir("./"))
+使用ServeFiles需要注意的是，第一个参数路径，必须要以/*filepath，因为要获取我们要访问的路径信息。
+
+func (r *Router) ServeFiles(path string, root http.FileSystem) {
+    if len(path) < 10 || path[len(path)-10:] != "/*filepath" {
+        panic("path must end with /*filepath in path '" + path + "'")
+    }
+ 
+    fileServer := http.FileServer(root)
+ 
+    r.GET(path, func(w http.ResponseWriter, req *http.Request, ps Params) {
+        req.URL.Path = ps.ByName("filepath")
+        fileServer.ServeHTTP(w, req)
+    })
+}
+例子：
+package main
+ 
+import (
+    "log"
+    "net/http"
+ 
+    "github.com/julienschmidt/httprouter"
+)
+ 
+func main() {
+    router := httprouter.New()
+  //访问静态文件
+    router.ServeFiles("/static/*filepath", http.Dir("./files"))
+    log.Fatal(http.ListenAndServe(":8080", router))
+}
+httprouter 异常捕获，httprouter允许使用者，设置PanicHandler用于处理HTTP请求中发生的panic。
+package main
+ 
+import (
+    "fmt"
+    "log"
+    "net/http"
+ 
+    "github.com/julienschmidt/httprouter"
+)
+ 
+func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+    panic("error")
+}
+ 
+func main() {
+    router := httprouter.New()
+    router.GET("/", Index)
+  //捕获异常
+    router.PanicHandler = func(w http.ResponseWriter, r *http.Request, v interface{}) {
+        w.WriteHeader(http.StatusInternalServerError)
+        fmt.Fprintf(w, "error:%s", v)
+    }
+    log.Fatal(http.ListenAndServe(":8080", router))
+}
+
+httprouter还有不少有用的小功能，比如对404进行处理，我们通过设置Router.NotFound来实现，我们看看Router这个结构体的配置，可以发现更多有用的功能。
+type Router struct {
+    //是否通过重定向，给路径自定加斜杠
+    RedirectTrailingSlash bool
+    //是否通过重定向，自动修复路径，比如双斜杠等自动修复为单斜杠
+    RedirectFixedPath bool
+    //是否检测当前请求的方法被允许
+    HandleMethodNotAllowed bool
+    //是否自定答复OPTION请求
+    HandleOPTIONS bool
+    //404默认处理
+    NotFound http.Handler
+    //不被允许的方法默认处理
+    MethodNotAllowed http.Handler
+    //异常统一处理
+    PanicHandler func(http.ResponseWriter, *http.Request, interface{})
+}
+　　
