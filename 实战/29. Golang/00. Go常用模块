@@ -266,8 +266,12 @@ strconv
     b.String()
 
     ===============使用实例:
-    主要用户定义一个固定大小的然后从其他IO流读入
-    或者组装一个对象然后写到其他IO流 通常binary和buffer结合
+    binary作用把可读写byte流转数据类型 或者把数据类型转可读写byte流
+    buffer的话是转换为可读写流
+    
+    读取的话首先读取到byte流转为buffer然后用binary读取
+    写入的话buffer构造后然后通过binary把数据类型转为byte流写入缓冲后统一写到可写流
+    
   服务端：
   package network
 
@@ -477,3 +481,10 @@ strconv
     func Varint(buf []byte) (int64, int)
     func ReadUvarint(r io.ByteReader) (uint64, error)
     func ReadVarint(r io.ByteReader) (int64, error)
+
+
+
+
+
+
+
