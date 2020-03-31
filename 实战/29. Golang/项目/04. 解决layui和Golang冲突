@@ -12,3 +12,13 @@ s.Delims("<<<", ">>>")
 然后还还发现如果用双等于有会有问题要改成大于小于号
 {{d.stat == 0 ? 'checked' : ''}}
 {{d.stat > 0 ? 'checked' : ''}}
+
+实践发现在用C.HTML解析时候如果在完整HTML元素里面改造大概率后台会错不知道是BUG么如下
+<input type="checkbox" name="status" lay-skin="switch" lay-text="正常|停用" lay-filter="status" value="{{d.stat}}" {{d.stat > 0 ? 'checked' : ''}} >
+采用包裹方式
+{{#  if(d.stat == '1'){ }}
+<input type="checkbox" name="status" lay-skin="switch" lay-text="正常|停用" lay-filter="status" value="{{d.stat}}" checked >
+{{#  } else { }}
+<input type="checkbox" name="status" lay-skin="switch" lay-text="正常|停用" lay-filter="status" value="{{d.stat}}" >
+{{#  } }}
+这样就正常多了
