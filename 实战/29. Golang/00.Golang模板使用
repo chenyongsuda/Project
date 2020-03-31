@@ -1,0 +1,24 @@
+golang 模板(template)的常用基本语法
+模板
+在写动态页面的网站的时候，我们常常将不变的部分提出成为模板，可变部分通过后端程序的渲染来生成动态网页，golang提供了html/template包来支持模板渲染。
+
+这篇文章不讨论golang后端的模板读取及渲染方法，只讨论模板中嵌入变量，渲染变量、循环等一些基本用法。
+
+变量
+在golang渲染template的时候，可以接受一个interface{}类型的变量，我们在模板文件中可以读取变量内的值并渲染到模板里。
+有两个常用的传入参数的类型。一个是struct，在模板内可以读取该struct域的内容来进行渲染。还有一个是map[string]interface{}，在模板内可以使用key来进行渲染。
+我一般使用第二种，效率可能会差一点儿，但是用着方便。
+模板内内嵌的语法支持，全部需要加{{}}来标记。
+在模板文件内， . 代表了当前变量，即在非循环体内，.就代表了传入的那个变量。假设我们定义了一个结构体：
+！！！注意第一种去变量的时候需要按照结构体定义一般首字母大写第二种不需要
+
+
+type Article struct {
+    ArticleId int
+    ArticleContent string
+}
+那么我们在模板内可以通过
+
+<p>{{.ArticleContent}}<span>{{.ArticleId}}</span></p>
+来获取并把变量的内容渲染到模板内。假设上述的结构体的内容为ArticleId:1 ArticleContent:”hello”， 则对应渲染后的模板内容为：
+<p>hello<span>1</span></p>
