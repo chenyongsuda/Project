@@ -5,3 +5,10 @@
 {{ " {{# if(d.auth > 2){ }} " }}
 <a class="layui-btn layui-btn-xs" lay-event="check">审核</a>
 {{ " {{# } }} " }}
+
+
+我用的是改变后台GIN的模板
+s.Delims("<<<", ">>>")
+然后还还发现如果用双等于有会有问题要改成大于小于号
+{{d.stat == 0 ? 'checked' : ''}}
+{{d.stat > 0 ? 'checked' : ''}}
