@@ -3,6 +3,180 @@ Golang读取文件一般有两种方式(写的话差不多)
 2. ioutil直接读取,ioutil.ReadFile直接读取文件或者读取可读流ioutil.ReadAll
 
 File方法 可以读bytes 可以写bytes 读目录下的文件名
+###读取文件夹和读取文件
+读取文件夹os.OpenFile(file_path, os.O_RDONLY, 0666) 或者os.Open
+读取文件的话可以随意组合
+###重命名文件名
+os.ReName
+
+一般写入写出的三种方法
+这一部分较多的涉及I/O的相关操作，系统的介绍放在I/O那部分来整理，大体上向文件中读写内容的时候有三种方式：
+1、在使用f, err := os.Open(file_path)打开文件之后直接使用 f.read() f.write() 结合自定义的buffer每次从文件中读入/读出固定的内容
+2、使用ioutl的readFile和writeFile方法
+3、使用bufio采用带有缓存的方式进行读写，比如通过info:=bufio.NewReader(f)将实现了io.Reader的接口的实例加载上来之后，就可以使用info.ReadLine（）来每次实现一整行的读取，直到err信息为io.EOF时，读取结束
+
+优缺点：
+
+
+==============================================================
+基本方法
+type File
+File代表一个打开的文件对象。
+
+func Create(name string) (file *File, err error)
+Create采用模式0666（任何人都可读写，不可执行）创建一个名为name的文件，如果文件已存在会截断它（为空文件）。如果成功，返回的文件对象可用于I/O；对应的文件描述符具有O_RDWR模式。如果出错，错误底层类型是*PathError。
+
+func Open(name string) (file *File, err error)
+Open打开一个文件用于读取。如果操作成功，返回的文件对象的方法可用于读取数据；对应的文件描述符具有O_RDONLY模式。如果出错，错误底层类型是*PathError。
+
+func OpenFile(name string, flag int, perm FileMode) (file *File, err error)
+OpenFile是一个更一般性的文件打开函数，大多数调用者都应用Open或Create代替本函数。它会使用指定的选项（如O_RDONLY等）、指定的模式（如0666等）打开指定名称的文件。如果操作成功，返回的文件对象可用于I/O。如果出错，错误底层类型是*PathError。
+
+func NewFile(fd uintptr, name string) *File
+NewFile使用给出的Unix文件描述符和名称创建一个文件。
+
+func Pipe() (r *File, w *File, err error)
+Pipe返回一对关联的文件对象。从r的读取将返回写入w的数据。本函数会返回两个文件对象和可能的错误。
+
+func (f *File) Name() string
+Name方法返回（提供给Open/Create等方法的）文件名称。
+
+func (f *File) Stat() (fi FileInfo, err error)
+Stat返回描述文件f的FileInfo类型值。如果出错，错误底层类型是*PathError。
+
+func (f *File) Fd() uintptr
+Fd返回与文件f对应的整数类型的Unix文件描述符。
+
+func (f *File) Chdir() error
+Chdir将当前工作目录修改为f，f必须是一个目录。如果出错，错误底层类型是*PathError。
+
+func (f *File) Chmod(mode FileMode) error
+Chmod修改文件的模式。如果出错，错误底层类型是*PathError。
+
+func (f *File) Chown(uid, gid int) error
+Chown修改文件的用户ID和组ID。如果出错，错误底层类型是*PathError。
+
+func (f *File) Readdir(n int) (fi []FileInfo, err error)
+Readdir读取目录f的内容，返回一个有n个成员的[]FileInfo，这些FileInfo是被Lstat返回的，采用目录顺序。对本函数的下一次调用会返回上一次调用剩余未读取的内容的信息。
+如果n>0，Readdir函数会返回一个最多n个成员的切片。这时，如果Readdir返回一个空切片，它会返回一个非nil的错误说明原因。如果到达了目录f的结尾，返回值err会是io.EOF。
+如果n<=0，Readdir函数返回目录中剩余所有文件对象的FileInfo构成的切片。此时，如果Readdir调用成功（读取所有内容直到结尾），它会返回该切片和nil的错误值。如果在到达结尾前遇到错误，会返回之前成功读取的FileInfo构成的切片和该错误。
+
+func (f *File) Readdirnames(n int) (names []string, err error)
+Readdir读取目录f的内容，返回一个有n个成员的[]string，切片成员为目录中文件对象的名字，采用目录顺序。对本函数的下一次调用会返回上一次调用剩余未读取的内容的信息。
+如果n>0，Readdir函数会返回一个最多n个成员的切片。这时，如果Readdir返回一个空切片，它会返回一个非nil的错误说明原因。如果到达了目录f的结尾，返回值err会是io.EOF。
+如果n<=0，Readdir函数返回目录中剩余所有文件对象的名字构成的切片。此时，如果Readdir调用成功（读取所有内容直到结尾），它会返回该切片和nil的错误值。如果在到达结尾前遇到错误，会返回之前成功读取的名字构成的切片和该错误。
+
+func (f *File) Truncate(size int64) error
+Truncate改变文件的大小，它不会改变I/O的当前位置。 如果截断文件，多出的部分就会被丢弃。如果出错，错误底层类型是*PathError。
+
+func (f *File) Read(b []byte) (n int, err error)
+Read方法从f中读取最多len(b)字节数据并写入b。它返回读取的字节数和可能遇到的任何错误。文件终止标志是读取0个字节且返回值err为io.EOF。
+
+func (f *File) ReadAt(b []byte, off int64) (n int, err error)
+ReadAt从指定的位置（相对于文件开始位置）读取len(b)字节数据并写入b。它返回读取的字节数和可能遇到的任何错误。当n<len(b)时，本方法总是会返回错误；如果是因为到达文件结尾，返回值err会是io.EOF。
+
+func (f *File) Write(b []byte) (n int, err error)
+Write向文件中写入len(b)字节数据。它返回写入的字节数和可能遇到的任何错误。如果返回值n!=len(b)，本方法会返回一个非nil的错误。
+
+func (f *File) WriteString(s string) (ret int, err error)
+WriteString类似Write，但接受一个字符串参数。
+
+func (f *File) WriteAt(b []byte, off int64) (n int, err error)
+WriteAt在指定的位置（相对于文件开始位置）写入len(b)字节数据。它返回写入的字节数和可能遇到的任何错误。如果返回值n!=len(b)，本方法会返回一个非nil的错误。
+
+func (f *File) Seek(offset int64, whence int) (ret int64, err error)
+Seek设置下一次读/写的位置。offset为相对偏移量，而whence决定相对位置：0为相对文件开头，1为相对当前位置，2为相对文件结尾。它返回新的偏移量（相对开头）和可能的错误。
+
+func (f *File) Sync() (err error)
+Sync递交文件的当前内容进行稳定的存储。一般来说，这表示将文件系统的最近写入的数据在内存中的拷贝刷新到硬盘中稳定保存。
+
+func (f *File) Close() error
+Close关闭文件f，使文件不能用于读写。它返回可能出现的错误。
+
+2.文件打开模式：
+const (
+O_RDONLY int = syscall.O_RDONLY // 只读模式打开文件
+O_WRONLY int = syscall.O_WRONLY // 只写模式打开文件
+O_RDWR int = syscall.O_RDWR // 读写模式打开文件
+O_APPEND int = syscall.O_APPEND // 写操作时将数据附加到文件尾部
+O_CREATE int = syscall.O_CREAT // 如果不存在将创建一个新文件
+O_EXCL int = syscall.O_EXCL // 和O_CREATE配合使用，文件必须不存在
+O_SYNC int = syscall.O_SYNC // 打开文件用于同步I/O
+O_TRUNC int = syscall.O_TRUNC // 如果可能，打开时清空文件
+)
+###文件的创建
+os.Create 如果不存在就新建否则清空数据
+os.Open   还是使用这个比较好
+os.Stat   判断是否存在
+
+===创建文件夹
+os.mkdir
+// 判断文件夹是否存在
+func PathExists(path string) (bool, error) {
+    _, err := os.Stat(path)
+    if err == nil {
+        return true, nil
+    }
+    if os.IsNotExist(err) {
+        return false, nil
+    }
+    return false, err
+}
+
+func main() {
+    _dir := "./gzFiles2"
+    exist, err := PathExists(_dir)
+    if err != nil {
+        fmt.Printf("get dir error![%v]\n", err)
+        return
+    }
+
+    if exist {
+        fmt.Printf("has dir![%v]\n", _dir)
+    } else {
+        fmt.Printf("no dir![%v]\n", _dir)
+        // 创建文件夹
+        err := os.Mkdir(_dir, os.ModePerm)
+        if err != nil {
+            fmt.Printf("mkdir failed![%v]\n", err)
+        } else {
+            fmt.Printf("mkdir success!\n")
+        }
+    }
+}
+
+###删除
+文件删除的时候，不管是普通文件还是目录文件，都可以用err:=os.Remove(filename)这样的操作来执行。当然要是想移除整个文件夹，
+直接使用RemoveAll(path string)操作即可。可以看一下RemoveAll函数的内部实现，整体上就是遍历，递归的操作过程，其他的类似的文件操作都可以用类似的模板来实现
+os.RemoveAll("./gzFiles2")
+
+###文件读取
+var (
+	file_path string = "C:/test/abc.txt"
+	// file_info os.FileInfo
+	f   *os.File
+	err error
+)
+
+if f, err = os.OpenFile(file_path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666); err != nil {
+	return
+}
+defer f.Close()
+var store []byte = make([]byte, 10)
+for {
+	n, err := f.Read(store)
+	if err == io.EOF {
+		return
+	}
+	fmt.Println(n)
+	fmt.Println(string(store))
+}
+
+###文件写入
+write很简单
+
+
+
 
 
 
@@ -55,7 +229,6 @@ defer f.Close()
 
 
 案例3：打开一个存在的文件，将原来的内容读出来，显示在终端，并且追加5句：hello，北京。
-
 
 
 案例4：编写一个程序，将一个文件的内容复制到另外一个文件（注：这两个文件都已存在）
