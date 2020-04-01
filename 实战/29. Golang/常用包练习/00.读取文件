@@ -16,7 +16,7 @@ os.ReName
 3、使用bufio采用带有缓存的方式进行读写，比如通过info:=bufio.NewReader(f)将实现了io.Reader的接口的实例加载上来之后，就可以使用info.ReadLine（）来每次实现一整行的读取，直到err信息为io.EOF时，读取结束
 
 优缺点：
-ioutil提供文件流,文件,读写的方法但是写的话只是清空再写读的话是全部读,以及文件夹读取和临时文件这几种读写操作
+==========ioutil提供文件流,文件,读写的方法但是写的话只是清空再写读的话是全部读,以及文件夹读取和临时文件这几种读写操作
 // Discard 是一个 io.Writer 接口，调用它的 Write 方法将不做任何事情
 // 并且始终成功返回。
 var Discard io.Writer = devNull(0)
@@ -51,6 +51,78 @@ func TempFile(dir, prefix string) (f *os.File, err error)
 
 // TempDir 功能同 TempFile，只不过创建的是目录，返回目录的完整路径。
 func TempDir(dir, prefix string) (name string, err error)
+
+=========bufio
+创建一个带缓存的读写流服务
+}
+NewReaderSize
+
+func NewReaderSize(rd io.Reader, size int) *Reader
+作用：NewReaderSize将rd封装成一个带缓存的bufio.Reader对象。缓存大小由size指定（如果小于16则会被设为16）。如果rd的基类型就是有足够缓存的bufio.Reader类型，则直接将rd转换为基类型返回。
+NewReader
+
+func NewReader(rd io.Reader) *Reader
+funcReader相当于NewReaderSize(rd, 4096)
+Peek
+
+func (b *Reader) Peek(n int) ([]byte, error)
+Peek返回缓存的一个切片，该切片引用缓存中前n个字节的数据，该操作不会将数据读出，只是引用，引用的数据在下一次读取操作之前有效的。如果切片长度小于n，则返回一个错误信息说明原因。如果n大于缓存的总大小，则返回ErrBufferFull。
+Read
+
+func (b *Reader) Read(p []byte) (n int, err error)
+Read从b中数据到p中，返回读出的字节数和遇到的错误。如果缓存不为空，则只能读出缓冲中的数据，不会从底层io.Reader中提取数据，如果缓存为空，则：
+1、len(p) >= 缓存大小，则跳过缓存，直接从底层io.Reader中读出到p中
+2、len(p)< 缓存大小，则先将数据从底层io.Reader中读取到缓存中，再从缓存读取到p中。
+
+Buffered
+func (b *Reader) Buffered() int
+Buffered返回缓存中未读取的数据的长度。
+Discard
+
+func (b *Reader) Discard(n int) (discarded int, err error)
+Discard跳过后续的n个字节的数据，返回跳过的字节数。
+
+Writer类型和方法
+write结构
+
+type Write struct {
+    err error       // 写过程中遇到的错误
+    buf []byte      // 缓存
+    n   int         // 当前缓存中的字节数
+    wr  io.Writer   // 底层的io.Writer对象
+}
+NewWriteSize
+
+func NewWriteSize(wr io.Write, size int) *Write
+NewWriterSize将wr封装成一个带缓存的bufio.Writer对象，缓存大小由size指定（如果小于4096则会被设置未4096）。
+NewWrite
+
+func NewWriter(wr io.Writer) *Writer
+NewWriter相等于NewWriterSize(wr, 4096)
+
+WriteString
+
+func (b *Write) WriteString(s string) (int, error)
+WriteString功能同Write，只不过写入的是字符串
+WriteRune
+
+func (b *Writer) WriteRune(r rune) (size int, err error)
+WriteRune向b写入r的UTF-8编码，返回r的编码长度。
+Flush
+
+func (b *Writer) Flush() error
+Available
+
+func (b *Writer) Available() int
+Available 返回缓存中未使用的空间的长度
+Buffered
+
+func (b *Writer) Buffered() int
+Buffered返回缓存中未提交的数据长度
+Reset
+
+func (b *Write) Reset(w io.Writer)
+Reset将b的底层Write重新指定为w，同时丢弃缓存中的所有数据，复位所有标记和错误信息。相当于创建了一个新的bufio.Writer。
 
 ==============================================================
 基本方法
