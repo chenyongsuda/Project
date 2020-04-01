@@ -6,3 +6,20 @@ string <=> byte[] 强转
 
 byte或者string转读写流用byte.buffer
 
+将string转换成 io.Writer，可以进行类似于write的操作，类似于写文件一样。
+
+s := "Hello"
+buf := bytes.NewBufferString(s)
+fmt.Fprint(buf, ", World!")
+fmt.Println(buf.String())
+同样的，打开的文件也可以被转换成 io.Writer，继而直接向其写入数据。
+
+f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+if err != nil {
+	return
+}
+defer f.Close()
+
+w := bufio.NewWriter(f)
+fmt.Fprintln(w, fmt.Sprintf("start analysis log at the %s \r\n", `"`+logFileDir+`"`))
+————————————————
