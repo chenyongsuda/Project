@@ -1,0 +1,8 @@
+string <=> INT/FLOAT 用 strconv
+
+string <=> byte[] 强转
+
+各种类型转byte用binary
+
+byte或者string转读写流用byte.buffer
+
