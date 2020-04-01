@@ -2,6 +2,10 @@ Golang读取文件一般有两种方式(写的话差不多)
 1. os.Open得到文件句柄然后通过f.read或者用bufio.NewReader(fi)封装成可读缓冲流进行读取
 2. ioutil直接读取,ioutil.ReadFile直接读取文件或者读取可读流ioutil.ReadAll
 
+File方法 可以读bytes 可以写bytes 读目录下的文件名
+
+
+
 1. 文件操作练习
 案例1：创建一个新文件，写入5句 ：hello,Go语言,不存在创建
 func main() {
@@ -29,11 +33,30 @@ func main() {
 	}
 	defer f.Close()
 }
+========================================================
+改进版本如果不存在就创建
+var (
+	file_path string = "C:/test/abc.txt"
+	// file_info os.FileInfo
+	f   *os.File
+	err error
+)
 
+if f, err = os.OpenFile(file_path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666); err != nil {
+	return
+}
+
+f.WriteString("hello world !!!\n")
+
+defer f.Close()
 
 案例2：打开一个存在的文件，在原来的内容追加内容：ABC!!,不存在创建
+追加的话换成选项os.O_APPEND
+
 
 案例3：打开一个存在的文件，将原来的内容读出来，显示在终端，并且追加5句：hello，北京。
+
+
 
 案例4：编写一个程序，将一个文件的内容复制到另外一个文件（注：这两个文件都已存在）
 
