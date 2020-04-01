@@ -35,4 +35,18 @@ func main() {
 	time.Sleep(10 * time.Second)
 }
 
+3. after 
+func main() {
+	time.AfterFunc(3*time.Second, func() {
+		fmt.Println("let's go")
+	})
+
+	time.Sleep(10 * time.Second)
+}
+
+4. 时间格式化
+time.Now().Format("2006-01-02 15:04:05")
+
+
+
 
