@@ -1,0 +1,155 @@
+bytes.buffer是一个缓冲byte类型的缓冲器存放着都是byte 
+
+创建 Buffer缓冲器
+var b bytes.Buffer  //直接定义一个 Buffer 变量，而不用初始化
+b.Writer([]byte("Hello ")) // 可以直接使用
+ 
+b1 := new(bytes.Buffer)   //直接使用 new 初始化，可以直接使用
+// 其它两种定义方式 带初始化的buffer
+func NewBuffer(buf []byte) *Buffer
+func NewBufferString(s string) *Buffer
+
+向 Buffer 中写入数据
+Write
+把字节切片 p 写入到buffer中去。
+
+WriteString
+使用WriteString方法，将一个字符串放到缓冲器的尾部
+
+WriteByte
+将一个byte类型的数据放到缓冲器的尾部
+
+WriteRune
+将一个rune类型的数据放到缓冲器的尾部
+
+
+完整示例
+package main
+ 
+import (
+    "bytes"
+    "encoding/binary"
+    "fmt"
+)
+ 
+func main() {
+    //newBuffer 整形转换成字节
+    var n int = 10000
+    intToBytes := IntToBytes(n)
+    fmt.Println("==========int to bytes========")
+    fmt.Println(intToBytes)
+    //NewBufferString
+    TestBufferString()
+    //write
+    BufferWrite()
+    //WriteString
+    BufferWriteString()
+    //WriteByte
+    BufferWriteByte()
+    //WriteRune
+    BufferWriteRune()
+ 
+}
+ 
+ 
+func IntToBytes(n int) []byte {
+    x := int32(n)
+    //创建一个内容是[]byte的slice的缓冲器
+    //与bytes.NewBufferString("")等效
+    bytesBuffer := bytes.NewBuffer([]byte{})
+    binary.Write(bytesBuffer, binary.BigEndian, x)
+    return bytesBuffer.Bytes()
+}
+ 
+func TestBufferString(){
+    buf1:=bytes.NewBufferString("swift")
+    buf2:=bytes.NewBuffer([]byte("swift"))
+    buf3:=bytes.NewBuffer([]byte{'s','w','i','f','t'})
+    fmt.Println("===========以下buf1,buf2,buf3等效=========")
+    fmt.Println("buf1:", buf1)
+    fmt.Println("buf2:", buf2)
+    fmt.Println("buf3:", buf3)
+    fmt.Println("===========以下创建空的缓冲器等效=========")
+    buf4:=bytes.NewBufferString("")
+    buf5:=bytes.NewBuffer([]byte{})
+    fmt.Println("buf4:", buf4)
+    fmt.Println("buf5:", buf5)
+}
+ 
+func BufferWrite(){
+    fmt.Println("===========以下通过Write把swift写入Learning缓冲器尾部=========")
+    newBytes := []byte("swift")
+    //创建一个内容Learning的缓冲器
+    buf := bytes.NewBuffer([]byte("Learning"))
+    //打印为Learning
+    fmt.Println(buf.String())
+    //将newBytes这个slice写到buf的尾部
+    buf.Write(newBytes)
+    fmt.Println(buf.String())
+}
+ 
+func BufferWriteString(){
+    fmt.Println("===========以下通过Write把swift写入Learning缓冲器尾部=========")
+    newString := "swift"
+    //创建一个string内容Learning的缓冲器
+    buf := bytes.NewBufferString("Learning")
+    //打印为Learning
+    fmt.Println(buf.String())
+    //将newString这个string写到buf的尾部
+    buf.WriteString(newString)
+    fmt.Println(buf.String())
+}
+ 
+func BufferWriteByte(){
+    fmt.Println("===========以下通过WriteByte把swift写入Learning缓冲器尾部=========")
+    var newByte byte = '!'
+    //创建一个string内容Learning的缓冲器
+    buf := bytes.NewBufferString("Learning")
+    //打印为Learning
+    fmt.Println(buf.String())
+    //将newString这个string写到buf的尾部
+    buf.WriteByte(newByte)
+    fmt.Println(buf.String())
+}
+ 
+func BufferWriteRune(){
+    fmt.Println("===========以下通过WriteRune把\"好\"写入Learning缓冲器尾部=========")
+    var newRune = '好'
+    //创建一个string内容Learning的缓冲器
+    buf := bytes.NewBufferString("Learning")
+    //打印为Learning
+    fmt.Println(buf.String())
+    //将newString这个string写到buf的尾部
+    buf.WriteRune(newRune)
+    fmt.Println(buf.String())
+}
+
+
+向 Buffer 中读取数据
+Read
+给Read方法一个容器p，读完后，p就满了，缓冲器相应的减少了，返回的n为成功读的数量
+
+ReadByte
+返回缓冲器头部的第一个byte，缓冲器头部第一个byte被拿掉
+
+ReadRune
+ReadRune和ReadByte很像 
+返回缓冲器头部的第一个rune，缓冲器头部第一个rune被拿掉
+
+ReadBytes
+ReadBytes需要一个byte作为分隔符，读的时候从缓冲器里找第一个出现的分隔符（delim），找到后，把从缓冲器头部开始到分隔符之间的所有byte进行返回，作为byte类型的slice，返回后，缓冲器也会空掉一部分
+
+ReadString
+ReadString需要一个byte作为分隔符，读的时候从缓冲器里找第一个出现的分隔符（delim），找到后，把从缓冲器头部开始到分隔符之间的所有byte进行返回，作为字符串，返回后，缓冲器也会空掉一部分 
+和ReadBytes类似
+
+ReadFrom
+从一个实现io.Reader接口的r，把r里的内容读到缓冲器里，n返回读的数量
+
+Reset
+将数据清空，没有数据可读
+
+string
+将未读取的数据返回成 string
+
+
