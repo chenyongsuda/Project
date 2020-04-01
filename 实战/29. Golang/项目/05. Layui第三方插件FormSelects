@@ -1,0 +1,59 @@
+数据：
+第一种后台渲染
+
+第二种前台请求完后塞进去
+$.ajax({
+		url : xxx,
+		type:'POST',//默认以get提交，以get提交如果是中文后台会出现乱码
+		dataType : 'json',
+		async: false,
+		success : function(data) {
+			for(var i=0;i<data.length;i++){
+				//因为formslects,规定了数据格式
+				/*[
+				     {"name":"1",value:1},
+				     {"name":"2",value:2},
+				     {"name":"3",value:3}
+				  ]*/
+				var temp = {"name":data[i].dictNm,"value":data[i].dictCd}
+				keys.push(temp);
+			}
+		}
+	})
+	//local模式塞入本地数据
+	formSelects.data('renovationProjectSelect', 'local', {
+	    arr: keys
+	});
+  
+formSelects.data('select2', 'local', {arr: []}); //清空下拉框数据
+formSelects.value('select2',data.data.systemUsers,true); //给下拉框中追加数据，true：如果该值已选中则跳过, 该值未选中则选中；若为false：如果该值没有选中则跳过, 该值被选中则取消选中
+
+//远程数据 注意后端返回数组格式就行
+	/*formSelects.data('renovationProjectSelect', 'server', {
+	    url: 'http://yapi.demo.qunar.com/mock/9813/layui/data',
+    	keyword: '水果'	远程数据搜索内容, 其他附加数据可以使用 formSelects.config设置
+	});*/
+  
+//获取值：
+ 
+		可直接alert(formSelects.value('select1'))看返回值
+		formSelects.value('select1');              [{"name":"name1","val":"2"},{"name":"name2","val":"4"}]
+		formSelects.value('select1', 'all');         [{"name":"name1","val":"2"},{"name":"name2","val":"4"}]
+		formSelects.value('select1', 'val');         ["2","4"]
+		formSelects.value('select1', 'valStr');      2,4
+		formSelects.value('select1', 'name');        ["name1","name2"]
+		formSelects.value('select1', 'nameStr');     name1,name2 
+————————————————
+//选中值
+    formSelects.value('select1', [2, 4]);       // 选中value为2和4的option → name1,name2
+    
+本例中: formSelects.value('renovationProjectSelect', selected.split(","));
+
+
+
+工具条：
+formSelects.btns('select2', []); //去掉全选等工具条
+
+
+
+  
