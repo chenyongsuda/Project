@@ -1,0 +1,38 @@
+1. 使用Timer
+
+主程序10s 结束 协程接收时钟信号,接收到就打印,默认执行1s
+func main() {
+	t := time.NewTimer(3 * time.Second)
+	go func(t *time.Timer) {
+		for {
+			select {
+			case <-t.C:
+				fmt.Println("Go 3 Second")
+				t.Reset(3 * time.Second)
+			default:
+				fmt.Println("1s sleep")
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}(t)
+
+	time.Sleep(10 * time.Second)
+}
+
+
+2. 使用Ticker
+func main() {
+	t := time.NewTicker(3 * time.Second)
+
+	go func(t *time.Ticker) {
+		for {
+			select {
+			case <-t.C:
+				fmt.Println("Go Run~~~")
+			}
+		}
+	}(t)
+	time.Sleep(10 * time.Second)
+}
+
+
