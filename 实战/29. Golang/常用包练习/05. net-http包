@@ -57,3 +57,158 @@ func helloworld(w http.ResponseWriter, request *http.Request) {
 	result = result + "RequestURI: " + request.RequestURI
 	io.WriteString(w, result)
 }
+
+
+================================================
+注册方式
+
+type myHandler struct{}
+
+func (*myHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	io.WriteString(w, "URL:"+r.URL.String())
+}
+//以这种形式来注册路由和注册handler	mux.Handle("/",&myHandler{})
+
+===============================================
+通过实现Server的结构
+package main
+import (
+	"io"
+	"log"
+	"net/http"
+	"time"
+)
+
+//定义一个map来实现路由转发
+var mux map[string]func(http.ResponseWriter, *http.Request) 
+
+func main(){
+	server := http.Server{
+		Addr: ":8080",
+		Handler: &myHandler{},
+		ReadTimeout: 5*time.Second,
+	}
+	
+	mux = make(map[string]func(http.ResponseWriter, *http.Request))
+	mux["/tmp"] = Tmp
+
+	err := server.ListenAndServe()
+	if err != nil {
+		log.Fatal(err)
+	}	
+}
+
+type myHandler struct{}
+
+func (*myHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
+	//实现路由的转发
+	if h, ok := mux[r.URL.String()];ok{
+	//用这个handler实现路由转发，相应的路由调用相应func
+		h(w, r)
+		return
+	}
+	io.WriteString(w, "URL:"+r.URL.String())
+}
+
+func Tmp(w http.ResponseWriter, r *http.Request) {
+	io.WriteString(w, "version 3")
+}
+
+
+————————————————
+用自定义的Server来监听和实现http服务
+package main
+import (
+	"io"
+	"log"
+	"net/http"
+	"time"
+)
+
+//定义一个map来实现路由转发
+var mux map[string]func(http.ResponseWriter, *http.Request) 
+
+func main(){
+	server := http.Server{
+		Addr: ":8080",
+		Handler: &myHandler{},
+		ReadTimeout: 5*time.Second,
+	}
+	
+	mux = make(map[string]func(http.ResponseWriter, *http.Request))
+	mux["/tmp"] = Tmp
+
+	err := server.ListenAndServe()
+	if err != nil {
+		log.Fatal(err)
+	}	
+}
+
+type myHandler struct{}
+
+func (*myHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
+	//实现路由的转发
+	if h, ok := mux[r.URL.String()];ok{
+	//用这个handler实现路由转发，相应的路由调用相应func
+		h(w, r)
+		return
+	}
+	io.WriteString(w, "URL:"+r.URL.String())
+}
+
+func Tmp(w http.ResponseWriter, r *http.Request) {
+	io.WriteString(w, "version 3")
+}
+————————————————
+
+type HandlerFunc func(ResponseWriter, *Request)
+
+// ServeHTTP calls f(w, r).
+func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request) {
+    f(w, r)
+}
+
+HandlerFunc(handler) 通过强制转换会可以把方法转为特定接口
+func Handle(pattern string, handler Handler) { 
+    DefaultServeMux.Handle(pattern, handler)
+}
+
+======例子如下
+package main
+
+import (
+    "fmt"
+    "net/http"
+)
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, "hello world")
+}
+
+func htmlHandler(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "text/html")
+    html := `<!doctype html>
+    <META http-equiv="Content-Type" content="text/html" charset="utf-8">
+    <html lang="zh-CN">
+            <head>
+                    <title>Golang</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0;" />
+            </head>
+            <body>
+                <div id="app">Welcome!</div>
+            </body>
+    </html>`
+    fmt.Fprintf(w, html)
+}
+
+func main() {
+    mux := http.NewServeMux()
+    mux.Handle("/", http.HandlerFunc(indexHandler))
+    mux.HandleFunc("/welcome", htmlHandler)
+    http.ListenAndServe(":8001", mux)
+}
+
+
+
+
+
