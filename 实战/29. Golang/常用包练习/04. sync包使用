@@ -1,0 +1,37 @@
+sync/atomic 库提供了原子操作的支持，原子操作直接有底层CPU硬件支持，因而一般要比基于操作系统API的锁方式效率高些。本文对 sync/atomic 中的基本操作进行一个简单的介绍。
+
+原子增值
+用于对变量值进行原子增操作，并返回增加后的值。
+
+e.g.
+    var sum uint32 = 100
+    var wg sync.WaitGroup
+    for i := 0; i < 50; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            //sum += 1                 //1
+            atomic.AddUint32(&sum, 1)  //2
+        }()
+    }
+    wg.Wait()
+    fmt.Println(sum)
+
+————————————————
+
+CAS
+先比较变量的值是否等于给定旧值，等于旧值的情况下才赋予新值，最后返回新值是否设置成功。
+
+e.g.
+    var sum uint32 = 100
+    var wg sync.WaitGroup
+    for i := uint32(0); i < 100; i++ {
+        wg.Add(1)
+        go func(t uint32) {
+            defer wg.Done()
+            atomic.CompareAndSwapUint32(&sum, 100, sum+1)
+        }(i)
+    }
+    wg.Wait()
+    fmt.Println(sum)
+————————————————
