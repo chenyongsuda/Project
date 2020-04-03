@@ -1,3 +1,4 @@
+============================================
 sync/atomic 库提供了原子操作的支持，原子操作直接有底层CPU硬件支持，因而一般要比基于操作系统API的锁方式效率高些。本文对 sync/atomic 中的基本操作进行一个简单的介绍。
 
 原子增值
@@ -34,4 +35,39 @@ e.g.
     }
     wg.Wait()
     fmt.Println(sum)
+————————————————
+================================================================
+
+package main
+import (
+    "sync"
+    "fmt"
+)
+
+func main() {
+    //开箱即用
+    var sm sync.Map
+    //store 方法,添加元素
+    sm.Store(1,"a")
+    //Load 方法，获得value
+    if v,ok:=sm.Load(1);ok{
+        fmt.Println(v)
+    }
+    //LoadOrStore方法，获取或者保存
+    //参数是一对key：value，如果该key存在且没有被标记删除则返回原先的value（不更新）和true；不存在则store，返回该value 和false
+    if vv,ok:=sm.LoadOrStore(1,"c");ok{
+        fmt.Println(vv)
+    }
+    if vv,ok:=sm.LoadOrStore(2,"c");!ok{
+        fmt.Println(vv)
+    }
+    //遍历该map，参数是个函数，该函数参的两个参数是遍历获得的key和value，返回一个bool值，当返回false时，遍历立刻结束。
+    sm.Range(func(k,v interface{})bool{
+        fmt.Print(k)
+        fmt.Print(":")
+        fmt.Print(v)
+        fmt.Println()
+        return true
+    })
+}
 ————————————————
