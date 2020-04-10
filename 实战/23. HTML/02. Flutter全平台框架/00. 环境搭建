@@ -32,4 +32,6 @@ set PATH $PATH /usr/local/share/android-sdk/tools/
 flutter doctor --android-licenses
 
 
+6.创建项目脚手架flutter create Demo
+flutter run
 
