@@ -1,0 +1,22 @@
+0. 国内官网参考页面
+https://flutter.dev/
+
+资源下载
+我们需要的东西有VSCode & Flutter SDK & Android SDK(这个后续还会下载挺多东西)
+这些都可以在官网下载
+
+VSCode : https://code.visualstudio.com/
+Flutter SDK : https://flutter.io/docs/get-started/install
+Android SDK : https://www.androiddevtools.cn/
+
+1. 安装SDK
+https://flutter.cn/docs/development/tools/sdk/releases
+解压后设置环境变量
+
+2.添加flutter包的中国镜像：
+PUB_HOSTED_URL=https://pub.flutter-io.cn
+FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+
+3.接受安卓Licensse
+运行如下命令，然后遇到需要的输入的地方，输入y然后回车。
+flutter doctor --android-licenses
