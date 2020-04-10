@@ -17,6 +17,19 @@ https://flutter.cn/docs/development/tools/sdk/releases
 PUB_HOSTED_URL=https://pub.flutter-io.cn
 FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
 
-3.接受安卓Licensse
+3.使用sdk-manager安装其他的sdk包
+
+sdkmanager "platform-tools"
+sdkmanager "platform-tools" "platforms;android-28"
+sdkmanager "platform-tools" "build-tools;28.0.3"
+
+4、设置platform-tool的环境变量
+set PATH $PATH "$ANDROID_HOME/platform-tools"
+set PATH $PATH /usr/local/share/android-sdk/tools/
+
+5.接受安卓Licensse
 运行如下命令，然后遇到需要的输入的地方，输入y然后回车。
 flutter doctor --android-licenses
+
+
+
