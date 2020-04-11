@@ -142,6 +142,114 @@ map讲解
          return val>5;
        });
    
+12. 方法
+返回值 名字 参数{
+  
+}
+可选参数[]
+void 方法名(,['','']){
+  
+}
+命名参数 {}
+void 方法名(,{string name='',string age=''}){
+  
+}
+方法名(,name:"",age:"")
+
+箭头函数：
+原：
+myList.forEach((value){
+  print(value)
+})
+里面的匿名函数可以变成
+myList.forEach((value)=>print(value));
+
+13. 对象,类
+
+和java差不多
+私有变量加_开头且类必须变成一个单独文件,私有属性为文件级别的
+私有方法也是在方法名加_
+get前缀快捷方法属性
+get area{
+  return 1+2+3;
+}
+和area属性一样使用
+
+set area(value) {
+}
+set方法
+
+够着函数快捷赋值
+Rect(this.name,this.age)
+
+构造函数初始化列表
+Rect():height=100,width=80{
+}
+
+静态属性和静态方法
+加上static关键字就是相对静态的属性或者方法
+
+14.as is ? ..
+as 类型转换 is 类型判断
+.. 级联操作
+
+Person p
+p.print  
+会错误英文Person没初始化new 
+可以加上?
+p?.print 如果没初始化不会打印
+
+p1..name..age..print() 链式操作
+
+15.接口
+没有interface关键字
+普通类和抽象类都可以当接口被实现
+
+16.mixins 实现多继承
+class a
+class b
+class c with a,b 
+类似多继承
+但是不能具有构造函数
+
+17.泛型
+比如不设定类型
+getData(value){
+  return ""
+}
+
+泛型
+T getData<T>(T value){
+  return T
+}
+
+泛型类
+class a<T> 
+
+18.库
+自定义库
+import "lib/xxx"
+内部库
+import "durt:io"
+async加在方法外就是异步方法,通过await来表示同步等待
+外部库
+pub包管理
+
+部分引入
+import xxx as xxx show/hide xxx
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
