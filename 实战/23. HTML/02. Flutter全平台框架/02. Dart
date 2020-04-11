@@ -1,0 +1,156 @@
+1. 入口方法
+main(){
+  
+}
+或者
+void main(){
+  
+}
+
+2.变量定义
+可以通过var声明或者String类型声明
+
+3.const 和 final 
+const 不可改变量初始化时候赋值(定义时常量)
+final 不一定要初始化时候赋值但是只能赋值一次(运行时常量)
+
+4.常用类型
+字符串 String  ''或者"" 或者''' '''多行字符串
+字符串的拼接 print('$str1 $str2') str1+str2
+
+字符串 int double
+int型不可以接收double  double可以接收int型
+
+bool类型
+要不是true要不就是false
+bool不能接收true或者false之外的
+
+
+5. 集合【列表】
+定义的两种方式
+var ls = 【'','',''】
+
+var ls = new List();
+ls.add('')
+ls.add('')
+ls.add('')
+
+ls.lenght
+
+可以指定存储类型
+var ls = new List<String>();
+
+6. 集合【map】
+两种定义方式
+var person ={"name":"","age":20}
+print(person["name"])
+
+var person =new Map();
+person["name"] = "aaa"
+
+7.判断类型
+var str = "123"
+
+if(str is String) {
+   
+}
+
+8.运算符
+和java一样 有个没见过 
+int b = 18
+b??=23 如果b为空就赋值23
+
+9. 类型转化
+转数字型
+int.parse("")
+double.parse("")
+
+转string
+tostring()
+
+str.isEmpty 判断是否为空
+
+如果var xxx 没赋值的化就是null
+
+10. 循环语句
+for(int i=1;i<10;i++){
+
+}
+
+while(true/false){
+
+}
+
+do {
+
+}while(true/false)
+
+switch (){
+case :
+ break;
+default:
+ xxx;
+}
+
+11.详解集合类型
+List讲解
+属性：
+   lenght 长度
+   reversed 翻转 mylist.reversed.tolist()
+   isEmpty
+   isNotEmpty
+
+常用方法：
+   add 添加元素
+   addAll([,,,,,]) 添加多个
+   indexOf 查找数据
+   remove  删除元素
+   removeAt 删除指定index元素
+   fillRange(start,end,value) 区域修改
+   insert(index,val)
+   insertAll(index,[xx,xx,xx]）
+   join 连接
+   split 字符串转list
+
+Set讲解 去重集合
+   var set = new Set()
+
+map讲解 
+   remove
+   containsValue
+
+集合通用方法
+   forEach  
+       for(var item in myList)
+       myList.forEach((key,val){
+         print(val)
+       });
+   map
+       myList.map((val){
+         return val*2;
+       });
+   where  返回满足条件的集合
+       myList.where((val){
+         return val>5;
+       });
+   any   集合中任意一个满足的就返回true
+       myList.any((val){
+         return val>5;
+       });
+   every 集合中所有都满足就返回true
+       myList.where((val){
+         return val>5;
+       });
+   
+
+
+
+
+
+
+
+
+
+
+
+
