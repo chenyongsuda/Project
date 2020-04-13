@@ -24,6 +24,100 @@ new Text(
  使用TextFormField和TextField控件时，遇到此bug flutter RenderBox was not laid out
  把TextFormField或TextField控件包裹在一个有宽度的container或Expanded控件下。
  
- 
- 
+ 一些属性
+ Widget buildTextField(TextEditingController controller) {
+    return TextField(
+      controller: controller,
+      maxLength: 30,//最大长度，设置此项会让TextField右下角有一个输入数量的统计字符串
+      maxLines: 1,//最大行数
+      autocorrect: true,//是否自动更正
+      autofocus: true,//是否自动对焦
+      obscureText: true,//是否是密码
+      textAlign: TextAlign.center,//文本对齐方式
+      style: TextStyle(fontSize: 30.0, color: Colors.blue),//输入文本的样式
+      inputFormatters: [WhitelistingTextInputFormatter.digitsOnly],//允许的输入格式
+      onChanged: (text) {//内容改变的回调
+        print('change $text');
+      },
+      onSubmitted: (text) {//内容提交(按回车)的回调
+        print('submit $text');
+      },
+      enabled: true,//是否禁用
+    );
+  }
+  
+  显示placeholder
+  TextField(
+      decoration:
+          InputDecoration(fillColor: Colors.blue.shade100, filled: true, labelText: 'Hello'),
+    );
+  fillColor设置填充颜色，labelText设置标签文字，这个标签在没有输入的时候是占满输入框的，当输入聚焦以后，就会缩小到输入框左上角：
 
+  TextField(
+      decoration: InputDecoration(
+          fillColor: Colors.blue.shade100, filled: true, hintText: 'Hello', errorText: 'error'),
+    );
+  hintText就是普通的placeholder，输入后就不显示了,errorText是错误提示
+
+  前面后面修饰,前面图标后面文字修饰
+  Widget buildTextField() {
+    return TextField(
+      decoration: InputDecoration(
+          fillColor: Colors.blue.shade100,
+          filled: true,
+          helperText: 'help',
+          prefixIcon: Icon(Icons.local_airport),
+          suffixText: 'airport'),
+    );
+  }
+  
+  变成原型边框
+  Widget buildTextField() {
+    return TextField(
+      decoration: InputDecoration(
+          contentPadding: EdgeInsets.all(10.0),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15.0),
+//            borderSide: BorderSide(color: Colors.red, width: 3.0, style: BorderStyle.solid)//没什么卵效果
+          )),
+    );
+ 
+  改变装饰线颜色
+  无论是下面的装饰线，还是矩形边框装饰线，对焦后显示的颜色，都是主题颜色的primaryColor，失去焦点以后就是黑色，这显然不能满足自定义的需求，但是通过各种努力发现，改变边框颜色很困难，
+  最后发现了这个答案：https://stackoverflow.com/questions/49600139/how-to-change-textfield-underline-color
+  所以正确的设置边框颜色的方式是这样的：
+  Widget buildTextField() {
+    return Theme(
+      data: new ThemeData(primaryColor: Colors.red, hintColor: Colors.blue),
+      child: TextField(
+        decoration: InputDecoration(
+            contentPadding: EdgeInsets.all(10.0),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15.0),
+//            borderSide: BorderSide(color: Colors.red, width: 3.0, style: BorderStyle.solid)//没什么卵效果
+            )),
+      ),
+    );
+    
+    改变边框的粗细
+    这些TextField的decoration彻底不能满足要求了，需要重构成这种方式：
+    import 'package:flutter/material.dart';
+    class TextFieldPage extends StatelessWidget {
+    class TextFieldPage extends StatelessWidget {
+  Widget buildTextField() {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      alignment: Alignment.center,
+      height: 60.0,
+      decoration: new BoxDecoration(
+          color: Colors.blueGrey,
+          border: new Border.all(color: Colors.black54, width: 4.0),
+          borderRadius: new BorderRadius.circular(12.0)),
+      child: new TextFormField(
+        decoration: InputDecoration.collapsed(hintText: 'hello'),
+      ),
+    );
+  }
+
+
+ 
