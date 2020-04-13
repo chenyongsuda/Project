@@ -152,3 +152,20 @@ Container({
   padding,
   margin,
 })
+
+Flutter之Center组件
+一.参数说明
+const Center({ 
+    Key key, 
+    double widthFactor, 
+    double heightFactor, 
+    Widget child }
+)
+1.widthFactor: Center组件的宽度因子
+当 widthFactor == null时,Center组件的宽度要多大有多大,相当于android中的 match_parent
+当 widthFactor != null时,Center组件的宽度等于 widthFactor*子组件的宽度
+2.heightFactor: Center组件的高度因子
+当 heightFactor == null时,Center组件的宽度要多大有多大,相当于android中的 match_parent
+当 heightFactor != null时,Center组件的高度等于 heightFactor*子组件的高度
+3.child: 显示在Center组件内部的子组件,由于受到Center组件的限制,在Center内部居中显示
+————————————————
