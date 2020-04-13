@@ -1,3 +1,7 @@
+
+========================================
+MaterialApp 为整体App级别的设定
+
 1. MaterialApp是基于Material Design设计风格的应用，一般作为Flutter应用的根元素。
 当我们新建一个flutter项目时，系统会自动帮我们创建如下模板。
 
@@ -29,4 +33,85 @@ theme: ThemeData(
         primaryColor: Colors.blue,//导航栏颜色
         canvasColor: Colors.grey,//画布颜色
 )
+
+===================================================
+Scaffold为单页脚手架设置
+Scaffold常用的属性如下：
+
+属性名	类型	说明
+appBar	AppBar	显示在界面顶部的一个AppBar
+body	Widget	当前界面所显示的主要内容
+floatingActionButton	Widget	在Material Design 中定义的一个功能
+persistentFooterButtons	List	固定在下方显示的按钮
+drawer	Widget	侧边栏组件
+bottomNavigationBar	Widget	显示在底部的导航栏按钮
+backgroundColor	Color	当前界面所显示的主要内容
+body	Widget	背景色
+resizeToAvoidBottomPadding	bool	控制界面内容body是否重新布局来避免底部被覆盖，比如当键盘显示时，重新布局避免被键盘盖住内容。默认值为true
+———————————————
+样例
+class TextDemo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      appBar: new AppBar(
+        title: new Text('文本组件'),
+      ),
+      backgroundColor: Colors.grey,
+      bottomNavigationBar: BottomAppBar(
+        child: Container(
+          height: 50.0,
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        tooltip: '增加',
+        child: Icon(Icons.add),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      body: new Column(
+        children: <Widget>[
+          new Text(
+            '红色+黑色删除线+25号',
+            style: new TextStyle(
+                color: const Color(0xffff0000),
+                decoration: TextDecoration.lineThrough,
+                decorationColor: const Color(0xff000000),
+                fontSize: 25.0),
+          ),
+          new Text(
+            '橙色+下划线+24号',
+            style: new TextStyle(
+              color: const Color(0xffff9900),
+              decoration: TextDecoration.underline,
+              fontSize: 24.0,
+            ),
+          ),
+          new Text(
+            '虚线上划线+23号+倾斜',
+            style: new TextStyle(
+              decoration: TextDecoration.overline,
+              decorationStyle: TextDecorationStyle.dashed,
+              fontSize: 23.0,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          new Text(
+            '24号+加粗',
+            style: new TextStyle(
+              fontSize: 23.0,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 6.0,
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+————————————————
+
+
+
 
