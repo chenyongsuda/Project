@@ -1,0 +1,154 @@
+参考https://www.jianshu.com/p/4a550651f4b5
+
+基础组件分为文本(Text)、图片(Image)、按钮(xxButton)、输入框(TextField)、单选框(Switch)与复选框(CheckBox)、表单(Form)等等
+布局类组件 水平线性布局（Row）、垂直线性布局（Column)、弹性布局(Flex)、流式布局（Wrap|Flow）、层叠布局（Stack|Positioned）
+
+布局类组件
+水平线性布局（Row）、垂直线性布局（Column)、弹性布局(Flex)、流式布局（Wrap|Flow）、层叠布局（Stack|Positioned）
+
+线性布局
+水平跟垂直都是基层与Flex。基本格式如下
+Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.max, //有效，外层Colum高度为整个屏幕
+      children: <Widget>[
+        Container(
+          color: Colors.red,
+          child: Column(
+            mainAxisSize: MainAxisSize.max,//无效，内层Colum高度为实际高度  
+            children: <Widget>[
+              Text("hello world "),
+              Text("I am Jack "),
+            ],
+          ),
+        )
+      ],
+    )
+基本上跟Android的线性布局一样
+crossAxisAlignment：觉得子控件的对齐
+mainAxisSize：自身的大小，如果嵌套里面的会没效
+children：子控件
+还有其他可以看看链接https://book.flutterchina.club/chapter4/row_and_column.html
+
+弹性布局
+Flex属性与线性布局类似
+Expanded。在Flex容器中可以设置比例
+例如下面的代码会按1：2比例占据屏幕
+  Flex(
+          direction: Axis.horizontal,
+          children: <Widget>[
+            Expanded(
+              flex: 1,
+              child: Container(
+                height: 30.0,
+                color: Colors.red,
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Container(
+                height: 30.0,
+                color: Colors.green,
+              ),
+            ),
+          ],
+        )
+
+流式布局
+Wrap直接使用，超过屏幕自动换行
+Flow需要自己计算，但是性能较好。同时由于是自己计算的，所以换行规则可以自己定。
+
+层叠布局
+Stack类似于Android里面的FrameLayout、Web中的绝对定位
+Position 结合Stack使用可以实现绝对定位的效果
+
+容器类组件
+容器类与布局类不同的地方在于一般容器类只接受一个子组件。用于修饰、变换、限制大小、设置边距等等
+
+Padding
+跟移动端不一样的是，flutter的Padding也是单独抽出来的组件。格式如下
+Padding(
+      //上下左右各添加16像素补白
+      padding: EdgeInsets.all(16.0),
+      child: Column()
+
+限制类容器(ConstrainedBox、SizedBox等等)
+用于限制组件的最大最小值，格式如下，一个是限制条件的属性、一个是child放的内容
+
+ConstrainedBox(
+    constraints: BoxConstraints(minWidth: 60.0, minHeight: 100.0),  //父
+    child: UnconstrainedBox( //“去除”父级限制
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: 90.0, minHeight: 20.0),//子
+        child: redBox,
+      ),
+    )
+)
+
+装饰器DecoratedBox
+类似于Android的shape，可以设置圆角、渐变、阴影等等。格式如下
+ DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(colors:[Colors.red,Colors.orange[700]]), //背景渐变
+      borderRadius: BorderRadius.circular(3.0), //3像素圆角
+      boxShadow: [ //阴影
+        BoxShadow(
+            color:Colors.black54,
+            offset: Offset(2.0,2.0),
+            blurRadius: 4.0
+        )
+      ]
+    ),
+  child: Padding(padding: EdgeInsets.symmetric(horizontal: 80.0, vertical: 18.0),
+    child: Text("Login", style: TextStyle(color: Colors.white),),
+  )
+)
+
+变换Transform
+旋转(rotate)、平移(translate)、缩(scale)
+DecoratedBox(
+  decoration:BoxDecoration(color: Colors.red),
+  child: Transform.rotate(
+    angle:90 ,
+    child: Text("Hello world"),
+  ),
+)；
+这种方式的旋转不会执行build方法，所以背景不会改变性能也较好一些，我的理解是它仅仅改变了child的值，而如果要改变全部则使用RotatedBox
+
+RotatedBox
+ DecoratedBox(
+      decoration: BoxDecoration(color: Colors.red),
+      //将Transform.rotate换成RotatedBox  
+      child: RotatedBox(
+        quarterTurns: 1, //旋转90度(1/4圈)
+        child: Text("Hello world"),
+      ),
+    
+这里没有讲的一个是透明度的变换
+Opacity(
+        opacity: 0.1,
+        child: new Container(
+        width: 250.0,
+        height: 100.0,
+        decoration: new BoxDecoration(
+        backgroundColor: const Color(0xff000000),
+    ),
+)
+
+Container容器
+这个容器比较强大的是它有padding跟margin以及变换等等不过底层也是用上面的控件实现的
+Container({
+  this.alignment,
+  this.padding, //容器内补白，属于decoration的装饰范围
+  Color color, // 背景色
+  Decoration decoration, // 背景装饰
+  Decoration foregroundDecoration, //前景装饰
+  double width,//容器的宽度
+  double height, //容器的高度
+  BoxConstraints constraints, //容器大小的限制条件
+  this.margin,//容器外补白，不属于decoration的装饰范围
+  this.transform, //变换
+  this.child,
+  padding,
+  margin,
+})
