@@ -20,4 +20,10 @@ new Text(
           color: const Color(0xffffffff), //文字颜色
         )
     
-        
+ 2. TextField
+ 使用TextFormField和TextField控件时，遇到此bug flutter RenderBox was not laid out
+ 把TextFormField或TextField控件包裹在一个有宽度的container或Expanded控件下。
+ 
+ 
+ 
+
