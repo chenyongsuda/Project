@@ -53,6 +53,110 @@ Expanded。在Flex容器中可以设置比例
             ),
           ],
         )
+Flexible组件可以使Row、Column、Flex等子组件在主轴方向有填充可用空间的能力(例如，Row在水平方向，Column在垂直方向)，但是它与Expanded组件不同，它不强制子组件填充可用空间。
+Expanded组件可以使Row、Column、Flex等子组件在其主轴方向上展开并填充可用空间(例如，Row在水平方向，Column在垂直方向)。如果多个子组件展开，可用空间会被其flex factor(表示扩展的速度、比例)分割。
+
+Expanded的用法：
+import 'package:flutter/material.dart';
+class LayoutDemo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      appBar: new AppBar(
+        title: new Text('水平方向布局'),
+      ),
+      body: new Row(
+          children: <Widget>[
+            new RaisedButton(
+              onPressed: () {
+                print('点击红色按钮事件');
+              },
+              color: const Color(0xffcc0000),
+              child: new Text('红色按钮'),
+            ),
+            new Expanded(
+              flex: 1,
+              child: new RaisedButton(
+                onPressed: () {
+                  print('点击黄色按钮事件');
+                },
+                color: const Color(0xfff1c232),
+                child: new Text('黄色按钮'),
+              ),
+            ),
+            new RaisedButton(
+              onPressed: () {
+                print('点击粉色按钮事件');
+              },
+              color: const Color(0xffea9999),
+              child: new Text('粉色按钮'),
+            ),
+          ]
+      ),
+    );
+  }
+}
+void main() {
+  runApp(
+    new MaterialApp(
+      title: 'Flutter教程',
+      home: new LayoutDemo(),
+    ),
+  );
+}
+中间按钮会强制撑开
+
+Flexible的用法：
+
+import 'package:flutter/material.dart';
+class LayoutDemo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      appBar: new AppBar(
+        title: new Text('水平方向布局'),
+      ),
+      body: new Row(
+          children: <Widget>[
+            new RaisedButton(
+              onPressed: () {
+                print('点击红色按钮事件');
+              },
+              color: const Color(0xffcc0000),
+              child: new Text('红色按钮'),
+            ),
+            new Flexible(
+              flex: 1,
+              child: new RaisedButton(
+                onPressed: () {
+                  print('点击黄色按钮事件');
+                },
+                color: const Color(0xfff1c232),
+                child: new Text('黄色按钮'),
+              ),
+            ),
+            new RaisedButton(
+              onPressed: () {
+                print('点击粉色按钮事件');
+              },
+              color: const Color(0xffea9999),
+              child: new Text('粉色按钮'),
+            ),
+          ]
+      ),
+    );
+  }
+}
+void main() {
+  runApp(
+    new MaterialApp(
+      title: 'Flutter教程',
+      home: new LayoutDemo(),
+    ),
+  );
+}
+————————————————
+中间按钮不强制撑开
 
 流式布局
 Wrap直接使用，超过屏幕自动换行
