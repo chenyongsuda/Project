@@ -257,6 +257,13 @@ Container({
   margin,
 })
 
+EdgeInsets.fromLTRB(10,10,10,10) ，L表示左边距（left缩写），T表示上边距（top缩写），R表示右边距（right缩写），B表示底边距（bottom缩写），四个值可以分开写；
+EdgeInsets.all（10），上下左右边距均为10；
+EdgeInsets.only(left: 10, right: 5, top: 10, bottom: 10)，可分别指定4个方向的边距值，如果只需要上边距，可以写成EdgeInsets.only( top: 10)；
+EdgeInsets.symmetric(vertical: 20, horizontal: 10) ，可以指定垂直和水平方向的边距，也可以单独指定垂直或者水平方向的边距。如只需要垂直方向的边距，可写成EdgeInsets.symmetric(vertical: 20)；
+
+
+
 Flutter之Center组件
 一.参数说明
 const Center({ 
