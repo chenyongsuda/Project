@@ -1,0 +1,32 @@
+1. MaterialApp是基于Material Design设计风格的应用，一般作为Flutter应用的根元素。
+当我们新建一个flutter项目时，系统会自动帮我们创建如下模板。
+
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: MyHomePage(title: 'Flutter Demo Home Page'),
+    );
+  }
+}
+
+2. 常用属性
+title: 安卓手机任务管理页面所看到应用的名字
+home：app运行时打开的首页面
+routes：定义路由，内容为map健值对；key为路由名称，value为路由对应的页面。页面需要跳转时，可以通过Navigator.pushNamed(context, 'rooteName');来跳转。
+theme：定义主题。
+theme.primarySwatch：主题色，效果如下
+
+theme: ThemeData(
+        primarySwatch: Colors.green,//主题色
+        primaryColor: Colors.blue,//导航栏颜色
+        canvasColor: Colors.grey,//画布颜色
+)
+
