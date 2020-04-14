@@ -1,3 +1,9 @@
+Flutter的动画逻辑相对来说还是比较清晰的，AnimationController用于对动画的控制，开始，结束，反向播放等，Curve用于描述动画的过程特性，加速，减速等，
+Animatable或者Tween及其子类用于包装需要的最终的结果类型，由于AnimationController一般是从0.0到1.0之间变化，
+因此在Tween中需要通过设置begin属性和end属性来进行映射。Animation就是最终得到的动画对象，
+通过将不同时刻Animation的value值赋值给不同的对象来实现让对象动起来的效果。
+
+
 / Flutter的动画相关类 /
 首先来看下Flutter的动画基础概念和相关类，如下所示：
 
