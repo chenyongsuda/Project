@@ -138,8 +138,118 @@ controller = AnimationController(
  CurvedAnimation curve = CurvedAnimation(parent: controller, curve: Curves.easeIn);
  animation = Tween(begin: 0.0, end: 300.0).animate(curve);
 
- ============================
+============================ 
+AnimatedWidget
+直接上代码
+//...
+class AnimState extends State<AnimScreen> with SingleTickerProviderStateMixin {
+  Animation<double> animation;
+  AnimationController controller;
+
+  @override
+  initState() {
+    super.initState();
+    controller = AnimationController(
+        duration: const Duration(milliseconds: 2000), vsync: this);
+    // 区别在这里，不需要主动 addListener 中去 setState
+    animation = Tween(begin: 0.0, end: 300.0).animate(controller);
+    controller.forward();
+  }
+  
+  Widget build(BuildContext context) {
+    return AnimatedLogo(animation: animation);
+  }
+  
+  // ...
+}
+在 build 方法中返回了一个 AnimatedLogo，定义好的 Animation 作为参数。
+
+class AnimatedLogo extends AnimatedWidget {
+  AnimatedLogo({Key key, Animation<double> animation})
+      : super(key: key, listenable: animation);
+
+  Widget build(BuildContext context) {
+    // 外部传递过来的 Animation 对象
+    final Animation<double> animation = listenable;
+    return Center(
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 10.0),
+        height: animation.value,
+        width: animation.value,
+        child: FlutterLogo(),
+      ),
+    );
+  }
+}
+看起来 AnimatedLogo 的 build 其实和原来的写法区别不大，但这个 Widget 继承的是 AnimatedWidget，它本身继承自 StatefulWidget。看它的源码
+
+class _AnimatedState extends State<AnimatedWidget> {
+  @override
+  void initState() {
+    super.initState();
+    // 对传进来的 Animation 对象 listenable 添加监听，监听里调用 setState
+    widget.listenable.addListener(_handleChange);
+  }
+
+  @override
+  void dispose() {
+    // 还做了 removeListener 的操作
+    widget.listenable.removeListener(_handleChange);
+    super.dispose();
+  }
+  
+  void _handleChange() {
+    setState(() {
+      // The listenable's state is our build state, and it changed already.
+    });
+  }
+  // ...
+}
+即自动加了监听，value 变化时调用 setState 修改 UI。同时 dispose 方法中还移除了监听。
+
+状态监听
+前面通过 addListener() 监听动画值的变化，还可以通过 addStatusListener() 来监听动画的状态，如动画开始、结束、向前移动或向后移动。
+
+状态由四个值
+enum AnimationStatus {
+  /// The animation is stopped at the beginning
+  dismissed,
+  /// The animation is running from beginning to end
+  forward,
+  /// The animation is running backwards, from end to beginning
+  reverse,
+  /// The animation is stopped at the end
+  completed,
+}
+
+修改代码监听状态：
+@override
+initState() {
+  super.initState();
+  controller = AnimationController(
+      duration: const Duration(milliseconds: 2000), vsync: this);
+  animation = Tween(begin: 0.0, end: 300.0).animate(controller);
+  animation.addStatusListener((status) {
+    print("$status"); // 打印状态
+    if (status == AnimationStatus.completed) {
+      controller.reverse(); // 动画结束时，反转从尾到头播放，结束的状态是 dismissed
+    } else if (status == AnimationStatus.dismissed) {
+      controller.forward(); // 重新从头到尾播放
+    }
+  });
+  controller.forward();
+}
+
+动画将无限循环
+I/flutter (14046): AnimationStatus.forward
+I/flutter (14046): AnimationStatus.completed
+I/flutter (14046): AnimationStatus.reverse
+I/flutter (14046): AnimationStatus.dismissed
+I/flutter (14046): AnimationStatus.forward
+I/flutter (14046): AnimationStatus.completed
+I/flutter (14046): AnimationStatus.reverse
+I/flutter (14046): AnimationStatus.dismissed
+================================================
  
  
- 
- 
+
