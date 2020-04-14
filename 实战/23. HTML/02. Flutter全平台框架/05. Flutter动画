@@ -382,4 +382,33 @@ class _AnimState extends State<AnimScreen> with SingleTickerProviderStateMixin {
   }
 }
 
+=================================================================
+Flutter 25种动画组件介绍
+Flutter中提供了大量的动画组件及详细用法：
 
+AnimatedBuilder：http://laomengit.com/flutter/widgets/AnimatedBuilder/
+AlignTransition:http://laomengit.com/flutter/widgets/AlignTransition/
+AnimatedOpacity：http://laomengit.com/flutter/widgets/AnimatedOpacity/
+AnimatedAlign：http://laomengit.com/flutter/widgets/AnimatedAlign/
+AnimatedPadding：http://laomengit.com/flutter/widgets/AnimatedPadding/
+AnimatedCrossFade：http://laomengit.com/flutter/widgets/AnimatedCrossFade/
+AnimatedContainer：http://laomengit.com/flutter/widgets/AnimatedContainer/
+AnimatedPositioned：http://laomengit.com/flutter/widgets/AnimatedPositioned/
+AnimatedPositionedDirectional：http://laomengit.com/flutter/widgets/AnimatedPositionedDirectional/
+AnimatedSwitcher：http://laomengit.com/flutter/widgets/AnimatedSwitcher/
+AnimatedIcon：http://laomengit.com/flutter/widgets/AnimatedIcon/
+TweenAnimationBuilder：http://laomengit.com/flutter/widgets/TweenAnimationBuilder/
+DecoratedBoxTransition：http://laomengit.com/flutter/widgets/DecoratedBoxTransition/
+DefaultTextStyleTransition：http://laomengit.com/flutter/widgets/DefaultTextStyleTransition/
+AnimatedDefaultTextStyle：http://laomengit.com/flutter/widgets/AnimatedDefaultTextStyle/
+PositionedTransition：http://laomengit.com/flutter/widgets/PositionedTransition/
+RelativePositionedTransition：http://laomengit.com/flutter/widgets/RelativePositionedTransition/
+RotationTransition：http://laomengit.com/flutter/widgets/RotationTransition/
+ScaleTransition：http://laomengit.com/flutter/widgets/ScaleTransition/
+SizeTransition：http://laomengit.com/flutter/widgets/SizeTransition/
+SlideTransition：http://laomengit.com/flutter/widgets/SlideTransition/
+FadeTransition：http://laomengit.com/flutter/widgets/FadeTransition/
+AnimatedModalBarrier：http://laomengit.com/flutter/widgets/AnimatedModalBarrier/
+AnimatedList：http://laomengit.com/flutter/widgets/AnimatedList/
+Hero：http://laomengit.com/flutter/widgets/Hero/
+————————————————
