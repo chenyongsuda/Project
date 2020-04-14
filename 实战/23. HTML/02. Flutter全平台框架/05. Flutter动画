@@ -1,0 +1,28 @@
+/ Flutter的动画相关类 /
+首先来看下Flutter的动画基础概念和相关类，如下所示：
+
+Animation：Flutter中动画的核心类
+AnimationController：动画管理类
+CurvedAnimation：用于定义非线性曲线动画
+Tween：补间对象，用于计算动画使用的数据范围之间的插值。
+Listeners和StatusListeners：用于监听动画状态改变
+Animation介绍
+
+Flutter中的动画核心类，我们可以理解为Animation是Flutter中动画的基类。它是个抽象类（abstract），所以不能够直接创建其对象来使用动画。Animation具有以下特性：
+Animation对象知道动画的当前状态（例如，它是开始、停止还是向前或向后移动），但它不知道屏幕上显示的内容。
+Flutter中的Animation对象是一个在一段时间内依次生成一个区间之间值的类。Animation对象的输出可以是线性的、曲线的、一个步进函数或者任何其他可以设计的映射。根据Animation对象的控制方式，动画可以反向运行，甚至可以在中间切换方向。
+Animation还可以生成除double之外的其他类型值，如：Animation<Color> 或 Animation<Size>。
+Animation对象有状态，可以通过访问其value属性获取动画的当前值。
+Animation对象本身和UI渲染没有任何关系。
+
+AnimationController
+   AnimationController 是一个特殊的Animation对象，在屏幕刷新的没一帧，就会生成一个新的值，默认情况下，AnimationController在给定的时间段内会线性的生成从0.0到1.0的数字，如：下面代码创建一个Animation对象
+  final AnimationController controller = new AnimationController(duration:const Duration(millisecons:2000),vsync:this);
+  AnimationController派生自Animation因此可以在需要Animation的任何地方使用。但是，AnimationController 具体控制动画的其他方法：
+  # forward ：启动动画
+  # reverse({double from}):倒放动画
+  # reset() :重置动画，将其设置到动画的开始位置
+  # stop（{bool canceled = true}）:停止动画
+  当创建一个AnimationController 时，需要传递一个vsync参数。存在vsync时，回防止屏幕外动画消耗不必要的资源，可以将stateful对象作为vsync的值
+  
+ 
