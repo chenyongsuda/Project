@@ -31,4 +31,115 @@ AnimationController
   # stop（{bool canceled = true}）:停止动画
   当创建一个AnimationController 时，需要传递一个vsync参数。存在vsync时，回防止屏幕外动画消耗不必要的资源，可以将stateful对象作为vsync的值
   
+=================
+最基本的动画.
+继承with SingleTickerProviderStateMixin
+
+定义一个动画管理器
+AnimationController ctl;
+@override
+void initState() {
+ super.initState();
+ this.ctl = AnimationController(
+ duration:Duration(milliseconds:5000),
+ vsync: this)..addListener((){
+   setState(
+     (){
+
+     }
+   );
+ });
+ 和释放函数
+ @override
+  void dispose() {
+    this.ctl.dispose();
+    super.dispose();
+  }
+  
+在需要变换的控件方面加上变化参数
+Container(
+width: 100 * ctl.value,
+
+==========================================
+使用速度曲线
+继承 Animation<double>，生成 double 值。
+
+final CurvedAnimation curve = CurvedAnimation(parent: controller, curve: Curves.easeIn);
+第二个参数是 Curve 对象，表示动画曲线函数，类似 Android 动画的插值器。有一些内置曲线
+
+static const Curve linear = _Linear._();
+static const Curve decelerate = _DecelerateCurve._(); // 相当于 Android 的 DecelerateInterpolator
+这些内置对象就是继承了 Curve 类，重写 transform 方法，如
+
+class _Linear extends Curve {
+  const _Linear._();
+
+  @override
+  double transform(double t) => t;
+}
+因而可以自定义任何函数：
+
+class ShakeCurve extends Curve {
+  @override
+  double transform(double t) {
+    return math.sin(t * math.PI * 2);
+  }
+}
+Curve 有一子类 Cubic，是贝塞尔曲线，又定义了它的若干实例，如
+static const Cubic ease = Cubic(0.25, 0.1, 0.25, 1.0);
+static const Cubic easeIn = Cubic(0.42, 0.0, 1.0, 1.0);
+
+增加速度曲线
+@override
+initState() {
+ super.initState();
+ controller = AnimationController(
+     duration: const Duration(milliseconds: 5000), vsync: this);
+ // 创建一个 CurvedAnimation，监听它的 value
+ curve = CurvedAnimation(parent: controller, curve: Curves.easeIn)
+   ..addListener(() {
+     setState(() {
+
+     });
+   });
+ controller.forward();
+}
+
+============================
+更改不同生产范围
+AnimationController 对象的默认范围从 0.0 到 1.0。如果需要不同的范围或不同的数据类型，则可以使用 Tween 来配置动画以生成不同的范围或数据类型的值。
+
+// 生成 -200.0 到 0.0 的数值
+final Tween doubleTween = Tween<double>(begin: -200.0, end: 0.0);
+Tween 是 stateless 的，需要 begin 和 end 值
+唯一职责就是定义从输入范围到输出范围的映射。输入范围通常为 0.0 到 1.0，但并不一定
+继承 Animatable<T>，而不是继承 Animation<T>，泛型不一定要是 double。如
+final Tween colorTween =     ColorTween(begin: Colors.transparent, end: Colors.black54);
+
+final AnimationController controller = AnimationController(
+    duration: const Duration(milliseconds: 500), vsync: this);
+// 在 500 毫秒内生成从 0 到 255 的整数值，返回一个 Animation 对象
+Animation<int> alpha = IntTween(begin: 0, end: 255).animate(controller);
+
+或者
+controller = AnimationController(
+      duration: const Duration(milliseconds: 2000), vsync: this);
+  // 创建一个 Tween，值从 0 到 300
+  animation = Tween(begin: 0.0, end: 300.0).animate(controller)
+    ..addListener(() { // 给这个 Animation 添加监听
+      setState(() {
+        print('${controller.value}-${animation.value}');
+      });
+    });
+  controller.forward();
+ 
+ 在 2000ms 内，AnimationController 的 value 从 0.0 到 1.0，同时 Tween 的 value 从 0.0 到 300.0。
+ 也可以用 CurvedAnimation 对象作为 animate 方法的参数，以更改 begin 和 end 的值。
+ CurvedAnimation curve = CurvedAnimation(parent: controller, curve: Curves.easeIn);
+ animation = Tween(begin: 0.0, end: 300.0).animate(curve);
+
+ ============================
+ 
+ 
+ 
  
