@@ -250,6 +250,136 @@ I/flutter (14046): AnimationStatus.completed
 I/flutter (14046): AnimationStatus.reverse
 I/flutter (14046): AnimationStatus.dismissed
 ================================================
- 
- 
+
+AnimatedBuilder
+之前的例子，build 中使用 Animation 的 value 作为 logo 的宽高，更好的解决方案是将职责分离，logo 的显示只做显示，尺寸的变化应该动画去管理，可以借助 AnimatedBuilder 来完成此分离。
+AnimatedBuilder 是渲染树中的一个独立的类。与 AnimatedWidget 类似，自动监听 Animation 的变化，并根据需要将该控件树标记为 dirty 以自动刷新 UI。
+
+看一下它的源码：
+class AnimatedBuilder extends AnimatedWidget {
+
+  const AnimatedBuilder({
+    Key key,
+    @required Listenable animation, // 要做的动画 Animation
+    @required this.builder, // 动画 value 变化时调用的函数
+    this.child, // 要做动画的 widget
+  }) : assert(builder != null),
+       super(key: key, listenable: animation);
+
+  // Animation 的 value 变化时会调用 builder 这个函数
+  final TransitionBuilder builder;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return builder(context, child);
+  }
+}
+看 TransitionBuilder 的定义，它是一个函数的别名。
+
+typedef TransitionBuilder = Widget Function(BuildContext context, Widget child);
+现在做动画的 Widget 不再继承 AnimatedWidget 了，本身不管动画怎么处理，不管动画的 value 是多少，只管自己的显示
+
+class LogoWidget extends StatelessWidget { // 无状态
+  build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 10.0),
+      child: FlutterLogo(), // 显示的 Widget
+    );
+  }
+}
+然后要定义一个 AnimatedBuilder 专门处理动画，即它是一个中间件，将 Animation 和要作用的 Widget 关联起来，Animation 和 Widget 本身毫无关联。
+
+AnimatedBuilder(
+    animation: animation,
+    builder: (BuildContext context, Widget child) {
+      return Container(
+        height: animation.value, width: animation.value, child: child);
+    },
+    child: child)
+build 是一个函数，返回一个 Widget。在这里，将要做动画的 Widget 作为 Container 的 child，当参数 animation 的 value 变化时，会重新执行 builder，于是这个 Container 的尺寸就会变化。
+
+现在将它封装到一个 Widget 中
+class GrowTransition extends StatelessWidget {
+  GrowTransition({this.child, this.animation});
+
+  final Widget child;
+  final Animation<double> animation;
+
+  Widget build(BuildContext context) {
+    return Center(
+      child: AnimatedBuilder(
+          animation: animation,
+          builder: (BuildContext context, Widget child) {
+            return Container(
+                height: animation.value, width: animation.value, child: child);
+          },
+          child: child),
+    );
+  }
+}
+
+然后在主 Widget 的 build 方法中直接返回 GrowTransition 即可。
+Widget build(BuildContext context) {
+  return GrowTransition(child: LogoWidget(), animation: animation);
+}
+完整的代码如下
+
+class LogoWidget extends StatelessWidget {
+  build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 10.0),
+      child: FlutterLogo(),
+    );
+  }
+}
+
+class GrowTransition extends StatelessWidget {
+  GrowTransition({this.child, this.animation});
+
+  final Widget child;
+  final Animation<double> animation;
+
+  Widget build(BuildContext context) {
+    return Center(
+      child: AnimatedBuilder(
+          animation: animation,
+          builder: (BuildContext context, Widget child) {
+            return Container(
+                height: animation.value, width: animation.value, child: child);
+          },
+          child: child),
+    );
+  }
+}
+
+class AnimScreen extends StatefulWidget {
+  @override
+  _AnimState createState() => _AnimState();
+}
+
+class _AnimState extends State<AnimScreen> with SingleTickerProviderStateMixin {
+  Animation<double> animation;
+  AnimationController controller;
+
+  @override
+  initState() {
+    super.initState();
+    controller = AnimationController(
+        duration: const Duration(milliseconds: 2000), vsync: this);
+    animation = Tween(begin: 0.0, end: 300.0).animate(controller);
+    controller.forward();
+  }
+
+  Widget build(BuildContext context) {
+    return GrowTransition(child: LogoWidget(), animation: animation);
+  }
+
+  dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+}
+
 
