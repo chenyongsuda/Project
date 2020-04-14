@@ -412,3 +412,27 @@ AnimatedModalBarrier：http://laomengit.com/flutter/widgets/AnimatedModalBarrier
 AnimatedList：http://laomengit.com/flutter/widgets/AnimatedList/
 Hero：http://laomengit.com/flutter/widgets/Hero/
 ————————————————
+
+常用效果
+https://www.jianshu.com/p/b3d4a645f8b6
+SizeTransition
+宽度或者高度缩放
+
+重点是axis控制的, 百叶窗效果可实现
+SizeTransition(
+    axis: Axis.horizontal, //控制宽度或者高度缩放
+    sizeFactor:
+        new Tween(begin: 1.0, end: 0.5).animate(controllerTest),
+    child: Container(
+      width: 100.0,
+      height: 100.0,
+      color: Colors.red,
+      child: Text('12345678'),
+    )
+)
+
+
+
+
+
+
