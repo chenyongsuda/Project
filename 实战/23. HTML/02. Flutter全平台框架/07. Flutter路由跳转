@@ -1,0 +1,24 @@
+Navigator的跳转有两种，一种是显示跳转，需要我们在MaterialPageRoute中指定widget
+
+Navigator.of(context).push(new MaterialPageRoute(builder: (context) {
+      //指定跳转的页面
+      return new Demo1();
+    },));
+另一种是隐身跳转，这种跳转需要先定义，后使用，跳转方式就像Arouter一样的路径方式，定义部分需要在MaterialApp下定义routes，
+routes就跟一个Map<path,Page>集合一样，定义好了path对应的page，那么下次跳转，我们就可以针对path去跳转了
+
+ @override
+  Widget build(BuildContext context) {
+    return new MaterialApp(
+      home: new Scaffold(
+        body: new Center(child: new RaisedButton(onPressed: _pushPage,child: new Text("跳转"))),
+      ),
+      //定义路由
+      routes: <String,WidgetBuilder>{
+        "/demo1":(BuildContext context)=>new Demo1(),
+      },
+    );
+跳转使用
+Navigator.of(context).pushNamed("/demo1");
+知道路由如何跳转了，那么，我们开始实战吧
+————————————————
