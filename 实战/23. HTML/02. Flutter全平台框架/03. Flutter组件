@@ -159,7 +159,72 @@ void main() {
 中间按钮不强制撑开
 ----------------
 Container：一个拥有绘制、定位、调整大小的Widget,Flutter 里具体的内容 Weight 没法自己设置宽高了，全得靠诸如：Container 这样的父容器来设置，Container 只能给 width/height 设置具体值和最大最小值
+      1· 如果Container没有子Widget，没有height，没有width，没有constraints，并且父窗口提供无限制约束，则Container尝试尽可能小。
+      2· 如果Container没有子Widget，没有alignment，而是一个height，width或 constraints提供，Container试图给出这些限制和父Widget的约束相结合，以尽可能小。
+      3· 如果Container没有子Widget，没有height，没有width，没有constraints，没有alignment，但是父窗口提供了有界约束，那么Container会扩展以适应父窗口提供 的约束。
+      4· 如果Container具有alignment，并且父窗口提供无限制约束，则constraints会尝试围绕子Widget的alignment自身大小。
+      5· 如果Container具有alignment，并且父窗口提供有界约束，则constraints会尝试展开以适合父窗口，然后根据alignment将子项置于其自身内。
+      6· Container具有子Widget，但没有height，没有width，没有constraints，没有alignment，将父级constraints传递给子级，自身调整大小。
+      
+      目前看的特征是如果不设置约束,并且父节点为有界,则撑满,如有自控件的话就包裹子控件,设定宽高的话会作用于子节点.
+      一般大小的话可以有两种warp content和match_parent,如果有子控件的话相当于warp content,如果在有子控件条件下要match parent的话需要设置
+      constraints BoxConstraints.expand()
+      
+      BoxConstraints当我们不设置宽高尺寸时，minWidth = 0.0 && minHeight = 0.0 && maxWidth = double.infinity && maxHeight = double.infinity;
+      
+      框架约束：BoxConstraints 
+        // 用指定的约束大小创建框架大小
+        const BoxConstraints.tightFor({
+          double width,
+          double height,
+        })
+
+        // 创建需要给定宽度或高度的框约束，除非它们是无限的
+        const BoxConstraints.tightForFinite({
+          double width = double.infinity,
+          double height = double.infinity,
+        })
+
+        // 创建禁止大小大于给定大小的框约束
+        BoxConstraints.loose(Size size)
+          : minWidth = 0.0,
+            maxWidth = size.width,
+            minHeight = 0.0,
+            maxHeight = size.height;
+
+        // 创建扩展为填充另一个框约束的框约束
+        const BoxConstraints.expand({
+          double width,
+          double height,
+        })
+      
+
+
 SizedBox：一个特定大小的盒子，这个Widget强制它的孩子有一个特性的宽度和高度。如果宽度或高度为Null，则此Widget将调整自身大小以匹配该维度中的孩子的大小
+SizedBox 可自定义 width 和 height，当限制宽高时，子 Widget 无论宽高如何，均默认填充；通过设置 double.infinity 填充父类 Widget 宽高，注意此时父类要有限制，不可是无限宽高；当 width 和 height 未设置时，根据子 Widget 大小展示；
+
+1. SizedBox({ Key key, this.width, this.height, Widget child })
+sample:
+      return SizedBox(width: 100.0, height: 100.0, child: Container(color: Colors.teal.withOpacity(0.4)));
+      return SizedBox(width: 100.0, height: 100.0, child: Container(color: Colors.red.withOpacity(0.4), width: 200.0, height: 200.0));
+      return SizedBox(width: 100.0, height: 100.0, child: Container(color: Colors.pink.withOpacity(0.4), width: 50.0, height: 50.0));
+      return SizedBox(width: double.infinity, height: 100.0, child: Container(color: Colors.blueAccent.withOpacity(0.4)));
+
+2. SizedBox.expand({ Key key, Widget child })
+      return SizedBox.expand(child: Container(color: Colors.blueAccent.withOpacity(0.4)));
+      
+3. SizedBox.shrink({ Key key, Widget child })
+      .shrink 同样是便捷方法，但 width 和 height 均为 0.0，无论子 Widget 设置多少均不展示；小菜暂时未想出此类方法的应用场景；
+return SizedBox.shrink(child: Container(color: Colors.pink.withOpacity(0.4)));
+
+4. SizedBox.fromSize({ Key key, Widget child, Size size })
+      .fromSize 便捷方式与基本的构建方式基本相同，只是 width 和 height 由 Size 封装，小菜用此方法实现与基本方式相同的效果；
+      return SizedBox.fromSize(size: Size(100.0, 100.0), child: Container(color: Colors.teal.withOpacity(0.4)));
+      return SizedBox.fromSize(size: Size(100.0, 100.0), child: Container(color: Colors.red.withOpacity(0.4), width: 200.0, height: 200.0));
+      return SizedBox.fromSize(size: Size(100.0, 100.0), child: Container(color: Colors.pink.withOpacity(0.4), width: 50.0, height: 50.0));
+      return SizedBox.fromSize(size: Size(double.infinity, 100.0), child: Container(color: Colors.blueAccent.withOpacity(0.4)));
+
+
 
 
 
