@@ -308,7 +308,9 @@ A widget that imposes additional constraints on its child.
 
 控制子控件的宽度,高度,最小宽度最小高度.
 
-
+FittedBox 控制子控件对父控件的填充方式比如Text
+AspectRatio 控制子控件的显示宽高比 子控件要有宽高如Container
+ConstrainedBox 控制子控件的显示宽高 子控件要有宽高如Container
 ---------------
 
 
