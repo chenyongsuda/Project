@@ -157,6 +157,11 @@ void main() {
 }
 ————————————————
 中间按钮不强制撑开
+----------------
+Container：一个拥有绘制、定位、调整大小的Widget,Flutter 里具体的内容 Weight 没法自己设置宽高了，全得靠诸如：Container 这样的父容器来设置，Container 只能给 width/height 设置具体值和最大最小值
+SizedBox：一个特定大小的盒子，这个Widget强制它的孩子有一个特性的宽度和高度。如果宽度或高度为Null，则此Widget将调整自身大小以匹配该维度中的孩子的大小
+
+
 
 流式布局
 Wrap直接使用，超过屏幕自动换行
