@@ -301,7 +301,7 @@ new Container(
 AspectRatio适用于需要固定宽高比的情景下。笔者最近使用这个控件的场景是相机，相机的预览尺寸都是固定的几个值，因此不能随意去设置相机的显示区域，必须按照比率进行显示，否则会出现拉伸的情况。除此之外，倒是用的不多。
 
 ---------------
-ConstrainedBox
+ConstrainedBox(控制子控件的大小,如果放非Text不生效,放Container容器可以)
 A widget that imposes additional constraints on its child.
 这个控件的作用是添加额外的限制条件（constraints）到child上，本身挺简单的，可以被一些控件替换使用。Flutter的布局控件体系，
 梳理着发现确实有点乱，感觉总体思想是缺啥就造啥，哈哈。
