@@ -447,3 +447,56 @@ const Center({
 当 heightFactor != null时,Center组件的高度等于 heightFactor*子组件的高度
 3.child: 显示在Center组件内部的子组件,由于受到Center组件的限制,在Center内部居中显示
 ————————————————
+
+
+
+
+------------------------------
+实例：在页面
+1. 显示200*200的黄色外部框,内部框显示margin外框一点值,
+body: Align(
+alignment: Alignment.topCenter,
+      child: Container(
+      width: 200.0,
+      height: 200.0,
+      // color:Colors.yellow,
+      decoration: BoxDecoration(
+        color: Colors.yellow,
+        borderRadius : BorderRadius.all(Radius.circular(10.0))
+      ),
+      child: 
+        child:Container(
+          // alignment: Alignment.center,
+          color: Colors.pink,
+          margin: EdgeInsets.all(10.0),
+          child: Text("123"),
+        ),
+),
+)
+
+2.由于Container默认行为是外部设定了宽高的话内部Container也会往外延伸,相当如继承了外部的宽高
+需要去掉这种宽高设定使用UnconstrainedBox
+body: Align(
+    alignment: Alignment.topCenter,
+            child: Container(
+            width: 200.0,
+            height: 200.0,
+            // color:Colors.yellow,
+            decoration: BoxDecoration(
+              color: Colors.yellow,
+              borderRadius : BorderRadius.all(Radius.circular(10.0))
+            ),
+            child: UnconstrainedBox(
+              child:Container(
+                // alignment: Alignment.center,
+                color: Colors.pink,
+                margin: EdgeInsets.all(10.0),
+                child: Text("123"),
+              )
+            ),
+    ),
+  )
+  
+  
+
+
