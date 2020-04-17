@@ -198,8 +198,15 @@ Container：一个拥有绘制、定位、调整大小的Widget,Flutter 里具�
           double height,
         })
       
+        Alignment有3种方式，2套坐标
+        // 绝对坐标(绝对坐标以 Container 左上角为原点，像左像右延伸至1，FractionalOffset(0.5, 0.5) 代表居中)
+            alignment: FractionalOffset(0, 0),
+        // 相对坐标(相对坐标是以 Container 中心点为原点，左边为负数，右边是正数，Alignment(0，0) 代表居中)
+            alignment: Alignment(-1,1),
+       // 预设模式
+            alignment: Alignment.center,
 
-
+----------------
 SizedBox：一个特定大小的盒子，这个Widget强制它的孩子有一个特性的宽度和高度。如果宽度或高度为Null，则此Widget将调整自身大小以匹配该维度中的孩子的大小
 SizedBox 可自定义 width 和 height，当限制宽高时，子 Widget 无论宽高如何，均默认填充；通过设置 double.infinity 填充父类 Widget 宽高，注意此时父类要有限制，不可是无限宽高；当 width 和 height 未设置时，根据子 Widget 大小展示；
 
@@ -223,6 +230,94 @@ return SizedBox.shrink(child: Container(color: Colors.pink.withOpacity(0.4)));
       return SizedBox.fromSize(size: Size(100.0, 100.0), child: Container(color: Colors.red.withOpacity(0.4), width: 200.0, height: 200.0));
       return SizedBox.fromSize(size: Size(100.0, 100.0), child: Container(color: Colors.pink.withOpacity(0.4), width: 50.0, height: 50.0));
       return SizedBox.fromSize(size: Size(double.infinity, 100.0), child: Container(color: Colors.blueAccent.withOpacity(0.4)));
+
+----------------
+Align：一个WIdget，它可以将其子Widget对其，并可以根据子Widget的大小自动调整Align区域的大小(调整自己大小)
+Align的布局行为分为两种情况：
+
+当widthFactor和heightFactor为null的时候，当其有限制条件的时候，Align会根据限制条件尽量的扩展自己的尺寸，当没有限制条件的时候，会调整到child的尺寸；
+当widthFactor或者heightFactor不为null的时候，Aligin会根据factor属性，扩展自己的尺寸，例如设置widthFactor为2.0的时候，那么，Align的宽度将会是child的两倍。
+
+new Align(
+  alignment: Alignment.center,
+  widthFactor: 2.0,
+  heightFactor: 2.0,
+  child: new Text("Align"),
+)
+例子依旧很简单，设置一个宽高为child两倍区域的Align，其child处在正中间。
+Align的构造函数基本上就是宽高因子、对齐方式属性。日常使用中，宽高因子属性基本上用的不多。如果是复杂的布局，Container内部的align属性也可以实现相同的效果。
+
+Center
+Center继承自Align，只不过是将alignment设置为Alignment.center，其他属性例如widthFactor、heightFactor，布局行为，都与Align完全一样
+
+----------------
+Padding：一个Widget，会给其子Widget添加指定的填充
+Padding的布局分为两种情况：
+
+当child为空的时候，会产生一个宽为left+right，高为top+bottom的区域；
+当child不为空的时候，Padding会将布局约束传递给child，根据设置的padding属性，缩小child的布局尺寸。然后Padding将自己调整到child设置了padding属性的尺寸，在child周围创建空白区域。
+
+使用场景
+Padding本身还是挺简单的，基本上需要间距的地方，它都能够使用。如果在单一的间距场景，使用Padding比Container的成本要小一些，毕竟Container里面包含了多个widget。Padding能够实现的，Container都能够实现，只不过，Container更加的复杂。
+
+----------------
+FittedBox：按自己的大小调整其子Widget的大小和位置(调整缩放子控件)
+      按照其官方的介绍，它主要做了两件事情，缩放（Scale）以及位置调整（Position）。
+      FittedBox会在自己的尺寸范围内缩放并且调整child位置，使得child适合其尺寸。做过移动端的，可能会联想到ImageView控件，它是将图片在其范围内，按照规则，进行缩放位置调整。FittedBox跟ImageView是有些类似的，可以猜测出，它肯定有一个类似于ScaleType的属性。
+
+      FittedBox的布局行为还算简单，官方没有给出说明，我在这里简单说一下。由于FittedBox是一个容器，需要让其child在其范围内缩放，因此其布局行为分两种情况：
+      如果外部有约束的话，按照外部约束调整自身尺寸，然后缩放调整child，按照指定的条件进行布局；
+      如果没有外部约束条件，则跟child尺寸一致，指定的缩放以及位置属性将不起作用。
+
+      在使用这个控件的时候FittedBox父节点宽高需要定了.然后子控件自适应设定的缩放方式
+      fit 即child的缩放方式，比如以下缩放方式：
+      fill(全图显示，显示可能拉伸，充满)常用
+      contain(全图显示，显示原比例，不需充满)常用
+      cover(显示可能拉伸，可能裁剪，充满)
+      fitWidth(确保显示了源的全部宽度，不管这是否意味着源垂直地溢出目标框):
+      fitHeight(确保显示源的完整高度，不管这是否意味着源水平地溢出目标框):
+      none(将源文件对齐到目标框内(默认情况下居中)，并丢弃位于框外的源文件的任何部分,源映像没有调整大小。):
+
+使用场景
+FittedBox在目前的项目中还未用到过。对于需要缩放调整位置处理的，一般都是图片。笔者一般都是使用Container中的decoration属性去实现相应的效果。对于其他控件需要缩放以及调整位置的，目前还没有遇到使用场景，大家只需要知道有这么一个控件，可以实现这个功能即可。
+
+----------------
+AspectRatio的布局行为分为两种情况：
+
+AspectRatio首先会在布局限制条件允许的范围内尽可能的扩展，widget的高度是由宽度和比率决定的，类似于BoxFit中的contain，按照固定比率去尽量占满区域。
+如果在满足所有限制条件过后无法找到一个可行的尺寸，AspectRatio最终将会去优先适应布局限制条件，而忽略所设置的比率。
+
+new Container(
+  height: 200.0,
+  child: new AspectRatio(
+    aspectRatio: 1.5,
+    child: new Container(
+      color: Colors.red,
+    ),
+  ),
+);
+
+使用场景
+AspectRatio适用于需要固定宽高比的情景下。笔者最近使用这个控件的场景是相机，相机的预览尺寸都是固定的几个值，因此不能随意去设置相机的显示区域，必须按照比率进行显示，否则会出现拉伸的情况。除此之外，倒是用的不多。
+
+---------------
+ConstrainedBox
+A widget that imposes additional constraints on its child.
+这个控件的作用是添加额外的限制条件（constraints）到child上，本身挺简单的，可以被一些控件替换使用。Flutter的布局控件体系，
+梳理着发现确实有点乱，感觉总体思想是缺啥就造啥，哈哈。
+
+控制子控件的宽度,高度,最小宽度最小高度.
+
+
+---------------
+
+
+
+Baseline：根据子项的基准线对它们的位置进行定位的Widget
+Offstage：一个布局Widget，可以控制其子Widget的显示和隐藏
+LimitedBox：一个当其自身不受约束时才限制其大小的盒子
+OverflowBox：对其子项施加不同约束的Widget，它可能允许子项溢出父级
+
 
 
 
