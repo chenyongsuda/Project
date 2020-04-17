@@ -314,12 +314,45 @@ ConstrainedBox 控制子控件的显示宽高 子控件要有宽高如Container
 ---------------
 
 
-
+---------------
 Baseline：根据子项的基准线对它们的位置进行定位的Widget
-Offstage：一个布局Widget，可以控制其子Widget的显示和隐藏
-LimitedBox：一个当其自身不受约束时才限制其大小的盒子
-OverflowBox：对其子项施加不同约束的Widget，它可能允许子项溢出父级
 
+---------------
+Offstage：一个布局Widget，可以控制其子Widget的显示和隐藏
+使用
+child: new Offstage(
+          offstage: _offstage,
+          child: new Text('显示和隐藏',style: TextStyle(fontSize: 40.0),),
+        ),
+
+---------------
+LimitedBox：一个当其自身不受约束时才限制其大小的盒子
+new LimitedBox(
+  maxWidth: 100,
+  child: new Container(
+    color: Colors.pink,
+    width: 300,
+  ),
+)
+
+---------------
+OverflowBox：对其子项施加不同约束的Widget，它可能允许子项溢出父级
+body: new Container(
+    color: Colors.blue,
+    width: 200,
+    height: 200,
+    padding: EdgeInsets.all(20.0),
+    child: new OverflowBox(
+      alignment: Alignment.topLeft,
+      maxWidth: 200,
+      maxHeight: 200,
+      child: new Container(
+        color: Colors.pink,
+      ),
+    ),
+  ),
+  
+现象是距离左上角20 20处有一个200 * 200 的红色框
 
 
 
