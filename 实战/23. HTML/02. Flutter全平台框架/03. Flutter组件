@@ -261,7 +261,7 @@ Padding的布局分为两种情况：
 Padding本身还是挺简单的，基本上需要间距的地方，它都能够使用。如果在单一的间距场景，使用Padding比Container的成本要小一些，毕竟Container里面包含了多个widget。Padding能够实现的，Container都能够实现，只不过，Container更加的复杂。
 
 ----------------
-FittedBox：按自己的大小调整其子Widget的大小和位置(调整缩放子控件)
+FittedBox：按自己的大小调整其子Widget的大小和位置(调整缩放子控件)(调整子节点的大小,根据服节点的占用空间,如父节点有宽度高度,就算子节点是个text也会放大或者缩小)
       按照其官方的介绍，它主要做了两件事情，缩放（Scale）以及位置调整（Position）。
       FittedBox会在自己的尺寸范围内缩放并且调整child位置，使得child适合其尺寸。做过移动端的，可能会联想到ImageView控件，它是将图片在其范围内，按照规则，进行缩放位置调整。FittedBox跟ImageView是有些类似的，可以猜测出，它肯定有一个类似于ScaleType的属性。
 
@@ -282,7 +282,7 @@ FittedBox：按自己的大小调整其子Widget的大小和位置(调整缩放�
 FittedBox在目前的项目中还未用到过。对于需要缩放调整位置处理的，一般都是图片。笔者一般都是使用Container中的decoration属性去实现相应的效果。对于其他控件需要缩放以及调整位置的，目前还没有遇到使用场景，大家只需要知道有这么一个控件，可以实现这个功能即可。
 
 ----------------
-AspectRatio的布局行为分为两种情况：
+AspectRatio的布局行为分为两种情况：(父节点设定宽度或者高度,AspectRatio子节点是text这种的话text是不会变化大小的,AspectRatio会变成一个按照父节点和子节点生成一个比例盒子)
 
 AspectRatio首先会在布局限制条件允许的范围内尽可能的扩展，widget的高度是由宽度和比率决定的，类似于BoxFit中的contain，按照固定比率去尽量占满区域。
 如果在满足所有限制条件过后无法找到一个可行的尺寸，AspectRatio最终将会去优先适应布局限制条件，而忽略所设置的比率。
