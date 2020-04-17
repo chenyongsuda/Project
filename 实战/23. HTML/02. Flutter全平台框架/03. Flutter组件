@@ -378,6 +378,14 @@ Padding(
 
 限制类容器(ConstrainedBox、SizedBox等等)
 用于限制组件的最大最小值，格式如下，一个是限制条件的属性、一个是child放的内容
+BoxConstraints的默认值如下：
+
+const BoxConstraints({
+  this.minWidth = 0.0,
+  this.maxWidth = double.infinity, //无限大
+  this.minHeight = 0.0,
+  this.maxHeight = double.infinity, //无限大
+});
 
 ConstrainedBox(
     constraints: BoxConstraints(minWidth: 60.0, minHeight: 100.0),  //父
@@ -389,6 +397,97 @@ ConstrainedBox(
     )
 )
 
+---------------------
+FractionallySizedBox
+当我们需要一个控件的尺寸是相对尺寸时，比如当前按钮的宽度占父组件的70%，可以使用FractionallySizedBox来实现此效果。
+
+使用FractionallySizedBox包裹子控件，设置widthFactor宽度系数或者heightFactor高度系数，系数值的范围是0-1，0.7表示占父组件的70%，用法如下：
+
+FractionallySizedBox(
+  widthFactor: .7,
+  child: RaisedButton(
+    child: Text('button'),
+  ),
+)
+通过alignment参数控制子组件显示的位置，默认为center，用法如下：
+
+FractionallySizedBox(
+  alignment: Alignment.centerLeft,
+  ...
+)
+如果想让2个控件之间的间隔是当前父控件的10%，可以使用无子控件的FractionallySizedBox，用法如下：
+
+Container(
+  height: 200,
+  color: Colors.grey,
+  child: Column(
+    children: <Widget>[
+      Container(
+        height: 50,
+        color: Colors.red,
+      ),
+      Flexible(
+        child: FractionallySizedBox(
+          heightFactor: .1,
+        ),
+      ),
+      Container(
+        height: 50,
+        color: Colors.blue,
+      ),
+    ],
+  ),
+)
+
+------------------------
+LimitedBox
+LimitedBox组件是当不受父组件约束时限制它的尺寸，什么叫不受父组件约束？就像这篇文章介绍的其他组件，它们都会对子组件约束，没有约束的父组件有ListView、Row、Column等，如果LimitedBox的父组件受到约束，此时LimitedBox将会不做任何操作，我们可以认为没有这个组件，代码如下：
+
+Container(
+  height: 100,
+  width: 100,
+  child: LimitedBox(
+    maxHeight: 50,
+    maxWidth: 100,
+    child: Container(color: Colors.green,),
+  ),
+)
+效果如下：
+LimitedBox设置的宽高不是正方形，此时效果时正方形，说明LimitedBox没有起作用。
+在ListView中直接添加Container组件，如下：
+
+ListView(
+  children: <Widget>[
+    Container(
+      color: Colors.green,
+    ),
+    Container(
+      color: Colors.red,
+    ),
+  ],
+)
+
+这时你会发现什么也没有，因为在容器不受约束时，大小将会设置0，只需将Container包裹在LimitedBox中即可：
+ListView(
+  children: <Widget>[
+    LimitedBox(
+      maxHeight: 100,
+      child: Container(
+        color: Colors.green,
+      ),
+    ),
+    LimitedBox(
+      maxHeight: 100,
+      child: Container(
+        color: Colors.red,
+      ),
+    ),
+  ],
+)
+
+
+
+------------------------
 装饰器DecoratedBox
 类似于Android的shape，可以设置圆角、渐变、阴影等等。格式如下
  DecoratedBox(
