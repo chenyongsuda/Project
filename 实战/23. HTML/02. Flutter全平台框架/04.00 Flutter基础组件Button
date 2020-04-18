@@ -1,1 +1,65 @@
+Material 组件库中提供了多种按钮组件如RaisedButton灰色按钮、FlatButton无色按钮、OutlineButton边框无色按钮,IconButton图标原型按钮
+
+使用RaisedButton非常简单，如：
+RaisedButton(
+  child: Text("normal"),
+  onPressed: () {},
+);
+其他类似
+
+还有这些按钮带图标带文字的构造方式
+RaisedButton.icon(
+  icon: Icon(Icons.send),
+  label: Text("发送"),
+  onPressed: _onPressed,
+),
+
+自定义按钮外观
+const FlatButton({
+  ...  
+  @required this.onPressed, //按钮点击回调
+  this.textColor, //按钮文字颜色
+  this.disabledTextColor, //按钮禁用时的文字颜色
+  this.color, //按钮背景颜色
+  this.disabledColor,//按钮禁用时的背景颜色
+  this.highlightColor, //按钮按下时的背景颜色
+  this.splashColor, //点击时，水波动画中水波的颜色
+  this.colorBrightness,//按钮主题，默认是浅色主题 
+  this.padding, //按钮的填充
+  this.shape, //外形
+  @required this.child, //按钮的内容
+})
+
+实例：
+FlatButton(
+  color: Colors.blue,
+  highlightColor: Colors.blue[700],
+  colorBrightness: Brightness.dark,
+  splashColor: Colors.grey,
+  child: Text("Submit"),
+  shape:RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+  onPressed: () {},
+)
+
+使用ShapeDecoration可以做出各种形状
+
+斜切角: BeveledRectangleBorder
+圆角: RoundedRectangleBorder
+超椭圆: SuperellipseShape
+体育场: StadiumBorder
+圆形: CircleBorder
+
+// 矩形边色
+// shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10)), side: BorderSide(color: Color(0xFFFFFFFF), style: BorderStyle.solid, width: 2))
+// 圆形边色
+// shape: CircleBorder(side: BorderSide(color: Color(0xFFFFFF00), style: BorderStyle.solid, width: 2))
+// 体育场（竖向椭圆）
+// shape: StadiumBorder(side: BorderSide(width: 2, style: BorderStyle.solid, color: Color(0xFF00FFFF))
+// 角形（八边角）边色
+// shape: BeveledRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10)), side: BorderSide(color: Color(0xFFFFFFFF), style: BorderStyle.solid, width: 2))
+
+
+
+
+
 
