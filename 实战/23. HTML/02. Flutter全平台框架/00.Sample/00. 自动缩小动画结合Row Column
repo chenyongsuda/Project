@@ -1,0 +1,130 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+
+void main(){
+  runApp(DemoApp());
+}
+
+
+class DemoApp extends StatelessWidget {
+  const DemoApp({Key key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: "Demo App",
+      theme: ThemeData(
+        primarySwatch: Colors.yellow,
+      ),
+      home: MainPageSTF(),
+      // home:Container(
+      //     width: 300.0,
+      //     height: 300.0,
+      //     color: Colors.pink,
+      //     child: Text("123"),
+      // )
+    );
+  }
+}
+
+class MainPageSTF extends StatefulWidget {
+  MainPageSTF({Key key}) : super(key: key);
+
+  @override
+  _MainPageSTFState createState() => _MainPageSTFState();
+}
+
+class _MainPageSTFState extends State<MainPageSTF> with TickerProviderStateMixin{
+  bool _selectedValue = true;
+  AnimationController controller;
+  // bool _show = true;
+  @override
+  void initState() {
+    controller = AnimationController(
+        duration: const Duration(milliseconds: 200), vsync: this);
+    super.initState();
+  }
+
+  @override
+  dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+          title:Text("MainPage"),
+          centerTitle: true,
+        ),
+        body: Column(
+          children: <Widget>[
+             Container(
+               height: 80.0,
+               color: Colors.yellow,
+               child: Row(
+                 children: <Widget>[
+                    SizeTransition(
+                        axis: Axis.horizontal, //控制宽度或者高度缩放
+                        sizeFactor:
+                            new Tween(begin: 1.0, end: 0.0).animate(controller),
+                        child: Container(
+                        color: Colors.blue,
+                        constraints: BoxConstraints.expand(width: 50.0),
+                        child: Icon(Icons.ac_unit,color: Colors.black,)
+                        ),
+                    )
+                    ,Expanded(
+                      child: ListTile(
+                        title:Text("123")
+                        ,subtitle: Text("123")
+                        ,
+                      )
+                    ),
+                    CupertinoSwitch(
+                      value: _selectedValue, 
+                      activeColor: Colors.blue,
+                      onChanged: (value){
+                          setState((){
+                            _selectedValue=value;
+                            // _show = !_show;
+                            if(_selectedValue){
+                              controller.reverse();
+                            }else{
+                              controller.forward();
+                            }
+                          });
+                        }
+                    ),
+                    Checkbox(value: _selectedValue, onChanged: null)
+                 ], 
+               ),
+             )
+            ,
+            // ,Image.network("https://pcdn.flutterchina.club/imgs/3-17.png")
+          ],
+        ));
+  }
+}
+
+
+// http://pic-bucket.ws.126.net/photo/0001/2020-04-17/FADADPNJ00AP0001NOS.jpg
+
+
+class ViewPage extends StatelessWidget {
+  const ViewPage({Key key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text("ViewPage")
+        ),
+        body:Text("123")
+      ),
+    );
+  }
+}
