@@ -1,0 +1,65 @@
+https://flutter.cn/docs/development/ui/layout/box-constraints
+
+常遇到的问题是无边界约束导致的空间摆放异常父控件给了无边界约束,子控件是个尽可能大的空间.(父控件个子控件约束是无边界,子控件尽可能大,那子控件大小就渲染不出来
+,需要在子控件外部包裹或者确定子控件的宽度)
+
+-----------------------------
+见文档：
+无边界约束
+在某些情况下，传递给框的约束是 无边界 的或无限的。这意味着约束的最大宽度或最大高度为double.INFINITY。
+当传递无边界约束给类型为尽可能大的框时会失效，在 debug 模式下，则会抛出异常，该异常信息会把你引导到本页面。
+A box that tries to be as big as possible won’t function usefully when given an unbounded constraint and, 
+in debug mode, such a combination throws an exception that points to this file.
+
+渲染框具有无边界约束的最常见情况是：当其被置于 flex boxes (Row 和 Column)内以及 可滚动区域(ListView 和其它 ScrollView 的子类)内时。
+The most common cases where a render box finds itself with unbounded constraints are within flex boxes (Row and Column), 
+and within scrollable regions (ListView and other ScrollView subclasses).
+
+特别是 ListView 会试图扩展以适应其交叉方向可用空间 (比如说，如果它是一个垂直滚动块，它将试图扩充到与其父 widget 一样宽)。
+如果让垂直滚动的 ListView 嵌套在水平滚动的 ListView 内，那么被嵌套在里面的垂直滚动的 ListView 将会试图尽可能宽，直到无限宽，因为将其嵌套的是一个水平滚动的ListView，它可以在水平方向上一直滚动。
+In particular, ListView tries to expand to fit the space available in its cross-direction (for example, 
+if it’s a vertically-scrolling block, it tries to be as wide as its parent). 
+If you nest a vertically scrolling ListView inside a horizontally scrolling ListView, the inner one tries to be as wide as possible, 
+which is infinitely wide, since the outer one is scrollable in that direction.
+
+----------------------------
+弹性组件中放TextField问题
+The Row widget wants to determine the intrinsic size of its non-flexible children so it knows how much space that it has left for the flexible ones. However, TextField doesn't have an intrinsic width; it only knows how to size itself to the full width of its parent container. 
+Try wrapping it in a Flexible or Expanded to tell the Row that you're expecting the TextField to take up the remaining space:
+      new Row(
+        children: <Widget>[
+          new Flexible(
+            child: new TextField(
+              decoration: const InputDecoration(helperText: "Enter App ID"),
+              style: Theme.of(context).textTheme.body1,
+            ),
+          ),
+        ],
+      ),
+      
+TextField expands in horizontal direction and so does the Row, so we need to constrain the width of the TextField, 
+there are many ways of doing it.
+Use Expanded
+   Row(
+    children: <Widget>[
+      Expanded(child: TextField()),
+      // more widgets
+    ],
+  )
+  Use Flexible
+
+  Row(
+    children: <Widget>[
+      Flexible(child: TextField()),
+      // more widgets
+    ],
+  )
+  Wrap it in Container or SizedBox and provide width
+
+  Row(
+    children: <Widget>[
+      SizedBox(width: 100, child: TextField()),
+      // more widgets
+    ],
+  )       
+
