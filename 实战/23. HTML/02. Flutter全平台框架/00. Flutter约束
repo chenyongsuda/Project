@@ -67,4 +67,4 @@ Use Expanded
 1. 在弹性组件下,如果有尽可能大组件的话如texteditor 或者其他弹性组件的话需要加Expended或者固定宽度
 2. 在page根节点或者弹性组件Row/Column的宽度的话,Container的宽度是自适应的. 除非加上一个宽松依赖的Center或者Align或者unconstrained来解除约束.
 3. 如果Container在Listview的直接子节点,其宽度就会像在Page下被其宽度约束控制导致其无法改变宽度约束.除非解除其上层约束或者用Align/Center 或者Row
-4. Container特征,有子节点大小覆盖子节点,无子节点扩大.有约束使用约束,如直接在page下在listview下.
+4. Container特征,有子节点大小覆盖子节点,无子节点扩大.有约束使用约束,如直接在MaterialApp下在listview下.
