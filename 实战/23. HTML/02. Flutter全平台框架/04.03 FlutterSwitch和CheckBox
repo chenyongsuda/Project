@@ -1,0 +1,52 @@
+单选开关和复选框
+
+Material 组件库中提供了Material风格的单选开关Switch和复选框Checkbox，虽然它们都是继承自StatefulWidget，但它们本身不会保存当前选中状态，选中状态都是由父组件来管理的。当Switch或Checkbox被点击时，会触发它们的onChanged回调，我们可以在此回调中处理选中状态改变逻辑。下面看一个简单的例子：
+
+class SwitchAndCheckBoxTestRoute extends StatefulWidget {
+  @override
+  _SwitchAndCheckBoxTestRouteState createState() => new _SwitchAndCheckBoxTestRouteState();
+}
+
+class _SwitchAndCheckBoxTestRouteState extends State<SwitchAndCheckBoxTestRoute> {
+  bool _switchSelected=true; //维护单选开关状态
+  bool _checkboxSelected=true;//维护复选框状态
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Switch(
+          value: _switchSelected,//当前状态
+          onChanged:(value){
+            //重新构建页面  
+            setState(() {
+              _switchSelected=value;
+            });
+          },
+        ),
+        Checkbox(
+          value: _checkboxSelected,
+          activeColor: Colors.red, //选中时的颜色
+          onChanged:(value){
+            setState(() {
+              _checkboxSelected=value;
+            });
+          } ,
+        )
+      ],
+    );
+  }
+}
+上面代码中，由于需要维护Switch和Checkbox的选中状态，所以SwitchAndCheckBoxTestRoute继承自StatefulWidget 。
+在其build方法中分别构建了一个Switch和Checkbox，初始状态都为选中状态，当用户点击时，会将状态置反，
+然后回调用setState()通知Flutter framework重新构建UI
+
+IOS的切换按钮为CupertinoSwitch 用法一样.
+
+
+
+
+
+
+
+
+
