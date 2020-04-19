@@ -1,0 +1,145 @@
+Padding
+Padding可以给其子节点添加填充（留白），和边距效果类似。
+
+尺寸限制类容器
+ConstrainedBox、SizedBox、UnconstrainedBox、AspectRatio
+
+BoxConstraints
+BoxConstraints用于设置限制条件，它的定义如下：
+
+const BoxConstraints({
+  this.minWidth = 0.0, //最小宽度
+  this.maxWidth = double.infinity, //最大宽度
+  this.minHeight = 0.0, //最小高度
+  this.maxHeight = double.infinity //最大高度
+})
+
+BoxConstraints还定义了一些便捷的构造函数，用于快速生成特定限制规则的BoxConstraints，
+如BoxConstraints.tight(Size size)，它可以生成给定大小的限制；
+const BoxConstraints.expand()可以生成一个尽可能大的用以填充另一个容器的BoxConstraints。除此之外还有一些其它的便捷函数
+
+例子：
+ConstrainedBox(
+  constraints: BoxConstraints(
+    minWidth: double.infinity, //宽度尽可能大
+    minHeight: 50.0 //最小高度为50像素
+  ),
+  child: Container(
+      height: 5.0, 
+      child: redBox 
+  ),
+)
+
+SizedBox用于给子元素指定固定的宽高，如：
+
+SizedBox(
+  width: 80.0,
+  height: 80.0,
+  child: redBox
+)
+
+实际上SizedBox只是ConstrainedBox的一个定制，上面代码等价于：
+ConstrainedBox(
+  constraints: BoxConstraints.tightFor(width: 80.0,height: 80.0),
+  child: redBox, 
+)
+而BoxConstraints.tightFor(width: 80.0,height: 80.0)等价于：
+BoxConstraints(minHeight: 80.0,maxHeight: 80.0,minWidth: 80.0,maxWidth: 80.0)
+
+多重限制
+如果某一个组件有多个父级ConstrainedBox限制，那么最终会是哪个生效？我们看一个例子：
+ConstrainedBox(
+    constraints: BoxConstraints(minWidth: 60.0, minHeight: 60.0), //父
+    child: ConstrainedBox(
+      constraints: BoxConstraints(minWidth: 90.0, minHeight: 20.0),//子
+      child: redBox,
+    )
+)
+
+我们发现有多重限制时，对于minWidth和minHeight来说，是取父子中相应数值较大的。
+对于maxWidth和maxHeight，多重限制的策略是取最小的.
+
+UnconstrainedBox
+UnconstrainedBox不会对子组件产生任何限制，它允许其子组件按照其本身大小绘制。
+
+在实际开发中，当我们发现已经使用SizedBox或ConstrainedBox给子元素指定了宽高，但是仍然没有效果时，几乎可以断定：已经有父元素已经设置了限制！举个例子，如Material组件库中的AppBar（导航栏）的右侧菜单中，我们使用SizedBox指定了loading按钮的大小，代码如下：
+
+ AppBar(
+   title: Text(title),
+   actions: <Widget>[
+         SizedBox(
+             width: 20, 
+             height: 20,
+             child: CircularProgressIndicator(
+                 strokeWidth: 3,
+                 valueColor: AlwaysStoppedAnimation(Colors.white70),
+             ),
+         )
+   ],
+)
+
+我们会发现右侧loading按钮大小并没有发生变化！这正是因为AppBar中已经指定了actions按钮的限制条件，所以我们要自定义loading按钮大小，就必须通过UnconstrainedBox来“去除”父元素的限制，代码如下：
+AppBar(
+  title: Text(title),
+  actions: <Widget>[
+      UnconstrainedBox(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation(Colors.white70),
+              ),
+          ),
+      )
+  ],
+)
+
+AspectRatio，它可以指定子组件的长宽比、LimitedBox 用于指定最大宽高、FractionallySizedBox 可以根据父容器宽高的百分比来设置子组件宽高等
+
+---------------------
+装饰容器DecoratedBox
+我们通常会直接使用BoxDecoration类，它是一个Decoration的子类，实现了常用的装饰元素的绘制。
+
+BoxDecoration({
+  Color color, //颜色
+  DecorationImage image,//图片
+  BoxBorder border, //边框
+  BorderRadiusGeometry borderRadius, //圆角
+  List<BoxShadow> boxShadow, //阴影,可以指定多个
+  Gradient gradient, //渐变
+  BlendMode backgroundBlendMode, //背景混合模式
+  BoxShape shape = BoxShape.rectangle, //形状
+})
+
+Sample:
+DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(colors:[Colors.red,Colors.orange[700]]), //背景渐变
+      borderRadius: BorderRadius.circular(3.0), //3像素圆角
+      boxShadow: [ //阴影
+        BoxShadow(
+            color:Colors.black54,
+            offset: Offset(2.0,2.0),
+            blurRadius: 4.0
+        )
+      ]
+    ),
+  child: Padding(padding: EdgeInsets.symmetric(horizontal: 80.0, vertical: 18.0),
+    child: Text("Login", style: TextStyle(color: Colors.white),),
+  )
+)
+
+------------------------------
+剪裁（Clip）
+Flutter中提供了一些剪裁函数，用于对组件进行剪裁。
+
+ClipOval	子组件为正方形时剪裁为内贴圆形，为矩形时，剪裁为内贴椭圆
+ClipRRect	将子组件剪裁为圆角矩形
+ClipRect	剪裁子组件到实际占用的矩形大小（溢出部分剪裁）
+
+ClipOval(child: avatar), //剪裁为圆形
+ClipRRect( //剪裁为圆角矩形
+  borderRadius: BorderRadius.circular(5.0),
+  child: avatar,
+)
