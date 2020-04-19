@@ -1,0 +1,170 @@
+Flutter中通过Row和Column来实现线性布局，类似于Android中的LinearLayout控件。Row和Column都继承自Flex，我们将在弹性布局一节中详细介绍Flex。
+
+---------------------
+row and column
+
+主轴和纵轴
+对于线性布局，有主轴和纵轴之分，如果布局是沿水平方向，那么主轴就是指水平方向，而纵轴即垂直方向；如果布局沿垂直方向，那么主轴就是指垂直方向，而纵轴就是水平方向。在线性布局中，有两个定义对齐方式的枚举类MainAxisAlignment和CrossAxisAlignment，分别代表主轴对齐和纵轴对齐。
+
+Row
+Row可以在水平方向排列其子widget。定义如下：
+
+Row({
+  ...  
+  TextDirection textDirection,    
+  MainAxisSize mainAxisSize = MainAxisSize.max,    
+  MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start,
+  VerticalDirection verticalDirection = VerticalDirection.down,  
+  CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.center,
+  List<Widget> children = const <Widget>[],
+})
+textDirection：表示水平方向子组件的布局顺序(是从左往右还是从右往左)，默认为系统当前Locale环境的文本方向(如中文、英语都是从左往右，而阿拉伯语是从右往左)。
+mainAxisSize：表示Row在主轴(水平)方向占用的空间，默认是MainAxisSize.max，表示尽可能多的占用水平方向的空间，此时无论子widgets实际占用多少水平空间，Row的宽度始终等于水平方向的最大宽度；而MainAxisSize.min表示尽可能少的占用水平空间，当子组件没有占满水平剩余空间，则Row的实际宽度等于所有子组件占用的的水平空间；
+mainAxisAlignment：表示子组件在Row所占用的水平空间内对齐方式，如果mainAxisSize值为MainAxisSize.min，则此属性无意义，因为子组件的宽度等于Row的宽度。只有当mainAxisSize的值为MainAxisSize.max时，此属性才有意义，MainAxisAlignment.start表示沿textDirection的初始方向对齐，如textDirection取值为TextDirection.ltr时，则MainAxisAlignment.start表示左对齐，textDirection取值为TextDirection.rtl时表示从右对齐。而MainAxisAlignment.end和MainAxisAlignment.start正好相反；MainAxisAlignment.center表示居中对齐。读者可以这么理解：textDirection是mainAxisAlignment的参考系。
+verticalDirection：表示Row纵轴（垂直）的对齐方向，默认是VerticalDirection.down，表示从上到下。
+crossAxisAlignment：表示子组件在纵轴方向的对齐方式，Row的高度等于子组件中最高的子元素高度，它的取值和MainAxisAlignment一样(包含start、end、 center三个值)，不同的是crossAxisAlignment的参考系是verticalDirection，即verticalDirection值为VerticalDirection.down时crossAxisAlignment.start指顶部对齐，verticalDirection值为VerticalDirection.up时，crossAxisAlignment.start指底部对齐；而crossAxisAlignment.end和crossAxisAlignment.start正好相反；
+children ：子组件数组。
+
+特殊情况
+如果Row里面嵌套Row，或者Column里面再嵌套Column，那么只有对最外面的Row或Column会占用尽可能大的空间，里面Row或Column所占用的空间为实际大小.
+
+
+---------------------------
+Flex Expanded
+
+Expanded
+可以按比例“扩伸” Row、Column和Flex子组件所占用的空间。
+
+const Expanded({
+  int flex = 1, 
+  @required Widget child,
+})
+flex参数为弹性系数，如果为0或null，则child是没有弹性的，即不会被扩伸占用的空间。如果大于0，
+所有的Expanded按照其flex的比例来分割主轴的全部空闲空间。下面我们看一个例子：
+Flex(
+  direction: Axis.horizontal,
+  children: <Widget>[
+    Expanded(
+      flex: 1,
+      child: Container(
+        height: 30.0,
+        color: Colors.red,
+      ),
+    ),
+    Expanded(
+      flex: 2,
+      child: Container(
+        height: 30.0,
+        color: Colors.green,
+      ),
+    ),
+  ],
+  
+//Flex的两个子widget按1：2来占据水平空间
+
+----------------------------
+层叠布局 Stack、Positioned
+层叠布局和Web中的绝对定位、Android中的Frame布局是相似的，子组件可以根据距父容器四个角的位置来确定自身的位置。
+绝对定位允许子组件堆叠起来（按照代码中声明的顺序）。Flutter中使用Stack和Positioned这两个组件来配合实现绝对定位。
+Stack允许子组件堆叠，而Positioned用于根据Stack的四个角来确定子组件的位置。
+
+Stack
+Stack({
+  this.alignment = AlignmentDirectional.topStart,
+  this.textDirection,
+  this.fit = StackFit.loose,
+  this.overflow = Overflow.clip,
+  List<Widget> children = const <Widget>[],
+})
+alignment：此参数决定如何去对齐没有定位（没有使用Positioned）或部分定位的子组件。所谓部分定位，在这里特指没有在某一个轴上定位：left、right为横轴，top、bottom为纵轴，只要包含某个轴上的一个定位属性就算在该轴上有定位。
+textDirection：和Row、Wrap的textDirection功能一样，都用于确定alignment对齐的参考系，即：textDirection的值为TextDirection.ltr，则alignment的start代表左，end代表右，即从左往右的顺序；textDirection的值为TextDirection.rtl，则alignment的start代表右，end代表左，即从右往左的顺序。
+fit：此参数用于确定没有定位的子组件如何去适应Stack的大小。StackFit.loose表示使用子组件的大小，StackFit.expand表示扩伸到Stack的大小。
+overflow：此属性决定如何显示超出Stack显示空间的子组件；值为Overflow.clip时，超出部分会被剪裁（隐藏），值为Overflow.visible 时则不会。
+
+
+Positioned
+const Positioned({
+  Key key,
+  this.left, 
+  this.top,
+  this.right,
+  this.bottom,
+  this.width,
+  this.height,
+  @required Widget child,
+})
+
+left、top 、right、 bottom分别代表离Stack左、上、右、底四边的距离。
+width和height用于指定需要定位元素的宽度和高度。
+注意，Positioned的width、height 和其它地方的意义稍微有点区别，
+此处用于配合left、top 、right、 bottom来定位组件，
+举个例子，在水平方向时，你只能指定left、right、width三个属性中的两个，
+如指定left和width后，right会自动算出(left+width)，如果同时指定三个属性则会报错，垂直方向同理。
+
+
+在下面的例子中，我们通过对几个Text组件的定位来演示Stack和Positioned的特性：
+//通过ConstrainedBox来确保Stack占满屏幕
+ConstrainedBox(
+  constraints: BoxConstraints.expand(),
+  child: Stack(
+    alignment:Alignment.center , //指定未定位或部分定位widget的对齐方式
+    children: <Widget>[
+      Container(child: Text("Hello world",style: TextStyle(color: Colors.white)),
+        color: Colors.red,
+      ),
+      Positioned(
+        left: 18.0,
+        child: Text("I am Jack"),
+      ),
+      Positioned(
+        top: 18.0,
+        child: Text("Your friend"),
+      )        
+    ],
+  ),
+);
+
+由于第一个子文本组件Text("Hello world")没有指定定位，并且alignment值为Alignment.center，所以它会居中显示。
+第二个子文本组件Text("I am Jack")只指定了水平方向的定位(left)，所以属于部分定位，即垂直方向上没有定位，
+那么它在垂直方向的对齐方式则会按照alignment指定的对齐方式对齐，即垂直方向居中。
+对于第三个子文本组件Text("Your friend")，和第二个Text原理一样，只不过是水平方向没有定位，则水平方向居中。
+我们给上例中的Stack指定一个fit属性，然后将三个子文本组件的顺序调整一下：
+
+Stack(
+  alignment:Alignment.center ,
+  fit: StackFit.expand, //未定位widget占满Stack整个空间
+  children: <Widget>[
+    Positioned(
+      left: 18.0,
+      child: Text("I am Jack"),
+    ),
+    Container(child: Text("Hello world",style: TextStyle(color: Colors.white)),
+      color: Colors.red,
+    ),
+    Positioned(
+      top: 18.0,
+      child: Text("Your friend"),
+    )
+  ],
+),
+可以看到，由于第二个子文本组件没有定位，所以fit属性会对它起作用，就会占满Stack。由于Stack子元素是堆叠的，所以第一个子文本组件被第二个遮住了，
+而第三个在最上层，所以可以正常显示。
+
+-------------------------------------
+对齐与相对定位（Align）
+在上一节中我们讲过通过Stack和Positioned，我们可以指定一个或多个子元素相对于父元素各个边的精确偏移，并且可以重叠。
+但如果我们只想简单的调整一个子元素在父元素中的位置的话，使用Align组件会更简单一些。
+Align 组件可以调整子组件的位置，并且可以根据子组件的宽高来确定自身的的宽高，定义如下：
+
+Align({
+  Key key,
+  this.alignment = Alignment.center,
+  this.widthFactor,
+  this.heightFactor,
+  Widget child,
+})
+alignment : 需要一个AlignmentGeometry类型的值，表示子组件在父组件中的起始位置。AlignmentGeometry 是一个抽象类，
+它有两个常用的子类：Alignment和 FractionalOffset，我们将在下面的示例中详细介绍。
+widthFactor和heightFactor是用于确定Align 组件本身宽高的属性；
+它们是两个缩放因子，会分别乘以子元素的宽、高，最终的结果就是Align 组件的宽高。如果值为null，则组件的宽高将会占用尽可能多的空间。
+
