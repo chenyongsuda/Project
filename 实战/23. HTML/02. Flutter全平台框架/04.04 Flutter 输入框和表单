@@ -49,12 +49,22 @@ InputDecoration：用于控制TextField的外观显示，如提示文本、背�
 decoration: InputDecoration(
     labelText: "用户名",
     hintText: "用户名或邮箱",
-    prefixIcon: Icon(Icons.person)
+    prefixIcon: Icon(Icons.person),
+    // 未获得焦点下划线设为灰色
+    enabledBorder: UnderlineInputBorder(
+      borderSide: BorderSide(color: Colors.grey),
+    ),
+    //获得焦点下划线设为蓝色
+    focusedBorder: UnderlineInputBorder(
+      borderSide: BorderSide(color: Colors.blue),
+    ),
 ),
 
 前面的图标 显示Text 提示Text
 获取输入内容
 获取输入内容有两种方式：
+
+
 
 定义两个变量，用于保存用户名和密码，然后在onChange触发时，各自保存一下输入内容。
 通过controller直接获取。
@@ -148,8 +158,217 @@ TextField(
   controller: _selectionController,
 )
 
+------------------------------------
+焦点控制
+焦点可以通过FocusNode和FocusScopeNode来控制，默认情况下，焦点由FocusScope来管理
+定义焦点node
+FocusNode focusNode1 = new FocusNode();
+FocusNode focusNode2 = new FocusNode();
 
+/*设置 获取焦点*/
+FocusScope.of(context).requestFocus(focus1);
+/*传入空的焦点 则隐藏键盘*/
+FocusScope.of(context).requestFocus(FocusNode());
+隐藏还可以通过
+focusNode1.unfocus();
+focusNode1.unfocus();
 
+监听焦点状态改变事件
+FocusNode继承自ChangeNotifier，通过FocusNode可以监听焦点的改变事件，如：
 
+// 创建 focusNode   
+FocusNode focusNode = new FocusNode();
 
+// focusNode绑定输入框   
+TextField(focusNode: focusNode);
+
+// 监听焦点变化    
+focusNode.addListener((){
+   print(focusNode.hasFocus);
+});
+获得焦点时focusNode.hasFocus值为true，失去焦点时为false。
+
+=====================================
+onChanged事件,在输入内容发生变化的时候触发，onSubmitted事件,则是在输入结束,点击完成的时候触发。
+然而在TextFormField中没有这两个事件,取而代之的是validator,onSaved,onFieldSubmitted 他们都接受三个函数,并且将其值作为参数传递到函数里面
+
+validator,如果开启autovalidate: true,那么将会自动检验输入的值,如果没有则会在表单提交的时候检验 该函数只允许返回验证失败的错误信息以及验证通过时返回null。
+onSaved, 当调用FormState.save方法的时候调用。
+onFieldSubmitted, 与onSubmitted一样,则是在输入结束,点击完成的时候触发。
+
+无论是在TextField还是TextFormField中,都有一个重要的属性controller,该属性可用来对输入框内容进行控制。
+先创建一个控制对象：
+TextEditingController _controller = new TextEditingController();
+TextEditingController _formFieldController = new TextEditingController();
+
+为输入框初始化值以及注册一个监听事件：
+@override
+void initState() {
+  // TODO: implement initState
+  super.initState();
+  _controller.value = new TextEditingValue(text: 'Hello');
+  _formFieldController.addListener(() {
+    print('listener');
+  });
+}
+  
+触发一个监听事件：
+void _textFieldAction() {
+  // print(_formFieldController.selection);
+  // print(_formFieldController.text); //获取输入内容
+  print(_formFieldController.hasListeners); //判断是否注册监听事件
+  _formFieldController.notifyListeners(); //触发监听事件
+}
+
+-------------------------------------
+表单Form
+Form
+Flutter中的Form组件和html中的<form></form>的作用类似，都是起到了一个容器的作用，里面包含了TextFormField的一个列表 下面通过一个例子说明表单的一些特性
+
+布局
+@override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    return new MaterialApp(
+      title: 'Flutter data',
+      home: new Scaffold(
+        appBar: new AppBar(
+          title: new Text('Flutter Form'),
+        ),
+        floatingActionButton: new FloatingActionButton(
+          onPressed: _forSubmitted,
+          child: new Text('提交'),
+        ),
+        body: new Container(
+          padding: const EdgeInsets.all(16.0),
+          child: new Form(
+            key: _formKey,
+            child: new Column(
+              children: <Widget>[
+                new TextFormField(
+                  decoration: new InputDecoration(
+                    labelText: 'Your Name',
+                  ),
+                  onSaved: (val) {
+                    _name = val;
+                  },
+                ),
+                new TextFormField(
+                  decoration: new InputDecoration(
+                    labelText: 'Password',
+                  ),
+                  obscureText: true,
+                  validator: (val) {
+                    return val.length < 4 ? "密码长度错误" : null;
+                  },
+                  onSaved: (val) {
+                    _password = val;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+以上,我们使用一个Form包裹着两个TextFormField组件,在这里为了简便,我们只设置了一些必要的元素,先暂时忽略TextFormField中的事件
+为了获取表单的实例,我们需要设置一个全局类型的key,通过这个key的属性,来获取表单对象。
+
+GlobalKey<FormState> _formKey = new GlobalKey<FormState>();
+String _name;
+String _password;
+同时也设置了_name,_password两个变量来存储用户的输入值,在TextFormField组件的onSaved方法中,将输入框的值赋值到设定的变量中
+我们通过FloatingActionButton来触发表单提交事件，
+
+floatingActionButton: new FloatingActionButton(
+    onPressed: _forSubmitted,
+    child: new Text('提交'),
+),
+在_forSubmitted中我们使用key的currentState属性来获取表单的实例对象
+
+ void _forSubmitted() {
+    var _form = _formKey.currentState;
+
+    if (_form.validate()) {
+      _form.save();
+      print(_name);
+      print(_password);
+    }
+  }
+对于表单对象来说,其有一些非常实用的方法比如: reset 重置表单内容 validate, 调用TextFormField的validator方法 save, 表单保存。
+
+完整代码
+import 'package:flutter/material.dart';
+
+void main() => runApp(new HomePage());
+
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => new _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  GlobalKey<FormState> _formKey = new GlobalKey<FormState>();
+
+  String _name;
+
+  String _password;
+
+  void _forSubmitted() {
+    var _form = _formKey.currentState;
+
+    if (_form.validate()) {
+      _form.save();
+      print(_name);
+      print(_password);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    return new MaterialApp(
+      title: 'Flutter data',
+      home: new Scaffold(
+        appBar: new AppBar(
+          title: new Text('Flutter Form'),
+        ),
+        floatingActionButton: new FloatingActionButton(
+          onPressed: _forSubmitted,
+          child: new Text('提交'),
+        ),
+        body: new Container(
+          padding: const EdgeInsets.all(16.0),
+          child: new Form(
+            key: _formKey,
+            child: new Column(
+              children: <Widget>[
+                new TextFormField(
+                  decoration: new InputDecoration(
+                    labelText: 'Your Name',
+                  ),
+                  onSaved: (val) {
+                    _name = val;
+                  },
+                ),
+                new TextFormField(
+                  decoration: new InputDecoration(
+                    labelText: 'Password',
+                  ),
+                  obscureText: true,
+                  validator: (val) {
+                    return val.length < 4 ? "密码长度错误" : null;
+                  },
+                  onSaved: (val) {
+                    _password = val;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
