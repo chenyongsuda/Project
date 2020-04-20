@@ -1,0 +1,249 @@
+InheritedWidget 为共享数据的组件,
+如果你已经开始学习Flutter了，是不是很熟悉这段代码。
+
+@override
+Widget build(BuildContext context) {
+  return new Text(
+     'Flutter Demo',
+     style: Theme.of(context).textTheme.title,
+   );
+}
+inherited widget就像对其他的Widget的一个实现或者说是补充，就像Theme.of(context)返回你能拿到一个ThemeData，并使用其内部自定义的属性改变你当前widget的显示效果。
+
+class CountProvider extends InheritedWidget {
+  //设置数据,例如需要传递一个值，一个回调函数,设置的数据必须是final的
+  final int count;
+  final VoidCallback increaseCount; 在包裹定义时候实现,然后再方法实现时候调用刷新状态修改data这时候入口的count会刷新为新值.然后会更新,
+  final Widget child;
+  CountProvider({this.count, this.increaseCount, this.child})
+      : super(child: child);
+  static CountProvider of(BuildContext context) =>context.inheritFromWidgetOfExactType(CountProvider);
+  //是否通知子部件重建,这里需要CountProvider类型(这个名字随意起但是必须和上面保持一致)，才能拿到count
+  @override
+  bool updateShouldNotify(CountProvider oldWidget) {
+    // TODO: implement updateShouldNotify
+    return count!=oldWidget.count;
+  }
+}
+
+child就是被包裹的Widget部件
+创建三个部件：
+//父部件
+class StateDemo extends StatefulWidget {
+  @override
+  _StateDemoState createState() => _StateDemoState();
+}
+
+class _StateDemoState extends State<StateDemo> {
+  int _count = 0;
+  void _setCount() {
+    setState(() {
+      _count += 1;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CountProvider(
+      count: _count,
+      increaseCount: _setCount,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('状态管理'),
+        ),
+        body: CountWrap(),
+        floatingActionButton: FloatingActionButton(
+          child: Icon(Icons.add),
+          onPressed: _setCount,
+        ),
+      ),
+    );
+  }
+}
+
+//子部件
+class CountWrap extends StatelessWidget{
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    return Container(
+      child: CountData(),
+    );
+  }
+}
+
+//孙子部件，在这里调用爷爷的数据和爷爷的方法
+class CountData extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final int count=CountProvider.of(context).count;
+    final VoidCallback increaseCount=CountProvider.of(context).increaseCount;
+    return Center(
+      child: ActionChip(
+        label: Text('$count'),
+        onPressed: increaseCount,
+      ),
+    );
+  }
+}
+
+final int count=CountProvider.of(context).count;
+final VoidCallback increaseCount=CountProvider.of(context).increaseCount;
+当子部件需要使用传递的数据或者方法的时候，可以通过以上方法获取。
+
+------------------------------------------------------------------------------------------
+复杂对象的case
+
+1.创建一个model，用于保存当前的计数值
+class InheritedTestModel {
+  final int count;
+  const InheritedTestModel(this.count);
+}
+
+2.创建一个InheritedWidget
+class InheritedContext extends InheritedWidget {
+  
+  //数据
+  final InheritedTestModel inheritedTestModel;
+
+  //点击+号的方法
+  final Function() increment;
+
+  //点击-号的方法
+  final Function() reduce;
+
+  InheritedContext({
+    Key key,
+    @required this.inheritedTestModel,
+    @required this.increment,
+    @required this.reduce,
+    @required Widget child,
+  }) : super(key: key, child: child);
+
+  static InheritedContext of(BuildContext context) {
+    return context.inheritFromWidgetOfExactType(InheritedContext);
+  }
+
+  //是否重建widget就取决于数据是否相同
+  @override
+  bool updateShouldNotify(InheritedContext oldWidget) {
+    return inheritedTestModel != oldWidget.inheritedTestModel;
+  }
+}
+
+3.把 "+" ,“-”, "value" 3个widget隔离
+class TestWidgetA extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final inheritedContext = InheritedContext.of(context);
+
+    final inheritedTestModel = inheritedContext.inheritedTestModel;
+
+    print('TestWidgetA 中count的值:  ${inheritedTestModel.count}');
+    return new Padding(
+      padding: const EdgeInsets.only(left: 10.0, top: 10.0, right: 10.0),
+      child: new RaisedButton(
+          textColor: Colors.black,
+          child: new Text('+'),
+          onPressed: inheritedContext.increment),
+    );
+  }
+}
+
+class TestWidgetB extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+
+    final inheritedContext = InheritedContext.of(context);
+
+    final inheritedTestModel = inheritedContext.inheritedTestModel;
+
+    print('TestWidgetB 中count的值:  ${inheritedTestModel.count}');
+
+    return  new Padding(
+      padding: const EdgeInsets.only(left: 10.0, top: 10.0, right: 10.0),
+      child:  new Text('当前count:${inheritedTestModel.count}',style: new TextStyle(fontSize: 20.0),),
+    );
+  }
+}
+
+class TestWidgetC extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+
+    final inheritedContext = InheritedContext.of(context);
+
+    final inheritedTestModel = inheritedContext.inheritedTestModel;
+
+    print('TestWidgetC 中count的值:  ${inheritedTestModel.count}');
+
+    return new Padding(
+      padding: const EdgeInsets.only(left: 10.0, top: 10.0, right: 10.0),
+      child: new RaisedButton(
+          textColor: Colors.black,
+          child: new Text('-'),
+          onPressed: inheritedContext.reduce),
+    );
+  }
+}
+
+4.组合
+class InheritedWidgetTestContainer extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() {
+    return new _InheritedWidgetTestContainerState();
+  }
+}
+
+class _InheritedWidgetTestContainerState
+    extends State<InheritedWidgetTestContainer> {
+  InheritedTestModel inheritedTestModel;
+
+  _initData() {
+    inheritedTestModel = new InheritedTestModel(0);
+  }
+
+  @override
+  void initState() {
+    _initData();
+    super.initState();
+  }
+
+  _incrementCount() {
+    setState(() {
+      inheritedTestModel = new InheritedTestModel(inheritedTestModel.count + 1);
+    });
+  }
+
+  _reduceCount() {
+    setState(() {
+      inheritedTestModel = new InheritedTestModel(inheritedTestModel.count - 1);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return new InheritedContext(
+        inheritedTestModel: inheritedTestModel,
+        increment: _incrementCount,
+        reduce: _reduceCount,
+        child: new Scaffold(
+          appBar: new AppBar(
+            title: new Text('InheritedWidgetTest'),
+          ),
+          body: new Column(
+            children: <Widget>[
+              new Padding(
+                padding: const EdgeInsets.only(left: 10.0, top: 10.0, right: 10.0),
+                child: new Text('我们常使用的\nTheme.of(context).textTheme\nMediaQuery.of(context).size等\n就是通过InheritedWidget实现的',
+                  style: new TextStyle(fontSize: 20.0),),
+              ),
+              new TestWidgetA(),
+              new TestWidgetB(),
+              new TestWidgetC(),
+            ],
+          ),
+        ));
+  }
+}
+
