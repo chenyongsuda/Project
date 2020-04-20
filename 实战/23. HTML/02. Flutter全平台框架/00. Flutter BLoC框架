@@ -1,3 +1,182 @@
 其全称为 Business Logic Component,表示为业务逻辑组件,简称 BLoC。从其名字来看感觉和业务逻辑有关系
 
+简而言之， Business Logic需要：
+  转移到一个或几个BLoC，
+  尽可能从表示层(Presentation Layer)中删除。换句话说，UI组件应该只关心UI事物而不关心业务
+  依赖 Streams 独家使用输入（Sink）和输出（stream）
+  保持平台独立
+  保持环境独立
 
+原理：
+Widgets 通过 Sinks 向 BLoC 发送事件(event)
+BLoC 通过流(stream)通知小部件(widgets)
+由BLoC实现的业务逻辑不是他们关注的问题。
+
+从这个声明中，我们可以直接看到一个巨大的好处。
+由于业务逻辑与UI的分离：
+  我们可以随时更改业务逻辑，对应用程序的影响最小
+  我们可能会更改UI而不会对业务逻辑产生任何影响，
+  现在，测试业务逻辑变得更加容易。
+
+BLoC了解下
+上一步，我们摒弃了 setState 方法，那么下一步，我们试试把 StatefulWidget 替换成 StatelessWidget 吧，而且官方也推荐使用 StatelessWidget 替换 StatefulWidget，这里就需要提下 BLoC 模式了。
+BLoC是Business Logic Component（业务逻辑组建）的缩写，就是将UI与业务逻辑分离，有点MVC的味道。
+说实话，现在 Google 下 「flutter bloc」能搜到很多文章，基本上都是通过 InheritedWidget 来实现的，但是 InheritedWidget 没有提供 dispose 方法，那么就会存在 StreamController 不能及时销毁等问题，所以，参考了一篇国外的文章，Reactive Programming - Streams - BLoC 这里通过使用 StatefulWidget 来实现，当该部件销毁的时候，可以在其 dispose 方法中及时销毁 StreamController，这里我还是先当个搬运工，搬下大佬为我们实现好的基类
+
+import 'package:flutter/material.dart';
+abstract class BaseBloc {
+  void dispose(); // 该方法用于及时销毁资源
+}
+
+class BlocProvider<T extends BaseBloc> extends StatefulWidget {
+  final Widget child; // 这个 `widget` 在 stream 接收到通知的时候刷新
+  final T bloc; 
+  
+  BlocProvider({Key key, @required this.child, @required this.bloc}) : super(key: key);
+
+  @override
+  _BlocProviderState<T> createState() => _BlocProviderState<T>();
+
+  // 该方法用于返回 Bloc 实例
+  static T of<T extends BaseBloc>(BuildContext context) {
+    final type = _typeOf<BlocProvider<T>>(); // 获取当前 Bloc 的类型
+    // 通过类型获取相应的 Provider，再通过 Provider 获取 bloc 实例
+    BlocProvider<T> provider = context.ancestorWidgetOfExactType(type); 
+    return provider.bloc; 
+  }
+
+  static Type _typeOf<T>() => T;
+}
+
+class _BlocProviderState<T> extends State<BlocProvider<BaseBloc>> {
+  @override
+  void dispose() {
+    widget.bloc.dispose(); // 及时销毁资源
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
+  }
+}
+
+接着我们对前面的例子使用 BLoC 进行修改。
+首先，我们需要创建一个 Bloc 类，用于修改 count 的值：
+
+import '../widget/baseBloc.dart';
+import 'dart:async';
+
+class CounterBloc extends BaseBloc {
+  int _count = 0;
+  int get count => _count;
+
+  // stream
+  StreamController<int> _countController = StreamController.broadcast();
+  Stream<int> get countStream => _countController.stream; // 用于 StreamBuilder 的 stream
+
+  void dispatch(int value) {
+    _count = value;
+    _countController.sink.add(_count); // 用于通知修改值
+  }
+
+  @override
+  void dispose() {
+    _countController.close(); // 注销资源
+  }
+}
+
+在使用 Bloc 前，需要在最上层的容器中进行注册，也就是 MaterialApp 中.
+
+import 'package:flutter/material.dart';
+import './widget/baseBloc.dart';
+import './bloc/counter.dart';
+
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // 这里对创建的 bloc 类进行注册，如果说有多个 bloc 类的话，可以通过 child 进行嵌套注册即可
+    // 放在最顶层，可以全局调用，当 App 关闭后，销毁所有的 Bloc 资源，
+    // 也可以在路由跳转的时候进行注册，至于在哪里注册，完全看需求
+    // 例如实现主题色的切换，则需要在全局定义，当切换主题色的时候全局切换
+    // 又比如只有某个或者某几个特殊界面调用，那么完全可以通过在路由跳转的时候注册
+    return BlocProvider(  
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: StreamHome(),
+        ),
+        bloc: CounterBloc());
+  }
+}
+
+class StreamHome extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // 获取注册的 bloc，必须先注册，再去查找
+    final CounterBloc _bloc = BlocProvider.of<CounterBloc>(context); 
+    return Scaffold(
+      body: SafeArea(
+          child: Container(
+        alignment: Alignment.center,
+        child: StreamBuilder(
+          initialData: _bloc.count,
+          stream: _bloc.countStream,
+          builder: (_, snapshot) => Text('${snapshot.data}', style: TextStyle(fontSize: 20.0)),
+        ),
+      )),
+      floatingActionButton:
+          // 通过 bloc 中的 dispatch 方法进行值的修改，通知 stream 刷新界面
+          FloatingActionButton(onPressed: () => 
+              _bloc.dispatch(_bloc.count + 1), child: Icon(Icons.add)),
+    );
+  }
+}
+
+重新运行后，查看效果还是一样的。所以我们成功的对 StatefulWidget 进行了替换。
+
+先总结下 Bloc：
+​ 1. 成功的把页面和逻辑分离开了，页面只展示数据，逻辑通过 BLoC 进行处理
+​ 2. 减少了 setState 方法的使用，提高了性能
+​ 3. 实现了状态管理
+
+多个Bloc的使用
+每一个有业务逻辑的页面的顶层都应该有自己的BLoC；
+每一个“足够复杂的组建（complex enough component）”都应该有相应的BLoC；
+可以使用一个ApplicationBloc来处理整个App的状态。
+下面的例子展示了在整个App的顶层使用ApplicationBloc，在CounterPage的顶层使用IncrementBloc：
+
+void main() => runApp(
+  BlocProvider<ApplicationBloc>(
+    bloc: ApplicationBloc(),
+    child: MyApp(),
+  )
+);
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context){
+    return MaterialApp(
+      title: 'Streams Demo',
+      home: BlocProvider<IncrementBloc>(
+        bloc: IncrementBloc(),
+        child: CounterPage(),
+      ),
+    );
+  }
+}
+
+class CounterPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context){
+    final IncrementBloc counterBloc = BlocProvider.of<IncrementBloc>(context);
+    final ApplicationBloc appBloc = BlocProvider.of<ApplicationBloc>(context);
+    
+    ...
+  }
+}
+
+一个实践Demo
+大佬构建了一个伪应用程序来展示如何使用所有这些概念。 完整的源代码可以在Github上找到。
