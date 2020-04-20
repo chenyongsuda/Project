@@ -1,0 +1,122 @@
+同步方法
+Dart通常是单线程执行：
+如：
+
+
+  String method1() {
+    return "1";
+  }
+
+  String method2() {
+    return "2";
+  }
+
+  String method3() {
+    return "3";
+  }
+
+  void testA() {
+    print(method1());
+    print(method2());
+    print(method3());
+  }
+则输出：
+
+
+1
+2
+3
+异步方法
+如果是执行的网络请求、访问数据库或文件等，那么方法不会立刻返回结果，需要一定的执行时间。这时不能一直等待，时间长了就ANR了。
+这种情况，可以用Future描述未来的结果。
+如：
+
+
+    // 假设method1是网络请求
+    Future<String> f1 = new Future(method1);//此时f1就是未来的结果
+    // 未来的结果获取，使用then
+    f1.then((String value) {
+      print("value1=$value");
+    });
+async 与await 将异步方法按同步方法操作
+async 描述一个执行异步操作的方法
+await 表示一直等待异步方法返回结果，才继续往后执行
+如：
+
+  Future<String> method5() async {
+    return "5";
+  }
+  void testD() async {
+    method1();
+    String f5 = await method5();
+    print(f5);
+    method3();
+  }
+结果：
+
+
+1
+5
+3
+wait 并行执行
+同时执行了多个网络请求，等所有结果都返回后再执行操作,返回一个List的结果集。
+如：
+
+
+Future<String> method5() async {
+    return "5";
+  }
+
+  Future<String> method6() async {
+    return "6";
+  }
+
+  Future<String> method7() async {
+    return "7";
+  }
+
+void testE() {
+    Future.wait([method5(), method6(), method7()]).then((List responses) {
+      print(responses);
+    }).catchError((e) {
+      print(e);
+    });
+  }
+结果：
+
+
+[5,6,7]
+链式调用
+多个网络请求，后者需要前者的返回值当作参数，最后一个才是想要的值。
+如：
+
+
+  Future<int> method8() async {
+    return 8;
+  }
+
+  Future<int> method9(int p) async {
+    return p+9;
+  }
+
+  Future<int> method10(int p) async {
+    return p+10;
+  }
+
+void testG() {
+    method8().then((value8) {
+      print("value8=$value8");
+      return method9(value8);
+    }).then((value9) {
+      print("value9=$value9");
+      return method10(value9);
+    }).then((value10) {
+      print("value10=$value10");
+    });
+  }
+
+
+结果：
+value8=8
+value9=17
+value10=27
