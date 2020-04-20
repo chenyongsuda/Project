@@ -202,9 +202,20 @@ subject2.stream.listen(print); // prints 2, 3
 Subject的释放
 当你不再收听Subject，或者Subject不再使用时，请务必释放它。你可以调用subscription的cancel()方法让某个听众取消收听，或者Subject.close()，关闭整个流。
 
+-----------------------------------------------------
+其实我们在做项目的时候，不可能用的这么简单！我就把其他的方法直接复制出来，有兴趣的可以去多试试！
 
+_textFieldSubject
+     .map((item) => 'item: $item')
+     .listen((data) => print(data));  //RxDart的数据转换方法(map)
 
+    _textFieldSubject
+     .where((item) => item.length > 10)
+     .listen((data) => print(data));  //这个就像是给数据设置一个条件，满足条件的数据才通过。
 
+    _textFieldSubject
+     .debounceTime(Duration(seconds: 2))
+     .listen((data) => print(data));  //可以设置间隔的时间，过一段时间才让数据通过。
 
 
 
