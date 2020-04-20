@@ -1,3 +1,5 @@
+参考： https://www.jianshu.com/p/4d5e712594b4
+
 其全称为 Business Logic Component,表示为业务逻辑组件,简称 BLoC。从其名字来看感觉和业务逻辑有关系
 
 简而言之， Business Logic需要：
