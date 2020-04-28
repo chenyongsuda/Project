@@ -1,3 +1,6 @@
 Kettle
 Apache NiFi
 streamsets
+
+使用Antlr4对hive 脚本进行分析，拿到脚本里的输入输出表，识别出临时表，并且拿到每个字段的加工条件
+通过分析结果
