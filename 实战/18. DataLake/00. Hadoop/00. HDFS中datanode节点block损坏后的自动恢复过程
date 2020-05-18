@@ -1,0 +1,197 @@
+HDFS中datanode节点block损坏后的自动恢复过程
+
+https://www.cnblogs.com/prayer21/p/4835272.html 模拟namenode损坏
+相关参数说明
+dfs.blockreport.intervalMsec ：datanode向namenode报告块信息的时间间隔，默认6小时
+
+datanode日志中记录如下：
+dfs.datanode.directoryscan.interval：datanode进行内存和磁盘数据集块校验，更新内存中的信息和磁盘中信息的不一致情况，默认6小时
+datanode日志中记录如下：
+
+测试机器：
+10.0.50.144  master  （namenode，datanode）
+10.0.50.145  node1    （datanode）
+10.0.50.146  node2    （datanode）
+
+参数配置
+hdfs-site.xml中的两个主要参数配置入下
+
+<property>
+    <name>dfs.namenode.secondary.http-address</name>
+    <value>master:9001</value>
+</property>
+<property>
+  <name>dfs.blockreport.intervalMsec</name>
+    <value>600000</value>
+      <description>Determines block reporting interval in milliseconds.</description>
+</property>
+<property>
+  <name>dfs.datanode.directoryscan.interval</name>
+    <value>600</value>    
+</property>
+都是10分钟
+
+测试过程
+模拟在node1上破坏一个块后，是否能自动恢复
+[hbase@node1 subdir0]$ ll
+total 609700
+-rw-rw-r-- 1 hbase hbase        13 Sep 10 11:32 blk_1073741825
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:32 blk_1073741825_1001.meta
+-rw-rw-r-- 1 hbase hbase        12 Sep 10 11:32 blk_1073741826
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:32 blk_1073741826_1002.meta
+-rw-rw-r-- 1 hbase hbase         9 Sep 10 11:32 blk_1073741827
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:32 blk_1073741827_1003.meta
+-rw-rw-r-- 1 hbase hbase        30 Sep 10 11:33 blk_1073741834
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:33 blk_1073741834_1010.meta
+-rw-rw-r-- 1 hbase hbase       349 Sep 10 11:33 blk_1073741835
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:33 blk_1073741835_1011.meta
+-rw-rw-r-- 1 hbase hbase     46744 Sep 10 11:33 blk_1073741836
+-rw-rw-r-- 1 hbase hbase       375 Sep 10 11:33 blk_1073741836_1012.meta
+-rw-rw-r-- 1 hbase hbase    113741 Sep 10 11:33 blk_1073741837
+-rw-rw-r-- 1 hbase hbase       899 Sep 10 11:33 blk_1073741837_1013.meta
+-rw-rw-r-- 1 hbase hbase 134217728 Sep 10 17:49 blk_1073741838
+-rw-rw-r-- 1 hbase hbase   1048583 Sep 10 17:49 blk_1073741838_1014.meta
+-rw-rw-r-- 1 hbase hbase  19295151 Sep 10 17:49 blk_1073741839
+-rw-rw-r-- 1 hbase hbase    150751 Sep 10 17:49 blk_1073741839_1015.meta
+-rw-rw-r-- 1 hbase hbase 153512879 Sep 11 11:12 blk_1073741846
+-rw-rw-r-- 1 hbase hbase   1199327 Sep 11 11:12 blk_1073741846_1022.meta
+-rw-rw-r-- 1 hbase hbase        22 Sep 11 11:12 blk_1073741848
+-rw-rw-r-- 1 hbase hbase        11 Sep 11 11:12 blk_1073741848_1024.meta
+-rw-rw-r-- 1 hbase hbase       155 Sep 17 22:31 blk_1073741849
+-rw-rw-r-- 1 hbase hbase        11 Sep 17 22:31 blk_1073741849_1025.meta
+-rw-rw-r-- 1 hbase hbase       363 Sep 11 11:12 blk_1073741850
+-rw-rw-r-- 1 hbase hbase        11 Sep 11 11:12 blk_1073741850_1026.meta
+-rw-rw-r-- 1 hbase hbase     33430 Sep 11 11:12 blk_1073741851
+-rw-rw-r-- 1 hbase hbase       271 Sep 11 11:12 blk_1073741851_1027.meta
+-rw-rw-r-- 1 hbase hbase    115097 Sep 11 11:12 blk_1073741852
+-rw-rw-r-- 1 hbase hbase       907 Sep 11 11:12 blk_1073741852_1028.meta
+-rw-rw-r-- 1 hbase hbase 134217728 Sep 17 14:44 blk_1073741853
+-rw-rw-r-- 1 hbase hbase   1048583 Sep 17 14:44 blk_1073741853_1029.meta
+-rw-rw-r-- 1 hbase hbase 134217728 Sep 18 14:55 blk_1073741854
+-rw-rw-r-- 1 hbase hbase   1048583 Sep 18 14:55 blk_1073741854_1030.meta
+-rw-rw-r-- 1 hbase hbase  43608288 Sep 17 14:44 blk_1073741855
+-rw-rw-r-- 1 hbase hbase    340699 Sep 17 14:44 blk_1073741855_1031.meta
+
+执行  mv blk_1073741853* /tmp
+
+[hbase@node1 subdir0]$ mv blk_1073741853* /tmp
+[hbase@node1 subdir0]$ ll
+total 477600
+-rw-rw-r-- 1 hbase hbase        13 Sep 10 11:32 blk_1073741825
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:32 blk_1073741825_1001.meta
+-rw-rw-r-- 1 hbase hbase        12 Sep 10 11:32 blk_1073741826
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:32 blk_1073741826_1002.meta
+-rw-rw-r-- 1 hbase hbase         9 Sep 10 11:32 blk_1073741827
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:32 blk_1073741827_1003.meta
+-rw-rw-r-- 1 hbase hbase        30 Sep 10 11:33 blk_1073741834
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:33 blk_1073741834_1010.meta
+-rw-rw-r-- 1 hbase hbase       349 Sep 10 11:33 blk_1073741835
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:33 blk_1073741835_1011.meta
+-rw-rw-r-- 1 hbase hbase     46744 Sep 10 11:33 blk_1073741836
+-rw-rw-r-- 1 hbase hbase       375 Sep 10 11:33 blk_1073741836_1012.meta
+-rw-rw-r-- 1 hbase hbase    113741 Sep 10 11:33 blk_1073741837
+-rw-rw-r-- 1 hbase hbase       899 Sep 10 11:33 blk_1073741837_1013.meta
+-rw-rw-r-- 1 hbase hbase 134217728 Sep 10 17:49 blk_1073741838
+-rw-rw-r-- 1 hbase hbase   1048583 Sep 10 17:49 blk_1073741838_1014.meta
+-rw-rw-r-- 1 hbase hbase  19295151 Sep 10 17:49 blk_1073741839
+-rw-rw-r-- 1 hbase hbase    150751 Sep 10 17:49 blk_1073741839_1015.meta
+-rw-rw-r-- 1 hbase hbase 153512879 Sep 11 11:12 blk_1073741846
+-rw-rw-r-- 1 hbase hbase   1199327 Sep 11 11:12 blk_1073741846_1022.meta
+-rw-rw-r-- 1 hbase hbase        22 Sep 11 11:12 blk_1073741848
+-rw-rw-r-- 1 hbase hbase        11 Sep 11 11:12 blk_1073741848_1024.meta
+-rw-rw-r-- 1 hbase hbase       155 Sep 17 22:31 blk_1073741849
+-rw-rw-r-- 1 hbase hbase        11 Sep 17 22:31 blk_1073741849_1025.meta
+-rw-rw-r-- 1 hbase hbase       363 Sep 11 11:12 blk_1073741850
+-rw-rw-r-- 1 hbase hbase        11 Sep 11 11:12 blk_1073741850_1026.meta
+-rw-rw-r-- 1 hbase hbase     33430 Sep 11 11:12 blk_1073741851
+-rw-rw-r-- 1 hbase hbase       271 Sep 11 11:12 blk_1073741851_1027.meta
+-rw-rw-r-- 1 hbase hbase    115097 Sep 11 11:12 blk_1073741852
+-rw-rw-r-- 1 hbase hbase       907 Sep 11 11:12 blk_1073741852_1028.meta
+-rw-rw-r-- 1 hbase hbase 134217728 Sep 18 14:55 blk_1073741854
+-rw-rw-r-- 1 hbase hbase   1048583 Sep 18 14:55 blk_1073741854_1030.meta
+-rw-rw-r-- 1 hbase hbase  43608288 Sep 17 14:44 blk_1073741855
+-rw-rw-r-- 1 hbase hbase    340699 Sep 17 14:44 blk_1073741855_1031.meta 
+
+执行好后马上执行fsck 还是显示healthy状态，复制个数还是3（因为datonode节点还没有检测内存和磁盘上的数据块状态）
+[hbase@master sbin]$ hadoop fsck /tmp -files -blocks -racks|grep 1073741853
+DEPRECATED: Use of this script to execute hdfs command is deprecated.
+Instead use the hdfs command for it.
+
+Connecting to namenode via http://master:50070/fsck?ugi=hbase&files=1&blocks=1&racks=1&path=%2Ftmp
+0. BP-1578427263-10.0.52.144-1441855472637:blk_1073741853_1029 len=134217728 repl=3 [/default-rack/10.0.52.146:50010, /default-rack/10.0.52.145:50010, /default-rack/10.0.52.144:50010]
+
+接着观察node1节点的datanode日志输出（大概是在07:36的时候执行的mv操作,是在35分DirectoryScanner之后执行的）
+2015-09-18 07:20:54,857 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Successfully sent block report 0x1354f1f2f5693e,  containing 1 storage report(s), of which we sent 1. The reports had 18 total blocks and used 1 RPC(s). This took 0 msec to generate and 5 msecs for RPC and NN processing. Got back one command: FinalizeCommand/5.
+2015-09-18 07:20:54,857 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Got finalize command for block pool BP-1578427263-10.0.52.144-1441855472637
+2015-09-18 07:25:57,936 INFO org.apache.hadoop.hdfs.server.datanode.DirectoryScanner: BlockPool BP-1578427263-10.0.52.144-1441855472637 Total blocks: 18, missing metadata files:0, missing block files:0, missing blocks in memory:0, mismatched blocks:0
+2015-09-18 07:30:54,857 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Successfully sent block report 0x13557da5bf9236,  containing 1 storage report(s), of which we sent 1. The reports had 18 total blocks and used 1 RPC(s). This took 0 msec to generate and 5 msecs for RPC and NN processing. Got back one command: FinalizeCommand/5.
+2015-09-18 07:30:54,857 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Got finalize command for block pool BP-1578427263-10.0.52.144-1441855472637
+2015-09-18 07:35:57,896 INFO org.apache.hadoop.hdfs.server.datanode.DirectoryScanner: BlockPool BP-1578427263-10.0.52.144-1441855472637 Total blocks: 18, missing metadata files:0, missing block files:0, missing blocks in memory:0, mismatched blocks:0
+2015-09-18 07:40:54,856 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Successfully sent block report 0x135609588a3066,  containing 1 storage report(s), of which we sent 1. The reports had 18 total blocks and used 1 RPC(s). This took 0 msec to generate and 4 msecs for RPC and NN processing. Got back one command: FinalizeCommand/5.
+2015-09-18 07:40:54,857 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Got finalize command for block pool BP-1578427263-10.0.52.144-1441855472637
+2015-09-18 07:45:57,895 INFO org.apache.hadoop.hdfs.server.datanode.DirectoryScanner: BlockPool BP-1578427263-10.0.52.144-1441855472637 Total blocks: 17, missing metadata files:1, missing block files:1, missing blocks in memory:0, mismatched blocks:0
+2015-09-18 07:45:57,895 WARN org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetImpl: Removed block 1073741853 from memory with missing block file on the disk
+2015-09-18 07:50:54,858 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Successfully sent block report 0x1356950b4e3e17,  containing 1 storage report(s), of which we sent 1. The reports had 17 total blocks and used 1 RPC(s). This took 0 msec to generate and 6 msecs for RPC and NN processing. Got back one command: FinalizeCommand/5.
+2015-09-18 07:50:54,858 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Got finalize command for block pool BP-1578427263-10.0.52.144-1441855472637
+2015-09-18 07:50:58,035 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Receiving BP-1578427263-10.0.52.144-1441855472637:blk_1073741853_1029 src: /10.0.52.146:56860 dest: /10.0.52.145:50010
+2015-09-18 07:50:59,143 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Received BP-1578427263-10.0.52.144-1441855472637:blk_1073741853_1029 src: /10.0.52.146:56860 dest: /10.0.52.145:50010 of size 134217728
+2015-09-18 07:55:57,892 INFO org.apache.hadoop.hdfs.server.datanode.DirectoryScanner: BlockPool BP-1578427263-10.0.52.144-1441855472637 Total blocks: 18, missing metadata files:0, missing block files:0, missing blocks in memory:0, mismatched blocks:0
+2015-09-18 08:00:54,856 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Successfully sent block report 0x135720be18e7ba,  containing 1 storage report(s), of which we sent 1. The reports had 18 total blocks and used 1 RPC(s). This took 0 msec to generate and 4 msecs for RPC and NN processing. Got back one command: FinalizeCommand/5.
+2015-09-18 08:00:54,856 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Got finalize command for block pool BP-1578427263-10.0.52.144-1441855472637
+ 
+
+查看node1上的文件情况，发现已经恢复
+[hbase@node1 subdir0]$ ll
+total 609700
+-rw-rw-r-- 1 hbase hbase        13 Sep 10 11:32 blk_1073741825
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:32 blk_1073741825_1001.meta
+-rw-rw-r-- 1 hbase hbase        12 Sep 10 11:32 blk_1073741826
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:32 blk_1073741826_1002.meta
+-rw-rw-r-- 1 hbase hbase         9 Sep 10 11:32 blk_1073741827
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:32 blk_1073741827_1003.meta
+-rw-rw-r-- 1 hbase hbase        30 Sep 10 11:33 blk_1073741834
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:33 blk_1073741834_1010.meta
+-rw-rw-r-- 1 hbase hbase       349 Sep 10 11:33 blk_1073741835
+-rw-rw-r-- 1 hbase hbase        11 Sep 10 11:33 blk_1073741835_1011.meta
+-rw-rw-r-- 1 hbase hbase     46744 Sep 10 11:33 blk_1073741836
+-rw-rw-r-- 1 hbase hbase       375 Sep 10 11:33 blk_1073741836_1012.meta
+-rw-rw-r-- 1 hbase hbase    113741 Sep 10 11:33 blk_1073741837
+-rw-rw-r-- 1 hbase hbase       899 Sep 10 11:33 blk_1073741837_1013.meta
+-rw-rw-r-- 1 hbase hbase 134217728 Sep 10 17:49 blk_1073741838
+-rw-rw-r-- 1 hbase hbase   1048583 Sep 10 17:49 blk_1073741838_1014.meta
+-rw-rw-r-- 1 hbase hbase  19295151 Sep 10 17:49 blk_1073741839
+-rw-rw-r-- 1 hbase hbase    150751 Sep 10 17:49 blk_1073741839_1015.meta
+-rw-rw-r-- 1 hbase hbase 153512879 Sep 11 11:12 blk_1073741846
+-rw-rw-r-- 1 hbase hbase   1199327 Sep 11 11:12 blk_1073741846_1022.meta
+-rw-rw-r-- 1 hbase hbase        22 Sep 11 11:12 blk_1073741848
+-rw-rw-r-- 1 hbase hbase        11 Sep 11 11:12 blk_1073741848_1024.meta
+-rw-rw-r-- 1 hbase hbase       155 Sep 17 22:31 blk_1073741849
+-rw-rw-r-- 1 hbase hbase        11 Sep 17 22:31 blk_1073741849_1025.meta
+-rw-rw-r-- 1 hbase hbase       363 Sep 11 11:12 blk_1073741850
+-rw-rw-r-- 1 hbase hbase        11 Sep 11 11:12 blk_1073741850_1026.meta
+-rw-rw-r-- 1 hbase hbase     33430 Sep 11 11:12 blk_1073741851
+-rw-rw-r-- 1 hbase hbase       271 Sep 11 11:12 blk_1073741851_1027.meta
+-rw-rw-r-- 1 hbase hbase    115097 Sep 11 11:12 blk_1073741852
+-rw-rw-r-- 1 hbase hbase       907 Sep 11 11:12 blk_1073741852_1028.meta
+-rw-rw-r-- 1 hbase hbase 134217728 Sep 18 15:50 blk_1073741853
+-rw-rw-r-- 1 hbase hbase   1048583 Sep 18 15:50 blk_1073741853_1029.meta
+-rw-rw-r-- 1 hbase hbase 134217728 Sep 18 14:55 blk_1073741854
+-rw-rw-r-- 1 hbase hbase   1048583 Sep 18 14:55 blk_1073741854_1030.meta
+-rw-rw-r-- 1 hbase hbase  43608288 Sep 17 14:44 blk_1073741855
+-rw-rw-r-- 1 hbase hbase    340699 Sep 17 14:44 blk_1073741855_1031.meta
+ 
+
+node1（10.0.52.145）是在07:45:57的时候，做的directoryscan，然后发现磁盘少了一个数据块，于是删掉了内存中这个数据块，在07:50:54的时候，向namenode报告数据块信息
+所以也可以查看master上namenode日志输出，发现namenode 要求10.0.52.146 向10.0.52.145复制缺失的数据块
+2015-09-18 07:50:54,881 INFO BlockStateChange: BLOCK* processReport: from storage DS-47f165f8-0a5f-4d73-bb2b-3a05daa72fef node DatanodeRegistration(10.0.52.145:50010, datanodeUuid=739dc2ca-08b6-4e74-b6dc-f1ac9b0fb337, infoPort=50075, infoSecurePort=0, ipcPort=50020, storageInfo=lv=-56;cid=CID-48284406-dfcb-472d-882c-0b7afe4bddfb;nsid=1714235198;c=0), blocks: 17, hasStaleStorage: false, processing time: 3 msecs
+2015-09-18 07:50:56,185 INFO BlockStateChange: BLOCK* ask 10.0.52.146:50010 to replicate blk_1073741853_1029 to datanode(s) 10.0.52.145:50010
+2015-09-18 07:50:59,202 INFO BlockStateChange: BLOCK* addStoredBlock: blockMap updated: 10.0.52.145:50010 is added to blk_1073741853_1029 size 134217728
+
+查看node2（10.0.52.146）datanode日志如下
+2015-09-18 07:50:57,876 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: DatanodeRegistration(10.0.52.146:50010, datanodeUuid=d22102fa-a651-4daa-9387-e0b6264ff934, infoPort=50075, infoSecurePort=0, ipcPort=50020, storageInfo=lv=-56;cid=CID-48284406-dfcb-472d-882c-0b7afe4bddfb;nsid=1714235198;c=0) Starting thread to transfer BP-1578427263-10.0.52.144-1441855472637:blk_1073741853_1029 to 10.0.52.145:50010 
+2015-09-18 07:50:59,180 INFO org.apache.hadoop.hdfs.server.datanode.DataNode: DataTransfer: Transmitted BP-1578427263-10.0.52.144-1441855472637:blk_1073741853_1029 (numBytes=134217728) to /10.0.52.145:50010
+ 
+
+初步总结如下：
+单纯的模拟了其中一个数据块损坏的情况，数据块损坏后，在该节点执行directoryscan之前（dfs.datanode.directoryscan.interval决定），都不会发现损坏，在向namenode报告数据块信息之前（dfs.blockreport.intervalMsec决定），都不会恢复数据块，当namenode收到块信息后才会采取恢复措施
+真实的情况肯定会更复杂，可以从这个简单的过程中了解开头所说的两个参数。
