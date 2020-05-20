@@ -1,0 +1,255 @@
+vue $mount 和 el的区别
+两者在使用效果上没有任何区别，都是为了将实例化后的vue挂载到指定的dom元素中。
+
+如果在实例化vue的时候指定el，则该vue将会渲染在此el对应的dom中，反之，若没有指定el，则vue实例会处于一种“未挂载”的状态，
+此时可以通过$mount来手动执行挂载。
+注：如果$mount没有提供参数，模板将被渲染为文档之外的的元素，并且你必须使用原生DOM API把它插入文档中。
+
+例如：
+var MyComponent = Vue.extend({
+  template: '<div>Hello!</div>'
+})
+
+// 创建并挂载到 #app (会替换 #app)
+new MyComponent().$mount('#app')
+
+// 同上
+new MyComponent({ el: '#app' })
+
+// 或者，在文档之外渲染并且随后挂载
+var component = new MyComponent().$mount()
+document.getElementById('app').appendChild(component.$el)
+
+创建虚拟节点还可以用
+const vm = new Vue({
+        render(h) {
+            return h(component,{props})
+        }
+    }).$mount();
+
+==========================================================
+ app.$root 的用途是什么呢？在所有的整个 Vue 应用当中，每一个节点上面，我们都可以进行调用。它们拿到的 $root 其实都是同一个值，也就是我们在最外层去生成的，并且通过这个节点去挂载到 html 上面那个 Vue 对象。
+
+ app.$el 就是挂载到 html 上面的节点，它对应的是对这个节点的引用。
+
+ =========================================================
+ 组件创建的几种方式
+ // Component 组件的创建
+        // 注意  template 中的容器 只能有一个父元素，不能包含两个 你可以用一个div包裹
+        // 第一种创建全局组件
+        // extend是注册组件函数，他返回一个对象
+       var comobj= Vue.extend({
+            template:"<h1>我是全局组件</h1>"
+        })
+        // component函数提交组件，第一个参数为组件的名称，第二个参数是一个注册组件的对象
+        Vue.component("login",comobj)   
+        
+        // 第二种创建方式
+        // component 中直接写上一个模板对象
+        Vue.component('login2',{template:'<h1>我是第二种v创建出来的组件</h1>'});
+        
+        // 第三种创建的方式 首先在元素中创建一个template模板
+        Vue.component('login3',{template:'#login3'})
+
+        var vm=new Vue({
+            el:'.app',
+            data:{},
+            // 定义私有组件 和全局差不多 组件名称和对象，也可以使用template模板来创建
+            components:{
+                login6:{template:'#login3'}
+            }
+    })
+    
+==========================================================
+提供了三种渲染模式，自定义render函数、template、el均可以渲染页面，也就是对应我们使用Vue时，三种写法：
+
+自定义render函数
+Vue.component('anchored-heading', {
+    render: function (createElement) {
+        return createElement (
+            'h' + this.level,   // tag name标签名称
+            this.$slots.default // 子组件中的阵列
+        )
+    },
+    props: {
+        level: {
+            type: Number,
+            required: true
+        }
+    }
+})
+
+template写法
+let app = new Vue({
+    template: `<div>{{ msg }}</div>`,
+    data () {
+        return {
+            msg: ''
+        }
+    }
+})
+
+el写法
+let app = new Vue({
+    el: '#app',
+    data () {
+        return {
+            msg: 'Hello Vue!'
+        }
+    }
+})
+
+这三种渲染模式最终都是要得到render函数。只不过用户自定义的render函数省去了程序分析的过程，等同于处理过的render函数，
+而普通的template或者el只是字符串，需要解析成AST，再将AST转化为render函数。
+
+==================================组件使用三种方式
+方法一、
+<template>
+    <input type="text" v-model='componentName'>
+    <button @click='add'>click me to add a component</button>
+</template>
+
+<script>
+    // 引入要添加的所有组件
+    import component1 from './components/component1.vue'
+    import component2 from './components/component2.vue'
+    export default {
+        data: function() {
+            return {
+                allComponents: [],
+                componentName: ''
+            }
+        },
+        components: {
+                // 注册所有组件
+                component1,
+                component2
+        }
+        methods: {
+            add: function() {
+                this.allComponents.push(this.componentName)
+                // 重置输入框
+                this.componentName = ''
+            },
+            render: function(h) { // h 为 createElement 函数，接受三个参数
+                // tag 
+                // data
+                // children 具体看文档吧
+                return h('div',this.allComponents.map(function(componentName) {
+                    return h(componentName)
+                }))
+            }
+        }
+    }
+</script>
+方法二、
+html
+
+  <div id="app">
+    <button @click="add('a-component', 'test')">Add A</button>
+    <button @click="add('b-component', 'test')">Add B</button>
+    <ul>
+      <li :is="item.component" :text="item.text" v-for="item in items"></li>
+    </ul>
+  </div>
+javascript
+
+var AComponent = Vue.extend({
+  props: ['text'],
+  template: '<li>A Component: {{ text }}</li>'
+})
+
+var BComponent = Vue.extend({
+  props: ['text'],
+  template: '<li>B Component: {{ text }}</li>'
+})
+
+
+new Vue({
+  el: '#app',
+  components: {
+    'a-component': AComponent,
+    'b-component': BComponent,
+  },
+  data: {
+    items: []
+  },
+  methods: {
+    add(component, text) {
+      this.items.push({
+        'component': component,
+        'text': text,
+      })
+    }
+  }
+})
+
+方法三、
+我是写在父组件中的:
+Vue.component('mycontent', {
+        props: ['content'],
+        data() {
+            return {
+                coms: [],
+            }
+        },
+        render: function(h) {
+            this.coms = [];
+            for(var i = 0; i < this.content.length; i++) {
+                this.coms.push(h(this.content[i], {}))
+            }
+            return h('div', {},
+                this.coms)
+        },
+    });
+    
+调用的时候
+<mycontent v-bind:content="content"></mycontent>
+那么父组件中的content变化时,就会动态加载组件了
+
+========================================================
+vue菜鸟一枚，对vue.extend、 new vue()、component、render比较懵逼，理不清关系，用法，查看了一些博文后，这里记录一下自己一点浅显的理解。
+
+1.vue.extend、 new vue()
+vue.extend() 是new vue() 的一个子类。用法都一样，都是实例化一个对象，然后是挂载到到dom元素上。
+
+注意：
+（1）挂载到dom元素，其次vue.extend（）里面的的HTML模板（template："<p>hello</p>"）会覆盖被挂载的那个dom元素。new vue()里面的render的模板也会覆盖被挂载的那个dom元素。
+（2）vue.extend（）中的data是一个函数且返回一个对象。
+ data:function(){
+     return { } 
+ }
+
+========================================================
+Vue手动挂载组件$mount()，实现js插入组件，替换组件
+项目中有时候用到需要再页面中使用js插入一个vue组件，这时候就用到vue的手动挂载$mount，Vue官网$mount()
+
+手动挂载限制：只在由 new 创建的实例中遵守。
+
+一、首先引入你要插入的组件和Vue
+import ShowBox from './show/ShowBox';
+import Vue from "vue";
+二、手动挂载，js插入组件
+//手动挂载，必须使用这种方式才可用，showBoxInstance是手动挂载完后的组件实例
+let myShowBox = Vue.extend(ShowBox)
+let showBoxInstance = new myShowBox().$mount()
+ 
+//setData是要插入的组件实例中的一个方法，方法内容就是给组件中的data数据赋值，用于组件的数据绑定显示
+showBoxInstance.setData(this.index);
+ 
+//调用插入相邻元素前面的方法,第一个参数是引入组件的dom对象，第二个参数是目标dom对象
+this.insertBefore(showBoxInstance.$el, target.$el);
+三、也可以直接替换目标元素，js替换组件
+//也可以直接替换，target为要替换的dom对象，可以直接使用组件替换目标dom
+let myShowBox = Vue.extend(ShowBox)
+let showBoxInstance = new myShowBox ().$mount(target.$el);
+————————————————
+
+
+
+
+
+
+
+
+
