@@ -1,0 +1,32 @@
+1. 制作弹出组件
+通过新建VUE对象来初始化某些插件
+    const vm = new Vue({
+        render(h) {
+            return h(component,{props})
+        }
+    }).$mount();
+
+    
+    document.body.append(vm.$el)
+    // vm.remove = () => {
+    //     document.body.removeChild(vm.$el);
+    //     vm.$destroy();
+    // }
+    console.log(vm.$el)
+    return vm.$children[0];
+    
+2. 通过创建组件VUE对象
+    let Const = Vue.extend(component); //创建构造类
+    let instance = new Const({
+        propsData:props
+    }).$mount();                       //挂载并且传入propdata实例化对象
+    console.log(instance)
+    //注册删除操作
+    instance.remove = () =>{
+        document.body.removeChild(instance.$el);
+        instance.$destroy();
+    }
+    //插入页面DOM
+    document.body.append(instance.$el) //将虚拟节点挂入dom中
+    return instance;
+    
