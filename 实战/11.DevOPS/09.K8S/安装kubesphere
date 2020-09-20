@@ -1,0 +1,76 @@
+-------安装Docker
+yum remove docker \
+               docker-client \
+               docker-client-latest \
+               docker-common \
+               docker-latest \
+               docker-latest-logrotate \
+               docker-logrotate \
+               docker-engine
+
+yum install -y yum-utils
+
+yum-config-manager \
+ --add-repo \
+ https://download.docker.com/linux/centos/docker-ce.repo
+
+yum-config-manager --enable docker-ce-nightly
+
+yum-config-manager --enable docker-ce-test
+
+yum-config-manager --disable docker-ce-nightly
+
+yum install docker-ce docker-ce-cli containerd.io
+
+yum list docker-ce --showduplicates | sort -r
+
+yum install docker-ce-19.03.9-3.el7 docker-ce-cli-19.03.9-3.el7 containerd.io
+
+systemctl start docker
+systemctl enable docker
+mkdir -p /etc/docker
+
+tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": ["https://5qsph43c.mirror.aliyuncs.com"]
+}
+EOF
+
+systemctl daemon-reload
+systemctl restart docker
+
+----------配置kubesphere前置条件
+yum install -y socat
+yum install conntrack-tools
+
+下载 KubeKey
+wget -c https://kubesphere.io/download/kubekey-v1.0.0-linux-amd64.tar.gz -O - | tar -xz
+
+然后，我们看到在当前的目录下面多了 一个 kk 的文件。现在对他赋予执行的权限:
+chmod +x kk
+
+现在，我们就需要安装了:
+./kk create cluster --with-kubernetes v1.18.6 --with-kubesphere v3.0.0
+
+kubectl logs -n kubesphere-system $(kubectl get pod -n kubesphere-system -l app=ks-install -o jsonpath='{.items[0].metadata.name}') -f
+
+最后的结果应该是这样的:
+#####################################################
+###              Welcome to KubeSphere!           ###
+#####################################################
+
+Console: http://192.168.0.2:30880
+Account: admin
+Password: P@88w0rd
+
+NOTES：
+  1. After logging into the console, please check the
+     monitoring status of service components in
+     the "Cluster Management". If any service is not
+     ready, please wait patiently until all components
+     are ready.
+  2. Please modify the default password after login.
+
+#####################################################
+https://kubesphere.io             20xx-xx-xx xx:xx:xx
+#####################################################
