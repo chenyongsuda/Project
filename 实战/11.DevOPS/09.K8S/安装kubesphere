@@ -32,7 +32,7 @@ mkdir -p /etc/docker
 
 tee /etc/docker/daemon.json <<-'EOF'
 {
-  "registry-mirrors": ["https://5qsph43c.mirror.aliyuncs.com"]
+  "registry-mirrors": ["https://xxxxxx.mirror.aliyuncs.com"]
 }
 EOF
 
