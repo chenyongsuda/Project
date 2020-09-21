@@ -1,0 +1,105 @@
+https://www.cnblogs.com/huandada/p/8854702.html
+
+1.gitlab的安装（Centos7）
+新建/etc/yum.repos.d/gitlab-ce.repo，添加以下内容：
+[gitlab-ce]
+name=gitlab-ce
+baseurl=http://mirrors.tuna.tsinghua.edu.cn/gitlab-ce/yum/el7
+repo_gpgcheck=0
+gpgcheck=0
+enabled=1
+gpgkey=https://packages.gitlab.com/gpg.key
+
+安装步骤：
+# 安装依赖包 
+yum install curl openssh-server openssh-clients postfix cronie
+
+# 启动 postfix 邮件服务
+service postfix start
+
+# 检查 postfix
+chkconfig postfix on
+
+# 安装 GitLab 社区版 ,安装git，使其支持git命令
+yum install gitlab-ce git
+
+# 初始化 GitLab 
+gitlab-ctl reconfigure
+
+修改 host
+添加访问的 host，修改/etc/gitlab/gitlab.rb的external_url
+external_url 'http://git.home.com'
+
+vi /etc/hosts，添加 host 映射
+127.0.0.1 git.home.com
+
+每次修改/etc/gitlab/gitlab.rb，都要运行以下命令，让配置生效
+   gitlab-ctl reconfigure
+
+启动gitlab
+   gitlab-ctl start
+
+配置本机的 host，如：192.168.113.59 git.home.com。最后，在浏览器打开网址http://git.home.com，登陆。默认管理员:
+  用户名: root
+  密码: xxxxxx
+
+安装中文语言包（汉化）
+对于英文还过得去的同学，可以不用汉化，下载最新的汉化包，并查看版本，汉化包版本要与gitlab-ce包版本一致：
+  git clone https://gitlab.com/xhang/gitlab.git 
+     cat gitlab/VERSION
+            10.6.1
+
+也可指定版本下载，对于刚出来的一些新版本的gitlab-ce包，可能没有同版本汉化包，过一段时间就会有了：
+    git clone https://gitlab.com/xhang/gitlab.git  -b  v10.6.1-zh
+
+先关闭gitlab：
+gitlab-ctl stop
+
+下载的文件夹内容复制到gitlab目录下
+cp -r -f ./gitlab/* /opt/gitlab/embedded/service/gitlab-rails/
+
+复制过程中会出现以下提示，不用管
+cp: cannot overwrite non-directory ‘/opt/gitlab/embedded/service/gitlab-rails/log’ with directory ‘./gitlab/log’
+cp: cannot overwrite non-directory ‘/opt/gitlab/embedded/service/gitlab-rails/tmp’ with directory ‘./gitlab/tmp’
+
+重新加载配置，启动gitlab
+gitlab-ctl reconfigure   
+gitlab-ctl restart
+再次访问gitlab的web界面即变为中文。
+
+===================================================================
+使用
+实现本地工作机git pull/push gitlab的项目：
+在本地工作机上生成密钥，将公钥复制到gitlab中
+ ssh-key
+ cat ~/.ssh/id_rsa.pub 
+ 
+回到刚才gitlab新建项目里，复制该项目地址
+
+在本地工作机上,配置域名解析  /etc/hosts,将gitlab里的test 1项目克隆到本地：
+172.19.0.111 gitlab.home.com
+
+mkdir test_repo
+cd test_repo/
+git init        #初始化仓库
+git clone git@gitlab.home.com:root/test1.git
+
+由于我之前本地hosts中配置的是另一台gitlab的相同域名不同ip，在known_hosts 文件中有属于 该hostname 的密钥，git clone会报错
+
+在该项目中创建新的文件aaa，并同步到gitlab，可在gitlab的web界面查看
+
+cd  test1
+
+echo aaa>aaa
+git add ./*
+git commit -m "提交代码"
+git push
+
+删除该项目中的文件aaa，并同步到gitlab
+
+git rm -r --cached aaa
+git commit -m 'delete'
+git push  
+
+git pull 可以从gitlab中将文件拉到本地
+
