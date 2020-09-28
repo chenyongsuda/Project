@@ -1,0 +1,62 @@
+使用vue-echarts
+安装vue-echarts
+
+使用npm安装（推荐）
+npm install echarts vue-echarts
+
+CDN
+包含echarts和vue-echarts在你的html文件中，如下所示
+< script src = “ https://cdn.jsdelivr.net/npm/echarts@4.1.0/dist/echarts.js ” > < / script > 
+< script src = “ https://cdn.jsdelivr.net/npm/vue-echarts@4.0.0 ” > < / script > 
+
+使用vue-echarts
+
+在main.js中引入
+
+import ECharts from 'vue-echarts/components/ECharts.vue'
+
+//引入所有表 
+require(‘echarts’);
+
+// 手动引入 ECharts 各模块来减小打包体积
+import 'echarts/lib/chart/bar'
+import 'echarts/lib/chart/line'
+import 'echarts/lib/component/tooltip'
+import 'echarts/lib/component/polar'
+import 'echarts/lib/component/legend'
+import 'echarts/lib/component/title.js'
+
+// 注册组件以便在项目中引用
+Vue.component('charts', ECharts);
+在你想要使用的组件xxx.vue中引入组件
+
+注意包裹echarts组件的容器大小单位必须为px 要不然就会发生图表组件大小异常的情况
+
+<template>
+    <div id="echartsBox">
+        <charts :options="option" style="width:100%;height:100%"></charts>
+    </div>
+</template>
+<script>
+    export default{
+        data(){
+            return{
+                option: {
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    series: [{
+                        data: [820, 932, 901, 934, 1290, 1330, 1320],
+                        type: 'line',
+                        areaStyle: {}
+                    }]
+                },
+            }
+        }
+    }
+</script>
