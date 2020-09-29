@@ -60,3 +60,56 @@ Vue.component('charts', ECharts);
         }
     }
 </script>
+
+=========================================================================================================
+
+通过 vuex 实现 vue-echarts 图表的手动 resize
+背景：项目有用到 vue-echarts, 百度推出的 vue 版本的 Echarts，图表自带响应式属性 auto-resize, 来实现窗口尺寸变化时，图表的尺寸自适应，但是发现它是靠监听 window 的 onresize 来实现的，而有时候当chart 容器 尺寸变化时，window 窗口大小是不变的，比如我这次遇到的，侧边菜单栏的显示隐藏切换，导致内容区域整体部分宽度会变化，但是window 没有变化，所以auto-resize 不能监听这种情况来实现 resize。
+
+解决思路：
+一、能否模拟监听普通 dom 的尺寸变化，然后调用 echarts 的 resize 事件
+具体做法有以下几种：
+
+初始化项目后，轮询，反复查看 dom 尺寸是否变化，这种一听就感觉不好，开销太大。
+监听元素的滚动事件，在 目标 dom 里面包裹一个同等大小的 div，是隐藏不可见的，当目标 dom 大小变化时，触发滚动事件。参考文章
+通过 MutationObserver 监听dom 节点变化，MutationObserver 是在DOM4规范中定义的，它的前身是 MutationEvent 事件，该事件最初在 DOM2 事件规范中介绍，到来了 DOM3 事件规范中正式定义，但是由于该事件存在兼容性以及性能上的问题被弃用；可以用它来监听 dom style 的变化, demo 代码，文档
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+</head>
+<body>
+	<div id="demo" style="background: blue; height: 200px; width: 100%">
+		demo 内容
+	</div>
+	<script>
+		var observer = new MutationObserver(function (mutations, observer) {
+		    mutations.forEach(function (mutation) {
+		        console.log(mutation);
+		    });
+		});
+		var config = {
+		    attributes: true,
+		    attributeOldValue: true,
+		    attributeFilter: [
+		        'style'
+		    ]
+		};
+		var el = document.getElementById('demo');
+		
+		observer.observe(el, config);
+	</script>
+</body>
+</html>
+Ie9-10 默认支持 div 的 resize 事件，可以直接通过 div.attachEvent('onresize', handler); 的方式实现;其它浏览器,通过在 div 中添加一个内置 object 元素实现监听,设置 object 元素的 style 使其填充满 div，这样当 div 的 size 发生变化时，object 的 size 也会发生变化,然后监听 object 元素的 contentDocument.defaultView(window对象)的 resize 事件。参考文章
+二、vue 实现方案
+斟酌了上面几种方案后，结合具体案例，我觉得还是用 vuex 写全局数据更好更方便一些，具体步骤如下
+
+侧边栏展开和隐藏按钮点击 - 触发事件 - 修改 store - ,在图表组件里面 watch store 的变化，然后执行 resize 函数。
+关于 resize(), 因为vue-echarts 插件已经是对 echarts 的封装，如果不修改它的代码的话，可以通过 this.$ref 访问子组件的实例，调用它的 resize()。文档
+    // 注意的坑，1.要设置 width 2. width 变化有延迟，需要加个 timeout，不然看不到效果
+    this.$refs.chart.resize({width: this.$refs.chart.offsetWidth})
+
+
+
