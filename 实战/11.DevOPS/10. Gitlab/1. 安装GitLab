@@ -37,3 +37,63 @@ docker ps
 gitlab启动成功后，浏览器访问http://ip:8880, 即可访问。
 
 设置默认密码 12345678
+
+============================================================
+安装jinkins
+
+拉取镜像
+我这里安装的版本是2.222.3-centos，可以去这里获取你需要的版本: https://hub.docker.com/_/jenkins?tab=tags
+
+# docker pull jenkins/jenkins:2.222.3-centos
+创建本地数据卷
+我这里映射本地数据卷的路径为/data/jenkins_home/，你想放别的地方可以自行修改
+
+# mkdir -p /data/jenkins_home/
+需要修改下目录权限，因为当映射本地数据卷时，/data/jenkins_home/目录的拥有者为root用户，而容器中jenkins用户的 uid 为 1000。
+
+# chown -R 1000:1000 /data/jenkins_home/
+创建容器
+# docker run -d --name jenkins -p 8040:8080 -p 50000:50000 -v /data/jenkins_home:/var/jenkins_home jenkins/jenkins:2.222.3-centos
+-d 标识是让 docker 容器在后台运行
+--name 定义一个容器的名字，如果没有指定，那么会自动生成一个随机数字符串当做UUID
+-p 8040:8080 端口映射，我本地的8080被占用了，所以随便映射了一个8040
+-p 50000:50000 端口映射
+-v /data/jenkins_home:/var/jenkins_home 绑定一个数据卷，/data/jenkins_home是刚才创建的本地数据卷
+
+打开http://192.168.56.102:8400/
+这里要求输入初始的管理员密码，根据提示密码在/var/jenkins_home/secrets/initialAdminPassword这个文件中，注意这个路径是 Docker 容器中的，所以我们通过如下命令获取一下
+
+# docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+85770376692448b7b6a8e301fb437848
+别忘了我们映射了本地数据卷/data/jenkins_home/，所以也可以通过如下命令输出
+
+# cat /data/jenkins_home/secrets/initialAdminPassword 
+85770376692448b7b6a8e301fb437848
+输入密码后，点击继续
+
+
+安装插件
+这里选择安装推荐的插件，然后 Jenkins 会自动开始安装，如果插件安装很慢
+Jenkins 在启动的时候需要安装一些插件，下载速度很慢不说还很多报错，让人很是抓狂，下面是解决办法:
+
+找到 default.json 文件
+在 Jenkins 的安装目录里查找
+
+$ find . -name default.json
+./updates/default.json
+如果你不知道 Jenkins 的安装目录，那就从根目录开始查找
+
+$ find / -name default.json
+/var/lib/jenkins/updates/default.json
+替换 default.json 中的内容
+将 updates.jenkins-ci.org/download 替换为 mirrors.tuna.tsinghua.edu.cn/jenkins，
+将 www.google.com 替换为 www.baidu.com，
+
+具体命令如下:
+# sed -i 's/www.google.com/www.baidu.com/g' default.json
+# sed -i 's/updates.jenkins-ci.org\/download/mirrors.tuna.tsinghua.edu.cn\/jenkins/g' default.json
+
+重启 Jenkins
+根据你具体的安装方式、启动方式，重启一下 Jenkins，然后在页端重新安装插件，就会看到速度非常快了！
+
+安装插件就行了,完成后创建第一个管理员用户就可以开始了.
