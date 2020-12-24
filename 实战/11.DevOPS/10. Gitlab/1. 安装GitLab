@@ -1,0 +1,37 @@
+1、下载镜像
+docker pull gitlab/gitlab-ce
+
+2、创建目录
+通常会将 GitLab 的配置 (etc) 、 日志 (log) 、数据 (data) 放到容器之外， 便于日后升级， 因此请先准备这三个目录
+mkdir -p /wwwroot/gitlab/config
+mkdir -p /wwwroot/gitlab/logs 
+mkdir -p /wwwroot/gitlab/data
+
+3、启动运行
+docker run --detach \
+  --hostname gitlab.example.com \
+  --publish 8443:443 --publish 8880:80 \
+  --name gitlab \
+  --restart always \
+  --volume /wwwroot/gitlab/config:/etc/gitlab \
+  --volume /wwwroot/gitlab/logs:/var/log/gitlab \
+  --volume /wwwroot/gitlab/data:/var/opt/gitlab \
+  --privileged=true \
+  gitlab/gitlab-ce:latest
+
+--hostname gitlab.example.com: 设置主机名或域名
+--publish 8443:443：将http：443映射到外部端口8443
+--publish 8880:80：将web：80映射到外部端口8880
+--name gitlab: 运行容器名
+--restart always: 自动重启
+--volume /wwwroot/gitlab/config:/etc/gitlab: 挂载目录
+--volume /wwwroot/gitlab/logs:/var/log/gitlab: 挂载目录
+--volume /wwwroot/gitlab/data:/var/opt/gitlab: 挂载目录
+--privileged=true 使得容器内的root拥有真正的root权限。否则，container内的root只是外部的一个普通用户权限
+运行成功之后，可以使用下面的命令查看容器运行状态：
+
+docker ps
+可以看到 GitLab 已经在运行了，有一个属性 STATUS 为 health: starting，说明 gitlab 的服务正在启动中，还没有启动完毕。等这个状态变成 healthy 时则说明已经部署完成，可以访问了。
+
+访问
+gitlab启动成功后，浏览器访问http://ip:8880, 即可访问。
