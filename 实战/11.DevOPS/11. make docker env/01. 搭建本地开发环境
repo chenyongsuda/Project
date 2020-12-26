@@ -1,0 +1,55 @@
+如何用Docker快速搭建本地开发环境
+
+
+
+这一期，我们来讲一下如何用docker快速搭建开发环境。在后端的搭建中php相对容易一些，这一期我们就用php作为例子。
+
+
+
+首先我们要下载docker。下载网站是这个: http://www.docker.com
+
+​
+
+
+
+如果没有账号的话，就创建一个账号。只用账号，你可以下载你想要的image。
+
+
+
+创建完账号以后需要去邮箱里确认一下。账号确认完以后就可以去登陆了。
+
+
+
+登录进去，当然第1件事就是要下载你想要的Docker版本。我现在正在使用windows，所以我就下载windows的Docker版本。
+
+
+
+
+下载完成以后就安装程序。大约几分钟后安装完成。
+按照提示，可能需要重启电脑。电脑重启以后, dockor会直接运行起来。去确认一下, 就在右下角的托盘上用鼠标指向docker图标, 应该可以看到docker desktop is running。
+这样子，安装部分我们就完成了。
+接下来，我们就创建一个文件夹docker。
+在里面创建一个src文件夹存放一个简单的index.php:
+
+<?php
+echo "这里是丁哥开讲";
+然后跟src同级的地方创建一个Dockfile文件。
+FROM php:7.2-apache
+COPY src/ /var/www/html/
+EXPOSE 80
+
+FROM这一行的意思是指定要下载的image，
+第二行COPY的意思是把我们的文件拷贝到docker container里面。
+EXPOSE这一行是说docker container的80端口是我们的程序运行端口。
+接下来就是执行下面的命令：
+docker build -t test .
+
+这个命令是要创建一个test image, 并放到当前的文件夹里面。
+如果一切正常的话，我们就创建了一个名字叫做test的image。并且把我们的文件拷贝上去。开放的端口是80。
+运行的方式是这样子的:
+
+docker run -p 82:80 test
+
+第1个82是指我们本机的端口。
+第2个80是指docker容器的端口。
+运行成功以后, 我们可以去浏览器测试一下我们的网站。
