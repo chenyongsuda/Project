@@ -196,3 +196,35 @@ docker load -i java.tar
 
 其他同学可以通过这个命令将我们的镜像加载到他的docker中。
 再将shell脚本集成到项目根目录中，就可以愉快的使用了。
+
+
+docker搭建Java开发环境
+centos7.2 + Tomcat7 + JDK1.8
+
+步骤如下：
+1.获取centos7.2 docker镜像
+
+#通过docker search 软件名 命令获取centosdocker search centos //此时可以看到可用的centos镜像列表#获取centos镜像docker pull centos:7.2#通过docker images 可以查看本地镜像docker images
+2.启动容器
+容器是在镜像的基础上来运行的，一旦容器启动了，我们就可以登录到容器中，安装自己所需的软件或应用程序。
+
+//启动容器命令 docker run options containsID argument#options参数说明#-i：表示以“交互模式”运行容器#-t：表示容器启动后会进入其命令行#-v：表示需要将本地哪个目录挂载到容器中，格式：-v <宿主机目录>:<容器目录>#--name: 指定容器的名称，如果未指定容器名称则会随机生成一个名称docker run --name JavaWeb -itv /root/software/:/mnt/software/ ff426288ea90 /bin/bash#启动容器docker start JavaWeb#登录容器docker attach JavaWeb
+3.安装JDK1.8
+
+#安装wget库sudo yum install wget#进入usr/local/src目录下cd /usr/local/src#获取JDK1.8包wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u161-b12/2f38c3b165be4555a1fa6e98c45e0808/jdk-8u161-linux-x64.tar.gz#解压jdk-8u161-linux-x64.tar.gztar -zxvf jdk-8u161-linux-x64.tar.gz#重命名为JDK8mv jdk1.8.0_161 jdk8#配置环境变量sudo vim /etc/profile #打开环境变量配置文件#增加下面内容到该文件最后export JAVA_HOME=/usr/local/jdk8export PATH=$JAVA_HOME/bin:$PATH  export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar 
+#使环境生效source /etc/profile
+4.安装Tomcat7
+
+#获取tomcat安装包wget http://mirrors.hust.edu.cn/apache/tomcat/tomcat-7/v7.0.84/bin/apache-tomcat-7.0.84.tar.gz#解压tomcat安装包tar -zxvf apache-tomcat-7.0.84.tar.gz#重命名为tomcat7mv apache-tomcat-7.0.84  tomcat7#打开环境变量配置文件sudo vim /etc/profile 
+#增加下面内容到该文件最后export TOMCAT=/usr/local/tomcat7export PATH=$TOMCAT/bin:$PATH  #使环境生效source /etc/profile
+5.编写启动脚本
+启动tomcat时必须通过TOMCATHOME/bin/catalina.sh实现，不能使用TOMCAT_HOME/bin/startup.sh启动，否则脚本执行后容器会马上退出。
+
+#创建启动脚本vi /root/run.sh#添加以下内容：#!/bin/bash# Export environment variablesource /etc/profile# Start tomcatsh /usr/local/src/tomcat7/bin/catalina.sh run#添加可执行权限：chmod u+x /root/run.sh
+6.构建JavaWeb镜像
+Docker构建镜像的两种方法：
+1.使用docker commit 命令；
+2.使用docker build命令和Dockerfile文件；
+
+docker ps #查看正在运行的容器docker ps -a #查看所有的容器#创建JavaWeb镜像docker commit 738cb51e2236  zhaoheqiang/JavaWeb:0.0.1#查看容器列表docker images #可以发现zhaoheqiang/JavaWeb:0.0.1镜像#运行zhaoheqiang/JavaWeb:0.0.1docker run -d -p 28080:8080 --name javaweb zhaoheqiang/JavaWeb:0.0.1 /root/run.sh
+7.测试外部访问28080端口
