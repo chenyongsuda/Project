@@ -228,3 +228,294 @@ Docker构建镜像的两种方法：
 
 docker ps #查看正在运行的容器docker ps -a #查看所有的容器#创建JavaWeb镜像docker commit 738cb51e2236  zhaoheqiang/JavaWeb:0.0.1#查看容器列表docker images #可以发现zhaoheqiang/JavaWeb:0.0.1镜像#运行zhaoheqiang/JavaWeb:0.0.1docker run -d -p 28080:8080 --name javaweb zhaoheqiang/JavaWeb:0.0.1 /root/run.sh
 7.测试外部访问28080端口
+
+=================================
+研发环境容器化实施过程（docker + docker-compose + jenkins）
+目录
+背景介绍
+改造思路
+容器构建
+基础准备
+中间件容器
+外部依赖容器
+业务应用容器
+容器整合
+自动构建容器
+Maven相关
+非Maven项目
+总结
+背景介绍
+目前公司内部系统（代号GMS）研发团队，项目整体微服务规模大概是4+9+3的规模，4个内部业务微服务，9个是外部平台或者基础服务（文件资源/用户中心/网关/加密等），3个中间件服务（数据库/Redis/Nacos）。
+分为2个组，迭代周期为2周。需求和排期都是会有交叉，会保证每周都有迭代内容交付，另外技术部门也在进行性能优化以及代码规约的重构。我们的Git管理模型使用的是AoneFlow，意味着同一时间可能会有多个研发特性分支进行中。出现的问题就是CI，我们集成使用的Jenkins，原本研发环境就只有一套Jenkins来构建，后来出现并行的特性分支，为了支持开发联调工作就重新搭建了一套环境，但是后面出现了更多的并行需求（例如对接口压测的性能分支，底层基础架构的升级分支，代码规约调整的分支）。
+现在的痛点是需要部署一个环境的成本太高，基本需要一个高级研发对于所有组件都了解，对于Linux系统了解。整套环境部署可能需要2天左右，而且过程特别复杂容易出错。
+
+改造思路
+考虑是需要进行容器化改造，目前整个环境的管理还没有基于容器化来实施，所以我们希望这次也是给团队一个基本概念和练兵的机会。
+因为我们主要的诉求是环境部署，所以并没有按照容器推荐的那样，每个服务都单独建立docker，而是为了能够快速的部署和构建将所有服务和中间件进行分块。
+目前分块主要是分为中间件服务，业务服务，依赖/底层服务这么三大块。这么分的原因有下面一些：
+
+中间件包含数据库、Nacos、Redis。这么做的目的是因为Nacos强依赖数据库，数据库也是所有微服务的基础依赖之一。数据库结构和Nacos的配置实际上每个迭代会有一些变化，所以将这些内容打包在一起，以版本区分会更简单一些。
+依赖/底层服务包含非业务的服务（文件资源/用户中心/网关/加密）。这些都是外部服务，迭代过程中的变化是比较少的，可以每隔几个迭代打包一次。所以为了操作便利所以统一打包成了一个镜像。
+业务微服务，业务的微服务就是迭代开发过程中不断修改和测试的内容，所以这块是应该是要单独的容器，并且还要和Jenkins关联能够更新。
+这样基本的容器划分就确认了，整体使用docker-compose来进行容器管理，因为实际的镜像数量会稍微多一些，而且还有很多如端口等配置。
+
+容器构建
+思路确认之后就开始执行，我们将比较详细的描述各个镜像的构建过程。
+
+基础准备
+服务器上首先需要安装好 docker和docker-compose依赖。我们的docker的私服使用的Harbor。
+接下来我们基本都是在准备所有的dockerfile，所以会建立一个基础目录，在/root/docker/下建立 gms 文件夹用于存放各个镜像的dockerfile，以及docker-compose文件。
+提供一个基础镜像用于其他镜像生成，基础镜像需要包含java环境，以及一些环境基础插件和工具，我们来看一下Dockerfile
+
+FROM centos:7
+
+RUN mkdir -p /home/project/vv/log
+
+ADD jdk-8u211-linux-x64.tar.gz /home/project/
+RUN mv /home/project/jdk1.8.0_211 /home/project/java
+COPY entrypoint.sh /home/project/vv/
+ENV JAVA_HOME /home/project/java
+ENV CLASSPATH .:$JAVA_HOME/lib:$JAVA_HOME/jre/lib:$CLASSPATH
+ENV PATH $JAVA_HOME/bin:$JAVA_HOME/jre/bin:$PATH
+# running required command
+WORKDIR /home/project/vv
+RUN yum install -y wget curl net-tools openssh-server telnet nc && chmod +x entrypoint.sh
+
+这里可以关注的点在于，我们在这个基础镜像的文件夹内实际上是要把我们需要使用的文件都存储好的，意思就是你需要复制进镜像的文件都必须在你当前执行docker build命令的目录中。
+然后就是这里会需要存在设置环境变量。
+
+接下来执行 docker build -t images:tag .
+不要漏掉最后的那个. 那个实际上就是指定当前目录。
+完成后执行 docker push
+这样基础镜像就构建完成，我们的命名为 172.16.6.248/gms-service/gms-base
+172.16.6.248是我们内部的Harbor服务器。
+
+中间件容器
+中间件容器需要包含数据库、Nacos、Redis。
+上面也说过，Nacos依赖与数据库，由于是研发环境Nacos使用的standalone模式。其中有一点需要注意，在Nacos中可能会设置数据库、Redis等连接，无论原本使用的是ip还是域名，在这里都需要改成是服务名称，由于我们是使用类docker-compose并且采用network组网的形式将相关的服务都放在同一个网络内进行多实例之间的隔离。Nacos指向的数据库连接改为本地。
+我们来看一下目录结构：
+
+-rw-r--r--. 1 root root 336 12月 17 17:58 Dockerfile
+-rw-r--r--. 1 root root 205 12月 17 18:34 gmsstore.sh
+-rw-r--r--. 1 root root 532 12月 6 15:31 my.cnf
+drwxr-xr-x. 12 root root 206 12月 6 15:24 mysql
+drwxr-xr-x. 17 root root 8192 12月 26 14:19 mysqldata
+drwxr-xr-x. 9 root root 125 12月 4 11:10 nacos
+drwxrwxr-x. 6 root root 4096 12月 11 15:21 redis
+Dockerfile不用解释，由于包含多个中间件，所以启动命令打包成了shell。
+mysql涉及到3个文件/文件夹，my.cnf是配置文件，mysql是程序本体，mysqldata是打包了所有相关库数据。
+nacos和redis文件夹也不用解释了。
+
+我们来看看这个Dockerfile：
+
+FROM 172.16.6.248/gms-service/gms-base
+
+RUN yum -y install libaio numactl
+
+COPY mysql /home/project/mysql
+COPY mysqldata /home/project/mysqldata
+COPY my.cnf /etc/my.cnf
+COPY nacos /home/project/nacos
+COPY redis /home/project/redis
+COPY gmsstore.sh /home/project
+WORKDIR /home/project/
+RUN chmod +x gmsstore.sh
+ENTRYPOINT ./gmsstore.sh
+这里特别的地方在于mysql8需要安装一些依赖才可以运行，所以我们安装了libaio numactl。
+
+外部依赖容器
+先来看下目录结构
+
+-rw-r--r--. 1 root root 358 12月 17 19:26 Dockerfile
+-rw-r--r--. 1 root root 764 12月 16 17:29 gmsdependency.sh
+-rw-r--r--. 1 root root 71509153 12月 16 17:30 vv-dict.jar
+-rw-r--r--. 1 root root 63880862 12月 16 17:29 vv-encryption.jar
+-rw-r--r--. 1 root root 51465237 12月 16 17:30 vv-gateway.jar
+-rw-r--r--. 1 root root 69535661 12月 16 17:29 vv-message.jar
+-rw-r--r--. 1 root root 171366034 12月 16 17:30 vv-resource.jar
+-rw-r--r--. 1 root root 78130738 12月 16 17:29 vv-user.jar
+这个套路和之前一样，相关的服务已经打出了jar包放到打包目录下，编写shell脚本作为所有应用启动的统一入口。
+接下来看下Dockerfile：
+
+FROM 172.16.6.248/gms-service/gms-base
+
+LABEL version="1.0"
+LABEL description="vv-gms-den"
+LABEL maintainer="liyonghua@vv.cn"
+COPY jar/* /home/project/vv/
+ENV JVM=""
+ENV NACOS="127.0.0.1:9002"
+RUN chmod +x /home/project/vv/gmsdependency.sh
+EXPOSE 7003
+EXPOSE 8100
+EXPOSE 7002
+EXPOSE 7004
+EXPOSE 7001
+WORKDIR /home/project/vv/
+ENTRYPOINT ./gmsdependency.sh
+在这里我们环境变量中设置Nacos的地址，实际上Nacos的地址会使用服务名的方式进行访问，在使用 java -jar 命令时直接设置到参数中，类似这样：
+
+java -jar vv-dict.jar --spring.cloud.nacos.config.server-addr=$NACOS --spring.cloud.nacos.discovery.server-addr=$NACOS
+业务应用容器
+业务应用容器反而是最没啥好说的，只有一个单jar文件，然后一个启动脚本。
+这里可能唯一需要注意一下的就是第一次启动的问题，由于业务应用依赖于中间件，当启动时mysql和Nacos可能还没有那么快启动起来，所以可能会引发业务应用连接不上中间件自动退出，需要写脚本检测。
+给出Dockerfile
+
+FROM 172.16.6.248/gms-service/gms-base
+
+LABEL version="1.0"
+LABEL description="vv-gms-core"
+LABEL maintainer="liyonghua@vv.cn"
+COPY jar/* /home/project/vv/
+ENV JVM=""
+ENV NACOS="127.0.0.1:9002"
+RUN chmod +x /home/project/vv/*.sh
+EXPOSE 8102
+WORKDIR /home/project/vv/
+没啥多解释的了。
+
+容器整合
+所有的docker镜像都已经构建完毕并且已经传输到了镜像服务器上。接下来就是如何整合容器了。
+之前已经说过本次的选型是docker-compose，没有上k8s是因为还没有和运维同学协调好，我们使用docker-compose先做可行性测试。
+docker-compose 的安装很多教程，我列一下基本命令
+
+yum -y install epel-release
+yum -y install python-pip
+yum -y install python-devel
+pip --version
+pip install --upgrade pip
+pip install docker-compose 
+docker-compose --version
+接下来看一下 docker-compose.yml
+
+version: '3'
+services:
+  gms-dependency:
+    image: 172.16.6.248/gms-service/gms-dependency
+    ports:
+      - 13004:7001
+      - 13005:7003
+      - 13006:7004
+      - 13007:17002
+      - 13008:8100
+    networks:
+      - gmsnetwork
+    environment:
+      JVM:
+      NACOS: gms-store:9002
+    depends_on:
+      - gms-gateway
+    volumes:
+      - "/home/project/vv/log/:/home/project/vv/log/"
+    entrypoint: ./entrypoint.sh -d gms-store:3306,gms-store:9002 -c './gmsdependency.sh'
+  gms-gateway:
+    image: 172.16.6.248/gms-service/gms-gateway
+    ports:
+      - 13010:9001
+    networks:
+      - gmsnetwork
+    depends_on:
+      - gms-store
+    volumes:
+      - "/home/project/vv/log/:/home/project/vv/log/"
+    entrypoint: ./entrypoint.sh -d gms-store:3306,gms-store:9002 -c 'java -jar vv-gateway.jar --spring.cloud.nacos.config.server-addr=gms-store:9002 --spring.cloud.nacos.discovery.server-addr=gms-store:9002 >/dev/null 2>&1'
+  gms-oacore:
+    image: 172.16.6.248/gms-service/gms-oacore:1.2.7
+    ports:
+      - 13009:8102
+    networks:
+      - gmsnetwork
+    environment:
+      JVM:
+      NACOS: gms-store:9002
+    depends_on:
+      - gms-gateway
+    volumes:
+      - "/home/project/vv/log/:/home/project/vv/log/"
+    entrypoint: ./entrypoint.sh -d gms-store:3306,gms-store:9002 -c 'java -jar vv-oa-core.jar --spring.cloud.nacos.config.server-addr=gms-store:9002 --spring.cloud.nacos.discovery.server-addr=gms-store:9002 >/dev/null 2>&1'
+  gms-store:
+    image: 172.16.6.248/gms-service/gms-store:1.2.6
+    ports:
+      - 13001:3306
+      - 13002:9002
+      - 13003:6379
+    networks:
+      - gmsnetwork
+    volumes:
+      - "/home/project/vv/log/:/home/project/vv/log/"
+  gms-oaweb:
+    image: 172.16.6.248/gms-service/gms-oaweb:1.2.6
+    ports:
+      - 13018:80
+    networks:
+      - gmsnetwork
+    depends_on:
+      - gms-oacore
+      - gms-dependency
+      - gms-gateway
+    volumes:
+      - "/home/project/vv/log/:/home/project/vv/log/"
+    entrypoint: /home/project/vv/entrypoint.sh -d gms-oacore:8102,gms-dependency:17002,gms-gateway:9001,gms-xxladmin:8103 -c 'nginx -g "daemon off;"'
+networks:
+  gmsnetwork:
+    driver: bridge
+这份文件中，其实是比较常规的docker-compose的格式，由于各个容器之间相互可能都有依赖，所以我们使用了内部网络，networks 这个特性，将相关应用放在同一个内部网络中互相访问。depends_on这个属性支持了启动的先后顺序，但是这个属性仅仅基于容器级别。也就是前置的容器只要启动后续就会启动，但是内部依赖的应用可能还没有启动完成，所以我们使用了shell脚本来检测应用启动完成后再实际的启动应用。最后就是我们使用volumes开放了可挂载目录，输出所有的日志文件便于查看。environment设置环境变量，将依赖的服务名和内部网络端口传递给不同容器中的应用。
+这样就完成了docker-compose的设计，然后我们使用 docker-compose up -d 就可以启动 docker-compose stop 可以关闭。但是切记docker-compose命令必须在存在docker-compose.yml文件的目录下执行。
+
+自动构建容器
+我们使用docker-compose已经启动了完整的环境，但是记得本次实践的目的在于研发环境的部署，研发环境是需要不断的更新代码进行调试的。所以我们需要引入jenkins来进行容器重新构建、推送、环境更新。
+
+Maven相关
+我们的项目是一个父子的Maven项目，父目录下会包含业务核心代码（core）、对外暴露API（api）等包。需要打包的镜像实际上是core中的完整jar包。
+Maven的插件我们使用的是
+
+<build>
+    <plugins>
+        <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>dockerfile-maven-plugin</artifactId>
+                <version>1.4.10</version>
+                <configuration>
+                    <repository>172.16.6.248/gms-service/gms-oacore</repository>
+                    <force>true</force>
+                    <forceCreation>true</forceCreation>
+                    <tag>${dev.docker.tag}</tag>
+                    <buildArgs>
+                        <JAR_FILE>vv-oa-core/target/${project.build.finalName}.jar</JAR_FILE>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+    </plugins>
+</build>
+这是github上的插件地址，这里force这个标签是可以对同tag的镜像在构建时进行覆盖。
+Dockerfile建议放在子项目根目录下。
+在Jenkins构建时，我们是以父项目作为根目录执行 package 命令的。打包完成后，不能直接执行 dockerfile:build 命令。而是在Post Steps中定制脚本，cd进入到子项目之后，分别执行 dockerfile:build dockerfile:push，我们来看一下Jenkins中配置的脚本：
+
+cd gms-oacore
+
+nowtag=1.3.1
+nowpath=/root/docker/dockerbase/feature-VV-443
+nowprefix=feature-VV-443
+
+mvn -Dmaven.test.skip=true dockerfile:build -Ddev.docker.tag=$nowtag
+mvn -Dmaven.test.skip=true dockerfile:push -DpushImageTag
+
+ssh root@172.16.6.247 "/root/docker/dockerbase/jenkins-rebuild.sh $nowpath "$nowprefix"_gms-oacore_1 172.16.6.248/gms-service/gms-oacore:$nowtag gms-oacore"
+这里实际上是在Jenkins先打包，并且build和push镜像，ssh到目标服务器通过远程脚本来进行拉取构建的一些操作。
+针对docker-compose启动的容器，如果是要单独更新一个镜像，可以将容器stop之后rm掉，同时rmi对应镜像，最终使用 docker-compose --scale images:tag=1 重新拉取启动这个镜像。
+
+非Maven项目
+由于是前后端分离项目，所以我们还会有一个单独的前端项目，是直接挂载Nginx容器内。所以这部分没办法使用Maven插件，我们就采用shell直接调用docker命令的形式，这里放上差异的部分：
+
+docker build -t 172.16.6.248/gms-service/gms-oaweb:$nowtag .
+docker push 172.16.6.248/gms-service/gms-oaweb:$nowtag
+替换来mvn dockerfile相关的命令，其他基本相同。
+
+总结
+在这样的实践中，我们将项目拆分为合理粒度建立docker镜像，使用docker-compose将多个容器打包为一个完整环境运行，同时用内部网络的概念隔离多个环境在同一个宿主机器时的影响，最后使用Jenkins来进行自动化的构建和发布，完成了研发环境的完整闭环。效果也大大提高，原本需要花几天时间还不能很完整的部署好，现在只需要一个人15-30分钟就可以完整部署好一个环境。
+但是实际上问题也很多，由于整合来大量的环境，所以单个环境启动后，占用内存10G左右，实际上比较难单个宿主机器直接部署多套。
+另外大家也能发现，我们存在部分访问是通过ip来的，这是一个不好的习惯，建议尽量都改为内部域名的形式，避免后续服务器变更造成复杂影响。
+在实施过程中，我们还是手写了很多shell脚本作为中间粘合，这个对于环境的依赖会比较大，而且复用性其实是很低的，后续我们会考虑如何提高可复用性。
+最后还是要考虑实施k8s，这个应该在2020的Q1就会实施。
+
+容器化是为了能够让研发和运维对于应用的把握程度更高，避免大家花太多的时间在环境、部署之类问题上，也能够大大提高系统的稳定性和扩展性。但是会对DevOps提出更高的要求，研发和运维要更加紧密的配合，架构设计、部署方案等都需要共同讨论理解之后才能实施，但是我坚信这就是趋势，我们越早迎合越早能提升自己、整个团队和我们的产品。
