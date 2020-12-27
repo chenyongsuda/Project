@@ -1,0 +1,58 @@
+1. 什么是看板？
+    关于看板的定义，网上一搜一箩筐。这里引用一下David Anderson一段话。有人可能想问这哥们是谁。 一句话，Taiichi Ohno (大野耐一)是Kanban之父，David 就是把Kanban引进IT行业的先锋。
+    KanBan is an approach to change management that employs a Kanban system onto an existing process context in order to provoke evolutionary and incremental change. 
+这句话意思就是说，Kanban可以被引入进任何开发框架去支持和推动持续性软件开发，不管你的开发模式是Agile的(比如: XP, FDD, TDD)还是传统的开发方式(比如:waterfall, iterative)。
+个人的理解就是，这个一种软件开发流程管理的方法，保证软件的持续集成并且不让你的开发团队超负荷。很程序猿是不是应该很喜欢听到这句 “不让你的开发团队超负荷”。 根据团队能力，限定WIP(work in progress)的tasks数量。
+
+2. 为什么看板？
+
+1）可视化你的工作流程。所有的task的进度会全部显示Kanban上，每一个人都可以一目了然了解进度和流程。
+2）限制WIP中的tasks数量。一般情况下，这个数量是等于Team中的developer数量。
+3）管理并优化流程。当WIP中的某一个task完成时，在ToDo中的优先级最高的task会被移到WIP中，这也是为什么当一个项目中需要经常更改优先级时，会选择Kanban的原因。
+4）量化开发周期。
+5）缩短开发周期。这个其实可以理解为发现问题，解决问题，从而找到更科学的方法提高开发效率。
+6）变push system (just in case) 为 pull system(just in time)。新的case只能在team有能力情况下再开始。
+
+3. 看板模型
+
+KanBan墙
+根据我们现在项目的看板，我画了一个上面的Kanban墙。
+
+1）划分list， backlog:还没做的，一般是来自产品部(新需求)或者你们的线上support的客服人员(bug)。design:正在准备design的，一般这个部分都是solution architecture或者UI Designer负责，并不是所有的task都会到这个list中来。 development:这部分就很明显是coding部分，由developer负责。 test:测试部分，由测试人员负责，done：已完成，等待上线。每个项目可以根据自己的需求建立自己Kanban。上面这个不是唯一的。
+2）在上面的每个流程中设置了限定的task数量。这是Kanban核心思想之一，意思就是说同一时间，只能做这么多task。比如Design是2 这个阶段只能有两个task进行。这个一般是根据人数来决定这个限定数目。
+3）我们project已经上线，所以经常会有一些bug来自我们客户，同时也会有些新需求来自我们的产品组，有时也会需要对项目中某一部分的function做一个提高。所以我们用不同颜色的代表不同类型的需求。蓝色是bug，绿色是improvement，紫色是新需求。这样可以更加清晰和归类。
+4）我们项目的产品组是project的stakeholder，所以一般由他们来划分backlog中task优先级。然后team在做完一个task之后，去选择下一个最高优先级的task。产品组是可以随时更改这些backlog中task的优先级除了下面两种情况：1. task已经开始，不可以替换正在做的task。2. 项目周期剩余时间已经小于task的预估完成时间，这个task是不可以更改作为下个更高优先级。
+
+4. 卡片模型
+
+task卡片
+ 1) Ticket ID 是某个task的唯一标识。 我们项目中，是使用了物理看板(就是买的一个大白板，自己画里面的内容)，当某一个task结束上线后，我们就会把task取下录入系统做备份。所以每次去系统里，我们都会根据ID找这些task。
+2）task的描述。就是这个task要做什么。
+3）Estimated Cycle Days 就是预估完成这个task要花费的时间。根据这个时间，我们可以预估出完成所有task可能需要的时间。我们也能预估出一个迭代能够做多少task，从而可以更好的排列backlog中task的优先级。一般是由开发组集体讨论给出这个预估时间。
+4）Actual Cycle Days 是完成一个task真正花费的时间，如果这个时间跟Estimated Cycle Days（预估时间）相差很大的话，整个team就要做回顾和总结，哪里出了问题。从而解决问题。一般一个新的组建初期，estimated Cycle Days和Actual Cycle Days相差都会比较大。通过几次迭代之后，大家都相互了解之后，estimated Cycle Days会变得越来越准确。
+5）task优先级。用来排序拿个task要先做的。这个是由产品拥有者来决定，scrum里面叫product owner, 传统项目中叫bussiness user。 就是谁来出钱做这个项目的。 我们项目中是由产品组的人来决定。
+6）task 负责人。这个很明显了，就是要做这个task的人。
+
+5. KanBan和Scrum的区别。
+   有的项目可能用的是Scrum，Scrum会比Kanban来的复杂很多。在Scrum有严格角色定义，开发周期管理。但是看板是没有的。个人总结，Scrum是一个完成的开发管理框架，比较完善的，而kanban只是开发流程的管理工具，可以放到各种开发框架中去的。各位可以看下面的图来对比Kanban和scrum板的区别。可能不是包括所有的不同。
+kanban和scrum比较
+大家也可以去看下这篇文章，https://blog.csdn.net/iamdll/article/details/18552607
+
+6. KanBan工具。
+kanban的工具有很多，大家可以自己去网上找找，我们的项目中主要是用物理看板，Trello和JIRA。因为我们有些project是外包的，所以我们只能使用Trello和JIRA这种online的tool跟vendor沟通。如果是自己的开发团队，个人建议还是使用物理看板。
+
+7. Work Agreement
+其实work agreement不只是Kanban会有，Agile所有methodology都会有。只是为了适应不同的methodology或者project，agreement会有不一样而已。这个agreement不是给某一team或者人设立。 而是给所有参加project的team。Agreement可以保证project稳定前进。下面有几个例子。
+1）Task开始后，不可以修改task的要求或者更换task。
+2）task的估算时间，不可以大于迭代剩余时间（只包括working time）。
+3）早上9点之前到公司并开始工作，下午6点离开办公室。
+4） 会议期间，不可使用手机并集中会议主题。
+5）会议期间，只讨论跟会议主题相关内容，以保证会议可以准时结束。
+
+总结
+   每个project都有各自不同的环境和人员的组成，Kanban是一种流程管理的工具， 每个project可以根据自己的情况，找出适合自己的使用方式。 大家在参与的过程中才会学会更多的东西。
+
+作者：飘动的字符
+链接：https://www.jianshu.com/p/3967f7785a62
+来源：简书
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
