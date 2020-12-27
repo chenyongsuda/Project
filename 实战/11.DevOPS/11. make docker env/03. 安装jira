@@ -1,0 +1,63 @@
+https://i4t.com/3502.html
+
+重建Jira软件系统，并采用Docker来实现破解版的Jira安装。
+
+步骤
+1、下载镜像
+一定要安装jira-software(不是jira),否则没有agile
+[root@iZo7e61fz42ik0Z ~]# docker pull dchevell/jira-software:7.13.0
+……
+2、运行容器
+[root@iZo7e61fz42ik0Z data]# docker run -d -it -p  8080:8080  --privileged  -m 4096M -v /data/jira-data:/var/atlassian/application-data/jira  -v /etc/localtime:/etc/localtime --name jira dchevell/jira-software:7.13.0
+
+3、拷贝文件到容器内
+# 下载3个文件
+[root@iZo7e61fz42ik0Z data]# wget https://github.com/hlwojiv/some-software/raw/master/Jira/mysql-connector-java-5.1.25-bin.jar
+[root@iZo7e61fz42ik0Z data]# wget https://github.com/hlwojiv/some-software/raw/master/Jira/atlassian-universal-plugin-manager-plugin-2.22.4.jar
+[root@iZo7e61fz42ik0Z data]# wget https://github.com/hlwojiv/some-software/raw/master/Jira/atlassian-extras-3.2.jar
+ 
+# 拷贝mysql-connector
+[root@iZo7e61fz42ik0Z data]# docker cp mysql-connector-java-5.1.25-bin.jar jira:/opt/atlassian/jira/atlassian-jira/WEB-INF/lib/
+# 进入容器修改mysql-connector的权限
+[root@iZo7e61fz42ik0Z data]# docker exec -it jira bash
+bash-4.4# chmod 755 /opt/atlassian/jira/atlassian-jira/WEB-INF/lib/mysql-connector-java-5.1.25-bin.jar
+bash-4.4# exit
+# 重启容器
+[root@iZo7e61fz42ik0Z data]# docker restart jira
+jira
+
+
+3、Web设置
+浏览器访问JiraWeb，语言可以设为中文，选择「我将设置它自己」——「下一步」
+数据库设置，数据库类型选择「MySQL」，接着填入你的MySQL连接信息（需要你在你的MySQL数据库中创建数据库，数据库的字符类型必须是utf8），测试可以连接之后点击「下一步」
+设置应用程序的属性——「下一步」
+申请许可证关键字，点击「生成Jira试用许可证」
+需要注册账号，注册完之后重新回到这个页面，选择相关信息，点击「Generate License」
+点击「Yes」
+
+页面就会带着你的许可证关键字回到Jira的设置页面，接着点击「下一步」
+等待一会就进入设置管理员页面，填入一些信息即可，接着「下一步」
+点击「完成」即完成设置
+
+4、拷贝文件到容器内
+# 拷贝atlassian-extras到容器内
+[root@iZo7e61fz42ik0Z data]# docker cp atlassian-extras-3.2.jar jira:/opt/atlassian/jira/atlassian-jira/WEB-INF/lib/
+# 进入容器设置atlassian-extras的权限
+[root@iZo7e61fz42ik0Z data]# docker exec -it jira bash
+bash-4.4# chmod 755 /opt/atlassian/jira/atlassian-jira/WEB-INF/lib/atlassian-extras-3.2.jar
+# 重启容器
+[root@iZo7e61fz42ik0Z data]# docker restart jira
+jira
+ 
+# 拷贝插件到容器内
+[root@iZo7e61fz42ik0Z data]# docker cp atlassian-universal-plugin-manager-plugin-2.22.4.jar jira:/opt/atlassian/jira/atlassian-jira/WEB-INF/atlassian-bundled-plugins/
+# 进入容器内修改插件的属性
+[root@iZo7e61fz42ik0Z data]# docker exec -it jira bash
+bash-4.4# chmod 755  /opt/atlassian/jira/atlassian-jira/WEB-INF/atlassian-bundled-plugins/atlassian-universal-plugin-manager-plugin-2.22.4.jar
+# 删除另一个插件
+bash-4.4# rm -rf /opt/atlassian/jira/atlassian-jira/WEB-INF/atlassian-bundled-plugins/atlassian-universal-plugin-manager-plugin-2.22.9.jar
+破解结束，进入Jira下载任意插件，申请试用，自动破解
+
+5、下面来下载一个收费软件试试
+安装完了点击「获取许可证」
+接着在「管理应用」中可以看到，该插件已经破解了
