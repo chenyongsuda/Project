@@ -1,0 +1,38 @@
+===
+1. 事件时间/处理时间/进入时间(Event Time / Processing Time / Ingestion Time)
+
+事件时间: 时间产生的时间
+处理时间: 事件进入流处理系统的时间(进入source时间)
+进入时间: 消息被计算处理的时间(窗口计算时间)
+
+2. 轻量级快照
+
+3. 支持状态计算
+
+4. 高度灵活的窗口
+
+等
+
+===集群架构
+
+JobManager: 接收客户端任务,TaskManager: 管理资源Slot
+
+Flink 整个系统主要由两个组件组成
+分别为 JobManager 和 TaskManager，Flink 架构也遵循 Master - Slave 架构设计原则，JobManager 为 Master 节点，TaskManager 为 Worker （Slave）节点。
+
+Client 客户端
+客户端负责将任务提交到集群，与 JobManager 构建 Akka 连接，然后将任务提交到 JobManager
+
+JobManager
+JobManager 负责整个 Flink 集群任务的调度以及资源的管理，从客户端中获取提交的应用，然后根据集群中 TaskManager 上 TaskSlot 的使用情况，
+为提交的应用分配相应的 TaskSlot 资源并命令 TaskManager 启动从客户端中获取的应用。
+同时在任务执行的过程中，Flink JobManager 会触发 Checkpoint 操作，每个 TaskManager 节点 收到 Checkpoint 触发指令后，完成 Checkpoint 操作，
+所有的 Checkpoint 协调过程都是在 Fink JobManager 中完成。
+当任务完成后，Flink 会将任务执行的信息反馈给客户端，并且释放掉 TaskManager 中的资源以供下一次提交任务使用。
+
+TaskManager
+TaskManager 相当于整个集群的 Slave 节点，负责具体的任务执行和对应任务在每个节点上的资源申请和管理。
+客户端通过将编写好的 Flink 应用编译打包，提交到 JobManager，然后 JobManager 会根据已注册在 JobManager 中 TaskManager 的资源情况，将任务分配给有资源的 TaskManager节点，然后启动并运行任务。
+TaskManager 从 JobManager 接收需要部署的任务，然后使用 Slot 资源启动 Task，建立数据接入的网络连接，接收数据并开始数据处理。
+同时 TaskManager 之间的数据交互都是通过数据流的方式进行的。
+
