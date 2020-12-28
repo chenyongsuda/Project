@@ -1,0 +1,53 @@
+学习页面
+
+http://www.idevops.site/jenkins/basics/projectandview/
+1. Generic Webhook Trigger 插件详讲
+
+GenericTrigger 触发条件分为5部分，这样更易于理解各参数的作用。
+
+1) 从 HTTP POST 请求中提取参数值。
+  这类变量从 POST 的具体内容中获取，格式支持JSON/XPATH，具体为：
+  Variable：是变量名
+  Expression：是变量的获取方式
+  Value filter：需要过滤的变量内容，一般不填
+  Default value：变量默认值，一般不填
+  其中，如果将 Expression 中设置为 $.a.b.c，即可获取到出下面 JSON 中的“value”。
+  ActionScript
+  {
+      "a":{
+          "b":{
+              "c":"value"
+          }
+      }
+  }
+  
+  --Header
+  这类变量从 Header 中获取，具体为：
+  Request header：变量名即参数名
+  Value filter：需要过滤的变量内容，一般不填
+          需要注意的是，获取到的变量名是小写字母的形式，且将会用 ‘_’ 字符代替 ‘-’ 字符。
+  
+  --Request
+  这类变量从 URL 的 Request 参数中获取，具体为：
+  Request parameter：变量名即参数名
+  Value filter：需要过滤的变量内容，一般不填
+  
+2) token, GWT 插件用于标识Jenkins项目的唯一性。
+  标识唯一性,只有和gogs中配置的token一致才能成功触发.
+  如果多个项目的此参数值一样，都会被触发。
+  
+3) 根据清求参数值判断是否触发Jenkins项目的抗行。
+4) 日志打印控制。
+    提供了三个供日调试打印日志的参数
+    Silent response 当为true，只返回http 200 状态码，不返回触发结果
+    Print post content 将 webhook 请求的内容打印到日志上
+    Print contributed variables 将 提取后的变量打印到日志上
+    
+5) Webhook 响应控制。
+一个 HTTP POST 请求可以从三个维度提取参数，即 POST Body、URL参数和header。
+GWT 插件提供了三个参数分别从这三个维度的数据进行提取。
+
+Optional filter
+  Generic Webhook Trigger 中 Optional filter 部分即可配置过滤策略。其中：
+  Expression：设置过滤（通过）的条件，通过正则方式进行判断
+  Text：带过滤的文本内容，可以使用系统变量（上一部中获取了很多系统变量就可以在这里使用）
