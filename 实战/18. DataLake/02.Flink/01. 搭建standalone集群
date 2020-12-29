@@ -95,4 +95,277 @@ services:
  所以我们可以通过浏览器来查看集群，由于我是在虚拟机上运行的。所以在浏览器上通过虚拟机IP:端口的方式访问，
  如果docker是直接装在机器上的，没有装在虚拟机上，那么可以直接通过localhost:8081访问
  
+ flink:1.9.2-scala_2.12是什么？
+ 答：这个字符串的格式是 Image name:tag，tag中1.9.2是指flink的版本，scala_2.12是指这个版本的flink的版本是使用scala 2.12构建的。如果想使用其他的镜像，
  
+ 
+ ==================================
+ 搭建测试环境
+  前置安装
+  开发工具IDEA
+  Docker环境(Flink平台运行在docker中)
+  jdk支持
+  Maven支持
+  netcat支持
+  jdk
+ 
+  引入依赖
+       <properties>
+          <maven.compiler.source>1.8</maven.compiler.source>
+          <maven.compiler.target>1.8</maven.compiler.target>
+          <encoding>UTF-8</encoding>
+          <scala.version>2.12.8</scala.version>
+          <scala.binary.version>2.12</scala.binary.version>
+          <hadoop.version>2.7.6</hadoop.version>
+          <flink.version>1.11.3</flink.version>
+      </properties>
+      <dependencies>
+          <dependency>
+              <groupId>org.scala-lang</groupId>
+              <artifactId>scala-library</artifactId>
+              <version>${scala.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>org.apache.flink</groupId>
+              <artifactId>flink-java</artifactId>
+              <version>${flink.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>org.apache.flink</groupId>
+              <artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
+              <version>${flink.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>org.apache.flink</groupId>
+              <artifactId>flink-scala_${scala.binary.version}</artifactId>
+              <version>${flink.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>org.apache.flink</groupId>
+              <artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
+              <version>${flink.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>org.apache.flink</groupId>
+              <artifactId>flink-table-planner_${scala.binary.version}</artifactId>
+              <version>${flink.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>org.apache.flink</groupId>
+              <artifactId>flink-table-api-scala_${scala.binary.version}</artifactId>
+              <version>${flink.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>org.apache.flink</groupId>
+              <artifactId>flink-clients_${scala.binary.version}</artifactId>
+              <version>${flink.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>org.apache.flink</groupId>
+              <artifactId>flink-connector-kafka-0.10_${scala.binary.version}</artifactId>
+              <version>${flink.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-client</artifactId>
+              <version>${hadoop.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>mysql</groupId>
+              <artifactId>mysql-connector-java</artifactId>
+              <version>5.1.38</version>
+          </dependency>
+          <dependency>
+              <groupId>com.alibaba</groupId>
+              <artifactId>fastjson</artifactId>
+              <version>1.2.22</version>
+          </dependency>
+      </dependencies>
+      <repositories>
+          <repository>
+              <id>aliyun</id>
+              <name>aliyun</name>
+              <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
+              <layout>default</layout>
+              <releases>
+                  <enabled>true</enabled>
+                  <updatePolicy>never</updatePolicy>
+              </releases>
+              <snapshots>
+                  <enabled>true</enabled>
+                  <updatePolicy>never</updatePolicy>
+              </snapshots>
+          </repository>
+      </repositories>
+      <pluginRepositories>
+          <pluginRepository>
+              <id>aliyun</id>
+              <name>aliyun</name>
+              <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
+              <releases>
+                  <enabled>true</enabled>
+              </releases>
+              <snapshots>
+                  <enabled>false</enabled>
+              </snapshots>
+          </pluginRepository>
+      </pluginRepositories>
+ 
+    编写代码
+    public class StreamWordCount {
+
+       public static void main(String[] args) throws Exception {
+           //1.创建一个 flink steam 程序的执行环境
+           StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+           //2.使用StreamExecutionEnvironment创建DataStream
+           //Source(可以有多个Source)
+           //Socket 监听本地端口8888(亦可监听linux环境下的某一台机器)
+           DataStreamSource<String> lines = env.socketTextStream("localhost", 8888);
+
+           //Transformation(s)对数据进行处理操作
+           SingleOutputStreamOperator<Tuple2<String, Integer>> wordAndOne = lines.flatMap(new FlatMapFunction<String, Tuple2<String, Integer>>() {
+               @Override
+               public void flatMap(String line, Collector<Tuple2<String, Integer>> out) throws Exception {
+                   //切分
+                   String[] words = line.split(" ");
+                   //循环，
+                   for (String word : words) {
+                       //将每个单词与 1 组合，形成一个元组
+                       Tuple2<String, Integer> tp = Tuple2.of(word, 1);
+                       //将组成的Tuple放入到 Collector 集合，并输出
+                       out.collect(tp);
+                   }
+               }
+           });
+
+           //进行分组聚合(keyBy：将key相同的分到一个组中)
+           SingleOutputStreamOperator<Tuple2<String, Integer>> sumed = wordAndOne.keyBy(0).sum(1);
+
+           //Transformation 结束
+
+           //3.调用Sink （Sink必须调用）
+           sumed.print();
+
+           //启动(这个异常不建议try...catch... 捕获,因为它会抛给上层flink,flink根据异常来做相应的重启策略等处理)
+           env.execute("StreamWordCount");
+       }
+   }
+   
+   ======灵活设置
+    //2.使用StreamExecutionEnvironment创建DataStream
+    //此处使用 args[0] 和 args[1] 来接收传递过来的参数，灵活性更强
+    DataStreamSource<String> lines = env.socketTextStream(args[0], Integer.parseInt(args[1]));
+    
+   =====可以打包jar然后上传
+   设置参数 全限定类型名 + 参数
+   
+
+ ==================================
+ Flink具有多种提交方式，比如：常用的local模式，stantalone模式，yarn模式，k8s等。
+ 这里主要对比local，stantalone，yarn三种提交方式。
+ 
+ 一、本地（local）模式，仅开发使用
+ 1.1 
+      public class TestLocal {
+         public static void main(String[] args) throws Exception {
+
+             // getExecutionEnvironment()方法可以根据flink运用程序如何提交判断出是那种模式提交，Local本地提交，Cluster标是standalone提交，Yarn提交好像是YarnCluster
+             ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+             // ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment();
+             env.setParallelism(1); // 设置并行度为1
+
+             env.readTextFile("D:\\code\\scalacode\\flinkstreamingreportforms\\pom.xml").print();
+         }
+      }
+  
+ 1.2 local使用remote的方式运行（不建议）
+      一般可以使用这种模式进行远程debug。如：
+      public class TestLocal {
+          public static void main(String[] args) throws Exception {
+              ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("remote_ip", 8090, "D:\\code\\scalacode\\flinkstreamingreportforms\\target\\flink-streaming-report-forms-1.0-SNAPSHOT-jar-with-dependencies.jar");
+              System.out.println(env.getParallelism());
+
+              env
+                      .readTextFile("hdfs://remote_ip:9000/tmp/test.txt")
+                      .print();
+          }
+      }
+   
+   1.3 本地提交到remote集群
+      项目代码：
+      public class TestLocal {
+          public static void main(String[] args) throws Exception {
+              // getExecutionEnvironment()方法可以根据flink运用程序如何提交判断出是那种模式提交，Local本地提交，Cluster标是standalone提交，Yarn提交好像是YarnCluster
+              ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+
+              env.readTextFile("hdfs://remote_ip:9000/tmp/test.txt").print();
+          }
+      }
+      
+      将项目打成jar包，将使用flink run 指定集群的模式提交（需要在local机器上，有flink提交命令）。如：
+      # -m flink 集群地址
+      # -p 配置job的并行度
+      # -c Job执行的main class
+      ./flink.bat run -m remote_ip:8090 -p 1 -c com.test.TestLocal ../flink-streaming-report-forms-1.0-SNAPSHOT-jar-with-dependencies.jar
+      
+  二、standalone
+      上面讲了flink在local机器上进行提交，需要指定flink的master信息。
+      standalone模式提交也是类似，不过可以不用指定master节点，还有个区别就是，提交是在flink集群的机器节点上。
+      可能有人问，在local机器上提交与flink机器节点上提交有啥区别？
+      区别不太，主要是，提交后，会有一些log信息输出，这些信息在哪里记录或展示，还有就是程序最后会收集结果collect，最后的收集结果也就在对应提交的机器上。
+      下面介绍flink的前台运行与后台运行，以及常用参数：
+      以下均已1.3打出来的jar作为测试。
+
+      2.1 flink run 前台运行
+        /opt/flink/bin/flink run -p 1 -c com.test.TestLocal ./flink-streaming-report-forms-1.0-SNAPSHOT-jar-with-dependencies.jar
+
+      2.2 flink run 后台运行
+        因1.3代码是直接print出来，使用后台模式会报错，这边修改代码，直接写入hdfs，再使用后台模式提交。
+        # 通过 -d 表示后台执行
+        /opt/flink/bin/flink run -p 1 -c com.test.TestLocal -d ./flink-streaming-report-forms-1.0-SNAPSHOT-jar-with-dependencies.jar 
+
+      2.3 flink run 命令常用的参数：
+        flink run命令参数如下：
+
+        flink run命令执行模板：flink run [option] <jar-file> <arguments>
+        -c,--class <classname> : 需要指定的main方法的类
+        -C,--classpath <url> : 向每个用户代码添加url，他是通过UrlClassLoader加载。url需要指定文件的schema如（file://）
+        -d,--detached : 在后台运行
+        -p,--parallelism <parallelism> : job需要指定env的并行度，这个一般都需要设置。
+        -q,--sysoutLogging : 禁止logging输出作为标准输出。
+        -s,--fromSavepoint <savepointPath> : 基于savepoint保存下来的路径，进行恢复。
+        -sas,--shutdownOnAttachedExit : 如果是前台的方式提交，当客户端中断，集群执行的job任务也会shutdown。
+ 
+  三、flink on yarn
+      flink on yarn提交有2种方式，第一种是yarn-session，一种是flink run -m yarn-cluster。下面分别介绍2种方式的用法。
+
+      3.1 yarn-session
+      
+      yarn-session提交的方式有3步：
+      第一步：分配资源，生成application_id
+      yarn-session -jm 1024m -nm flinkOnYarnTest -s 1 -tm 1024m -d
+      
+      第二步：yarn-session依附application_id
+      yarn-session -id/--applicationId <application_id>
+      
+      第三步：flink 提交job
+      flink run -c classname <jar> <arguments>
+
+     
+      3.2 flink run -m yarn-cluster
+      
+      flink run -m yarn-cluster 实际上和上面提交standalone的方式一样。不过对于yarn的资源的命令参数有区别，如下：
+
+      # -m/--jobmanager : yarn-cluster集群
+      # -yd/--yarndetached : 后台
+      # -yjm/--yarnjobManager : jobmanager的内存
+      # -ytm/--yarntaskManager : taskmanager的内存
+      # -yid/--yarnapplicationId : job依附的applicationId
+      # -ynm/--yarnname : application的名称
+      # -ys/--yarnslots : 分配的slots个数
+
+      flink run -m yarn-cluster -yd -yjm 1024m -ytm 1024m -ynm <name> -ys 1 <jar> <arguments>
+
+
+
