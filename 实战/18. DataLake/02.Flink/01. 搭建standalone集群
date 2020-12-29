@@ -22,3 +22,77 @@ $ start-cluster.bat
 
 linux:
 $ bin/start-cluster.sh
+
+
+==================================================
+方式一：使用docker命令进行构建
+创建网络
+   docker network create app-tier --bridge
+   创建jobmanager容器
+   docker run -t -d --name jmr \
+   --network app-tier \
+   -e JOB_MANAGER_RPC_ADDRESS=jmr \
+   -p 8081:8081  \
+   flink:1.9.2-scala_2.12 jobmanager
+   
+   
+创建taskmanager容器
+   docker run -t -d --name tmr \
+   --network app-tier \
+   -e JOB_MANAGER_RPC_ADDRESS=jmr   \
+   flink:1.9.2-scala_2.12 taskmanager
+   方式二：使用docker-compose进行构建
+   使用这种方式必须先安装docker-compose
+   我使用了以下命令进行安装，参考链接
+
+   su root
+   curl -L https://get.daocloud.io/docker/compose/releases/download/1.25.4/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+   chmod +x /usr/local/bin/docker-compose
+   安装完之后，我们可以查看一下docker的版本来验证一下是否安装成功
+
+docker-compose --version
+然后我们可以在一个文件夹里创建一个名为docker-compose.yml的文件，方便起见，那么我就在当前文件夹下创建就好了
+
+touch docker-compose.yml
+然后编辑这个文件,写入以下内容并保存退出！！！注意格式不能错
+
+version: "3.7"
+services:
+  flink-jobmanager-01:
+    image: flink:1.11.3-scala_2.12-java8
+    container_name: flink-jobmanager-01
+    hostname: flink-jobmanager-01
+    expose:
+      - "6123"
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager-01
+ 
+  flink-taskmanager-01:
+    image: flink:1.11.3-scala_2.12-java8
+    container_name: flink-taskmanager-01
+    hostname: flink-taskmanager-01
+    expose:
+      - "6121"
+      - "6122"
+    depends_on:
+      - flink-jobmanager-01
+    command: taskmanager
+    links:
+      - "flink-jobmanager-01:jobmanager"
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager-01
+ 
+ 
+ 最后通过以下的命令就能够构建起来了
+ docker-compose up -d
+ 
+ 如何查看Flink集群和日志
+ 通过web查看集群
+ 官方镜像暴露了8081端口，并且我们在方式一和方式二中我们都将机器的本地端口8081映射到容器的8081端口上了，
+ 所以我们可以通过浏览器来查看集群，由于我是在虚拟机上运行的。所以在浏览器上通过虚拟机IP:端口的方式访问，
+ 如果docker是直接装在机器上的，没有装在虚拟机上，那么可以直接通过localhost:8081访问
+ 
+ 
