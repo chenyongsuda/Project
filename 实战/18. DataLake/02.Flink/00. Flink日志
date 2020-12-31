@@ -1,0 +1,8 @@
+                  负责输出的进程	    默认能打印到提交任务的终端吗？	  print()结果       输出位置                  在WEB UI查看位置
+
+批处理(DataSet)	 Job Manager	      能	                             Master节点的       提交任务的终端           Job Manager中的Stdout
+流处理(DataStream)	Task Manager	    不能	                          Slave节点的        $FLINK_HOME/log/*.out    Task Managers中的Stdout
+
+docker容器默认输出到stdout/stderr
+
+
