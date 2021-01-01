@@ -1,0 +1,13 @@
+Window Function
+  定义Window Assigners后，我们需要指定要在每个窗口上执行的计算。
+  这是Window Function的职责，一旦系统确定某个窗口已准备好进行处理，该Window Function将用于处理每个窗口的元素。Flink提供了以下Window Function处理函数：
+  
+  ReduceFunction
+  AggregateFunction
+  FoldFunction(废弃)不能用在Merger window中，不可用在SessionWindows中。
+  
+  全量处理
+  apply/WindowFunction（旧版-一般不推荐）可以获取窗口的中的所有元素，并且可以拿到一些元数据信息，无法操作窗口状态。
+  ProcessWindowFunction(重点掌握) 可以获取窗口的中的所有元素，并且拿到一些元数据信息。是WindowFunction的替代方案，因为该接口可以直接操作窗口的State|全局State
+  
+  
