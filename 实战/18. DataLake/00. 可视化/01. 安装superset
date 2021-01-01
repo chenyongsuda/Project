@@ -1,0 +1,54 @@
+docker pull amancevice/superset:0.38.0
+
+create config dir
+mkdir -p /mydata/superset/conf
+
+create data dir
+mkdir -p /mydata/superset/data
+
+#start superset
+docker run -d -p 8088:8088 -v /mydata/superset/conf:/etc/superset -v /mydata/superset/data:/var/lib/superset --name superset amancevice/superset:0.38.0
+
+第四步：进入docker镜像
+docker exec -it superset /bin/bash
+
+第五步：数据库初始化
+superset db upgrade
+
+第六步：superset 出初始化
+superset init
+
+第七步：设置管理员账号
+export FLASK_APP=superset
+flask fab create-admin
+
+第八步：访问superset
+http://127.0.0.1:8088/
+
+============================
+迁移
+备份数据
+如果在启动时，数据目录是挂载出来的，那么可以忽略数据
+如果数据目录是在 docker 容器内的，那么先把数据库文档拷出来，superset 官方默认使用 sqlite 数据库，该数据库可以直接拷贝数据库文档，如果使用了其他数据库请参照对应的数据库备份方法备份。
+
+docker cp superset:/var/lib/superset/superset.db .
+将superset.db 拷贝到新机器的/superset/data 目录下，数据备份完成。
+
+启动服务
+在新的机器上安装好 docker，实现 pull 好 superset 的镜像。执行下列命令启动就可以了。
+
+docker run -d -p 8088:8088 -v /superset/conf:/etc/superset -v /superset/data:/var/lib/superset --name superset amancevice/superset:0.26.3
+升级
+与迁移类似，先备份数据，方式参考迁移的备份数据。
+
+# Pull desired version
+docker pull amancevice/superset:latest
+
+# Remove the current container
+docker rm -f superset
+
+# Deploy a new container ...
+docker run -d -p 8088:8088 -v /superset/conf:/etc/superset -v /superset/data:/var/lib/superset --name superset amancevice/superset:latest
+
+# Upgrade the DB
+docker exec superset-new superset db upgrade
