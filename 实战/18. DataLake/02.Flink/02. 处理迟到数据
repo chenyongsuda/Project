@@ -1,0 +1,11 @@
+// 每15秒统计一次，窗口内各传感器所有温度的最小值，以及最新的时间戳
+    val resultStream: DataStream[(String, Double, Long)] = dataStream
+      .map(data => (data.id, data.temperature, data.timeStamp))
+      .keyBy(_._1) // 根据id分组
+      .timeWindow(Time.seconds(15)) // 时间滚动窗口，窗口大小15秒
+      .allowedLateness(Time.minutes(1)) // 允许处理迟到的数据
+      .sideOutputLateData(latetag) // 将迟到的数据放入侧输出流
+      .reduce(
+      // （String, Double, Long） id,最小温度，最新时间戳
+        (currRes, newDate) => (currRes._1, currRes._2.min(newDate._2), newDate._3)
+      )
