@@ -1,0 +1,78 @@
+WatermarkStrategy
+
+在flink 1.11之前的版本中，提供了两种生成水印（Watermark）的策略，分别是AssignerWithPunctuatedWatermarks和AssignerWithPeriodicWatermarks，这两个接口都继承自TimestampAssigner接口。
+用户想使用不同的水印生成方式，则需要实现不同的接口，但是这样引发了一个问题，对于想给水印添加一些通用的、公共的功能则变得复杂，因为我们需要给这两个接口都同时添加新的功能，这样还造成了代码的重复
+所以为了避免代码的重复，在flink 1.11 中对flink的水印生成接口进行了重构
+
+
+当我们构建了一个DataStream之后，使用assignTimestampsAndWatermarks方法来构造水印，新的接口需要传入一个WatermarkStrategy对象。
+DataStream#assignTimestampsAndWatermarks(WatermarkStrategy<T>)
+
+public interface WatermarkStrategy<T>
+extends org.apache.flink.api.common.eventtime.TimestampAssignerSupplier<T>, org.apache.flink.api.common.eventtime.WatermarkGeneratorSupplier<T>
+
+WatermarkStrategy 这个接口是做什么的呢？这里面提供了很多静态的方法和带有缺省实现的方法，只有一个方法是非default和没有缺省实现的，就是下面的这个方法。
+       /**
+        * Instantiates a WatermarkGenerator that generates watermarks according to this strategy.
+        */
+       @Override
+       WatermarkGenerator<T> createWatermarkGenerator(WatermarkGeneratorSupplier.Context context);
+
+       所以默认情况下，我们只需要实现这个方法就行了，这个方法主要是返回一个 WatermarkGenerator，我们在进入这里边看看。
+           @Public
+          public interface WatermarkGenerator<T> {
+
+           /**
+            * Called for every event, allows the watermark generator to examine and remember the
+            * event timestamps, or to emit a watermark based on the event itself.
+            */
+           void onEvent(T event, long eventTimestamp, WatermarkOutput output);
+
+           /**
+            * Called periodically, and might emit a new watermark, or not.
+            *
+            * <p>The interval in which this method is called and Watermarks are generated
+            * depends on {@link ExecutionConfig#getAutoWatermarkInterval()}.
+            */
+           void onPeriodicEmit(WatermarkOutput output);
+          }
+  
+  
+  这个方法简单明了，主要是有两个方法：
+  onEvent ：每个元素都会调用这个方法，如果我们想依赖每个元素生成一个水印，然后发射到下游(可选，就是看是否用output来收集水印)，我们可以实现这个方法.
+  onPeriodicEmit : 如果数据量比较大的时候，我们每条数据都生成一个水印的话，会影响性能，所以这里还有一个周期性生成水印的方法。这个水印的生成周期可以这样设置：env.getConfig().setAutoWatermarkInterval(5000L);
+    
+    
+  我们自己实现一个简单的周期性的发射水印的例子：
+  在这个onEvent方法里，我们从每个元素里抽取了一个时间字段，但是我们并没有生成水印发射给下游，而是自己保存了在一个变量里，在onPeriodicEmit方法里，使用最大的日志时间减去我们想要的延迟时间作为水印发射给下游。
+
+  DataStream<Tuple2<String,Long>> withTimestampsAndWatermarks = dataStream.assignTimestampsAndWatermarks(
+    new WatermarkStrategy<Tuple2<String,Long>>(){
+     @Override
+     public WatermarkGenerator<Tuple2<String,Long>> createWatermarkGenerator(
+       WatermarkGeneratorSupplier.Context context){
+      return new WatermarkGenerator<Tuple2<String,Long>>(){
+       private long maxTimestamp;
+       private long delay = 3000;
+       @Override
+       public void onEvent(
+         Tuple2<String,Long> event,
+         long eventTimestamp,
+         WatermarkOutput output){
+        maxTimestamp = Math.max(maxTimestamp, event.f1);
+       }
+       @Override
+       public void onPeriodicEmit(WatermarkOutput output){
+        output.emitWatermark(new Watermark(maxTimestamp - delay));
+       }
+      };
+     }
+    });
+    
+    
+    
+    
+    
+    
+    
+    
