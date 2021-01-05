@@ -70,7 +70,84 @@ WatermarkStrategy 这个接口是做什么的呢？这里面提供了很多静�
     });
     
     
+    内置水印生成策略
+    为了方便开发，flink提供了一些内置的水印生成方法供我们使用。
     
+    固定延迟生成水印
+    通过静态方法forBoundedOutOfOrderness提供,入参接收一个Duration类型的时间间隔，也就是我们可以接受的最大的延迟时间.使用这种延迟策略的时候需要我们对数据的延迟时间有一个大概的预估判断。
+
+    WatermarkStrategy#forBoundedOutOfOrderness(Duration maxOutOfOrderness)
+
+    我们实现一个延迟3秒的固定延迟水印，可以这样做：
+
+       DataStream dataStream = ...... ;
+       dataStream.assignTimestampsAndWatermarks(WatermarkStrategy.forBoundedOutOfOrderness(Duration.ofSeconds(3)));
+
+    他的底层使用的WatermarkGenerator接口的一个实现类BoundedOutOfOrdernessWatermarks。我们看下源码中的这两个方法，是不是和我们上面自己写的很像.
+
+        @Override
+        public void onEvent(T event, long eventTimestamp, WatermarkOutput output) {
+         maxTimestamp = Math.max(maxTimestamp, eventTimestamp);
+        }
+
+        @Override
+        public void onPeriodicEmit(WatermarkOutput output) {
+         output.emitWatermark(new Watermark(maxTimestamp - outOfOrdernessMillis - 1));
+        }
+        
+    #单调递增生成水印
+    通过静态方法forMonotonousTimestamps来提供.
+
+       WatermarkStrategy.forMonotonousTimestamps()
+       这个也就是相当于上述的延迟策略去掉了延迟时间，以event中的时间戳充当了水印。
+
+    在程序中可以这样使用：
+
+       DataStream dataStream = ...... ;
+       dataStream.assignTimestampsAndWatermarks(WatermarkStrategy.forMonotonousTimestamps());
+
+    它的底层实现是AscendingTimestampsWatermarks，其实它就是BoundedOutOfOrdernessWatermarks类的一个子类，没有了延迟时间，我们来看看具体源码的实现.
+
+       @Public
+       public class AscendingTimestampsWatermarks<T> extends BoundedOutOfOrdernessWatermarks<T> {
+
+        /**
+         * Creates a new watermark generator with for ascending timestamps.
+         */
+        public AscendingTimestampsWatermarks() {
+         super(Duration.ofMillis(0));
+        }
+       }
+       
+     event时间的获取
+    上述我们讲了flink自带的两种水印生成策略，但是对于我们使用eventtime语义的时候，我们想从我们的自己的数据中抽取eventtime，这个就需要TimestampAssigner了.
+
+       @Public
+       @FunctionalInterface
+       public interface TimestampAssigner<T> {
+
+           ............
+
+        long extractTimestamp(T element, long recordTimestamp);
+       }
+
+    使用的时候我们主要就是从我们自己的元素element中提取我们想要的eventtime。
+    使用flink自带的水印策略和eventtime抽取类，可以这样用：
+
+       DataStream dataStream = ...... ;
+       dataStream.assignTimestampsAndWatermarks(
+           WatermarkStrategy
+             .<Tuple2<String,Long>>forBoundedOutOfOrderness(Duration.ofSeconds(5))
+             .withTimestampAssigner((event, timestamp)->event.f1));
+             
+       处理空闲数据源
+       在某些情况下，由于数据产生的比较少，导致一段时间内没有数据产生，进而就没有水印的生成，导致下游依赖水印的一些操作就会出现问题，比如某一个算子的上游有多个算子，这种情况下，水印是取其上游两个算子的较小值，如果上游某一个算子因为缺少数据迟迟没有生成水印，就会出现eventtime倾斜问题，导致下游没法触发计算。
+       所以filnk通过WatermarkStrategy.withIdleness()方法允许用户在配置的时间内（即超时时间内）没有记录到达时将一个流标记为空闲。这样就意味着下游的数据不需要等待水印的到来。
+       当下次有水印生成并发射到下游的时候，这个数据流重新变成活跃状态。
+       通过下面的代码来实现对于空闲数据流的处理
+       WatermarkStrategy
+               .<Tuple2<Long, String>>forBoundedOutOfOrderness(Duration.ofSeconds(20))
+               .withIdleness(Duration.ofMinutes(1));
     
     
     
