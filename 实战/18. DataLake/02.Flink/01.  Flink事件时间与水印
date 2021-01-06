@@ -142,10 +142,93 @@ public class WordCountWindow {
 
 =======================================
 
-EventTimeTrigger：通过对比Watermark和窗口的Endtime确定是否触发窗口计算，如果Watermark大于Window EndTime则触发，否则不触发，窗口将继续等待。
-ProcessTimeTrigger：通过对比ProcessTime和窗口EndTme确定是否触发窗口，如果ProcessTime大于EndTime则触发计算，否则窗口继续等待。
-ContinuousEventTimeTrigger：根据间隔时间周期性触发窗口或者Window的结束时间小于当前EndTime触发窗口计算。
-ContinuousProcessingTimeTrigger：根据间隔时间周期性触发窗口或者Window的结束时间小于当前ProcessTime触发窗口计算。
-CountTrigger：根据接入数据量是否超过设定的阙值判断是否触发窗口计算。
-DeltaTrigger：根据接入数据计算出来的Delta指标是否超过指定的Threshold去判断是否触发窗口计算。
-PurgingTrigger：可以将任意触发器作为参数转换为Purge类型的触发器，计算完成后数据将被清理。
+
+
+八大内置触发器
+EventTimeTrigger
+EventTime Window的默认触发器。基于事件时间，当Watermark>=Window End Time时，触发窗口计算。
+
+ContinuousEventTimeTrigger
+基于事件时间，当Watermark>=Window End Time时，触发窗口计算。或者，在Watermark>=Window End Time之前，即在窗口没有结束的情况下，以固定间隔，周期性触发窗口计算，提前获得当前窗口现阶段的聚合结果。如下:
+
+keyedStream
+// Window Size 10秒
+.timeWindow(Time.seconds(10))
+// 每隔2秒就触发一次计算
+.trigger(ContinuousEventTimeTrigger.of(Time.seconds(2)))
+// 窗口计算
+.process(...)
+ProcessingTimeTrigger
+ProcessingTime Window的默认触发器。基于处理时间，当ProcessingTime>=Window End Time时，触发窗口计算。
+
+ContinuousProcessingTimeTrigger
+基于处理时间，当ProcessingTime>=Window End Time时，触发窗口计算。或者，在ProcessingTime>=Window End Time之前，即在窗口没有结束的情况下，以固定间隔，周期性触发窗口计算，提前获得当前窗口现阶段的聚合结果。如下:
+
+keyedStream
+// Window Size 10秒
+.timeWindow(Time.seconds(10))
+// 每隔2秒就触发一次计算
+.trigger(ContinuousProcessingTimeTrigger.of(Time.seconds(2)))
+// 窗口计算
+.process(...)
+
+CountTrigger
+Count Window的默认触发器。基于数量，当输入元素个数>=阈值(maxCount)时，就触发窗口计算。
+
+PurgingTrigger
+清除触发器。可将任意触发器转换为清除触发器，即计算完后，窗口中的数据会被清除。
+
+DeltaTrigger
+根据输入的元素，按DeltaFunction计算出指标(Delta)，当Delta大于设定的阈值时，触发窗口计算。
+
+NeverTrigger
+永远不会触发的触发器，是GlobalWindow的默认触发器。
+
+
+===============自定义触发器
+Trigger
+如果默认触发器不满足需求，可以自定义触发器，这里总结下抽象类Trigger的API。
+
+onElement: 向Window添加元素时，该方法就会被调用。
+// element: 进入窗口的元素。
+// timestamp: 元素到达的时间戳。
+// window: 元素要添加的窗口。
+// ctx: Trigger上下文, 可以获取当前水印、处理状态、注册timer计时器回调等。
+public abstract TriggerResult onElement(T element, long timestamp, W window, TriggerContext ctx) throws Exception;
+
+onProcessingTime: 当processing-time timer被触发时，会被调用。
+// time: timer触发时的时间戳。
+// window: timer触发的窗口。
+// ctx: Trigger上下文。
+public abstract TriggerResult onProcessingTime(long time, W window, TriggerContext ctx) throws Exception;
+
+onEventTime: 当event-time timer被触发时，会被调用。
+// time: timer触发时的时间戳。
+// window: timer触发的窗口。
+// ctx: Trigger上下文。
+public abstract TriggerResult onEventTime(long time, W window, TriggerContext ctx) throws Exception;
+
+
+canMerge: 是否需要合并Trigger State。需要合并，则为true；不需要，则为false。为true时，需要实现onMerge方法。
+public boolean canMerge() {
+		return false;
+}
+
+onMerge: 对两个Trigger的State进行Merge。
+// window: merge产生的新窗口。
+// ctx: 可以用于注册timer计时器回调和访问状态的上下文。
+public void onMerge(W window, OnMergeContext ctx) throws Exception {
+		throw new UnsupportedOperationException("This trigger does not support merging.");
+}
+
+clear: Window销毁时被调用。
+// window: 要销毁的窗口。
+// ctx: Trigger上下文。
+public abstract void clear(W window, TriggerContext ctx) throws Exception;
+注意: onElement、onProcessingTime、onEventTime均返回TriggerResult。TriggerResult是个枚举，如下:
+
+CONTINUE: 不触发窗口计算。
+PURGE: 不触发窗口计算，但清除窗口中的数据
+FIRE_AND_PURGE: 触发窗口计算，并清除窗口中的数据。
+FIRE: 触发窗口计算，但不清除窗口中的数据。
+
