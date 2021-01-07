@@ -29,3 +29,28 @@ TaskManager 相当于整个集群的 Slave 节点，负责具体的任务执行�
 TaskManager 从 JobManager 接收需要部署的任务，然后使用 Slot 资源启动 Task，建立数据接入的网络连接，接收数据并开始数据处理。
 同时 TaskManager 之间的数据交互都是通过数据流的方式进行的。
 可以看出，Flink 的任务运行其实是采用多线程的方式，这和 MapReduce 多 JVM 进行的方式有很大的区别，Flink 能够极大提高 CPU 使用效率，在多个任务和 Task 之间通过 TaskSlot 方式共享系统资源，每个 TaskManager 中通过管理多个 TaskSlot 资源池进行对资源进行有效管理。
+
+
+1.Keyed Windows(分组窗口)
+stream
+       .keyBy(...)               <-  keyed versus non-keyed windows
+       .window(...)              <-  required: "assigner"
+      [.trigger(...)]            <-  optional: "trigger" (else default trigger)
+      [.evictor(...)]            <-  optional: "evictor" (else no evictor)
+      [.allowedLateness(...)]    <-  optional: "lateness" (else zero)
+      [.sideOutputLateData(...)] <-  optional: "output tag" (else no side output for late data)
+       .reduce/aggregate/fold/apply()      <-  required: "function"
+      [.getSideOutput(...)]      <-  optional: "output tag"
+
+2.Non-Keyed Windows(未分组窗口)
+stream
+       .windowAll(...)           <-  required: "assigner"
+      [.trigger(...)]            <-  optional: "trigger" (else default trigger)
+      [.evictor(...)]            <-  optional: "evictor" (else no evictor)
+      [.allowedLateness(...)]    <-  optional: "lateness" (else zero)
+      [.sideOutputLateData(...)] <-  optional: "output tag" (else no side output for late data)
+       .reduce/aggregate/fold/apply()      <-  required: "function"
+      [.getSideOutput(...)]      <-  optional: "output tag"
+      
+      
+      
