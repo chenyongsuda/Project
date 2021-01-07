@@ -241,3 +241,116 @@ FIRE: 触发窗口计算，但不清除窗口中的数据。
 窗口的每一个key的触发时间可能会不一致，是因为窗口的每一个key对应的第一条数据时间不一样，正如上述所描述定时规则。由于会注册一个窗口endTime的触发器，
 会触发窗口所有key的窗口函数，保证最终结果的正确性。
 ContinuousProcessingTimeTrigger表示处理时间连续触发器，其思想与ContinuousEventTimeTrigger触发器大体相同，主要区别就是基于处理时间的定时触发。
+
+
+#############################
+请注意:	窗口结束的时候，会自动触发调用 onProcessingTime ，一定要包含在触发器逻辑里面，不然不能获取窗口的完整数据
+
+例子:
+很简单的一段代码：定义了一个60秒的窗口，触发器是自己实现的10条数据或者 10 秒触发一次的触发器，窗口函数就输出窗口数据的条数
+下面看下自定义触发器 CountAndTimeTrigger 的核心代码如下：
+
+/**
+ * CountAndTimeTrigger : 满足一定条数和时间触发
+ * 条数的触发使用计数器计数
+ * 时间的触发，使用 flink 的 timerServer，注册触发器触发
+ *
+ * @param <W>
+ */
+public class CountAndTimeTrigger<W extends Window> extends Trigger<Object, W> {
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    // 触发的条数
+    private final long size;
+    // 触发的时长
+    private final long interval;
+    private static final long serialVersionUID = 1L;
+    // 条数计数器
+    private final ReducingStateDescriptor<Long> countStateDesc =
+            new ReducingStateDescriptor<>("count", new ReduceSum(), LongSerializer.INSTANCE);
+    // 时间计数器，保存下一次触发的时间
+    private final ReducingStateDescriptor<Long> timeStateDesc =
+            new ReducingStateDescriptor<>("fire-interval", new ReduceMin(), LongSerializer.INSTANCE);
+
+    public CountAndTimeTrigger(long size, long interval) {
+        this.size = size;
+        this.interval = interval;
+    }
+
+    @Override
+    public TriggerResult onElement(Object element, long timestamp, W window, TriggerContext ctx) throws Exception {
+        // 注册窗口结束的触发器, 不需要会自动触发
+//        ctx.registerProcessingTimeTimer(window.maxTimestamp());
+        // count
+        ReducingState<Long> count = ctx.getPartitionedState(countStateDesc);
+        //interval
+        ReducingState<Long> fireTimestamp = ctx.getPartitionedState(timeStateDesc);
+        // 每条数据 counter + 1
+        count.add(1L);
+        if (count.get() >= size) {
+            logger.info("countTrigger triggered, count : {}", count.get());
+            // 满足条数的触发条件，先清 0 条数计数器
+            count.clear();
+            // 满足条数时也需要清除时间的触发器，如果不是创建结束的触发器
+            if (fireTimestamp.get() != window.maxTimestamp()) {
+//                logger.info("delete trigger : {}, {}", sdf.format(fireTimestamp.get()), fireTimestamp.get());
+                ctx.deleteProcessingTimeTimer(fireTimestamp.get());
+            }
+            fireTimestamp.clear();
+            // fire 触发计算
+            return TriggerResult.FIRE;
+        }
+
+        // 触发之后，下一条数据进来才设置时间计数器注册下一次触发的时间
+        timestamp = ctx.getCurrentProcessingTime();
+        if (fireTimestamp.get() == null) {
+//            long start = timestamp - (timestamp % interval);
+            long nextFireTimestamp = timestamp + interval;
+//            logger.info("register trigger : {}, {}", sdf.format(nextFireTimestamp), nextFireTimestamp);
+            ctx.registerProcessingTimeTimer(nextFireTimestamp);
+            fireTimestamp.add(nextFireTimestamp);
+        }
+        return TriggerResult.CONTINUE;
+    }
+
+    @Override
+    public TriggerResult onProcessingTime(long time, W window, TriggerContext ctx) throws Exception {
+
+        // count
+        ReducingState<Long> count = ctx.getPartitionedState(countStateDesc);
+        //interval
+        ReducingState<Long> fireTimestamp = ctx.getPartitionedState(timeStateDesc);
+
+        // time trigger and window end
+        if (time == window.maxTimestamp()) {
+            logger.info("window close : {}", time);
+            // 窗口结束，清0条数和时间的计数器
+            count.clear();
+            ctx.deleteProcessingTimeTimer(fireTimestamp.get());
+            fireTimestamp.clear();
+            return TriggerResult.FIRE_AND_PURGE;
+        } else if (fireTimestamp.get() != null && fireTimestamp.get().equals(time)) {
+            logger.info("timeTrigger trigger, time : {}", time);
+            // 时间计数器触发，清0条数和时间计数器
+            count.clear();
+            fireTimestamp.clear();
+            return TriggerResult.FIRE;
+        }
+        return TriggerResult.CONTINUE;
+    }
+}
+
+主要是在数据进来的时候，调用  onElement 做条数的计数器，满足条件就触发， onProcessingTime 是 flink 的 timeservice 调用的，作为定时触发的触发器
+在时间和条数的定时器都有清除时间和条数计数器的计数，让计数器在下一条数据到的时候，重新开始计数
+特别需要注意：窗口结束的时候，会自动触发调用 onProcessingTime ，一定要包含在触发器逻辑里面，不然不能获取窗口的完整数据
+
+// time trigger and window end
+        if (time == window.maxTimestamp()) {
+            logger.info("window close : {}", time);
+            // 窗口结束，清0条数和时间的计数器
+            count.clear();
+            ctx.deleteProcessingTimeTimer(fireTimestamp.get());
+            fireTimestamp.clear();
+            return TriggerResult.FIRE_AND_PURGE;
+        } 
+
+如在获取到窗口触发时间是窗口的结束时间（即窗口的结束时间减1，Java的时间精度是到毫秒，如 10秒的窗口时间是：（00000, 10000）0000-10000 ，实际上窗口结束时间就是  9999）
