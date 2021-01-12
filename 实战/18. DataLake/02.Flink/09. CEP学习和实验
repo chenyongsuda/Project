@@ -52,7 +52,7 @@ util()	模式发生直至X条件满足为止
 
 忽略策略
 ===========================================
-A． NO_SKIP策略，意即当前事件组中的事件还会不受约束的参与后续的模式匹配。
+A． NO_SKIP策略，意即当前事件组中的事件还会不受约束的参与后续的模式匹配。(全量匹配)
     不忽略
     在模式为:begin("start").where(_.name='a').oneOrMore().followedBy("second").where(_.name='b')
     对于数据：a,a,a,a,b
@@ -61,7 +61,7 @@ A． NO_SKIP策略，意即当前事件组中的事件还会不受约束的参�
 B． SKIP_TO_NEXT策略，意即当前事件组中除了第一个事件之外，其他事件可以不受约束的参与后续的模式匹配。
     
 
-C． SKIP_PAST_LAST_EVENT策略，意即当前事件组中的任意一个事件都不参与后续的模式匹配。
+C． SKIP_PAST_LAST_EVENT策略，意即当前事件组中的任意一个事件都不参与后续的模式匹配。(最大匹配)
     在模式匹配完成之后，忽略掉之前的部分匹配结果
     在模式为:begin("start").where(_.name='a').oneOrMore().followedBy("second").where(_.name='b')
     对于数据：a,a,a,a,b
