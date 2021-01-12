@@ -295,8 +295,6 @@ E． SKIP_TO_LAST策略，此种策略需要指定一个模式，当前事件组
                     }
                 })
                 .next("second")  //紧接着上一个事件
-
-
                 .subtype(TemperatureEvent.class)
                 .where(new IterativeCondition<TemperatureEvent>() {
                     private static final long serialVersionUID = 2392863109523984059L;
@@ -314,6 +312,7 @@ E． SKIP_TO_LAST策略，此种策略需要指定一个模式，当前事件组
                 inputEventStream.keyBy("rackID"),
                 warningPattern);
         
+        ###################Warning
         #使用select方法为每个匹配的报警模式生成相应的报警。其中返回值是一个map，key是我们定义的模式，value是匹配的事件列表。
         // Generate temperature warnings for each matched warning pattern
         DataStream<TemperatureWarning> warnings = tempPatternStream.select(
@@ -331,7 +330,7 @@ E． SKIP_TO_LAST策略，此种策略需要指定一个模式，当前事件组
                 .next("second")
                 .within(Time.seconds(20));
         
-        
+        ###################Alert
         #然后通过上面的报警模式alertPattern和警告流warnings生成我们的报警流alertPatternStream。
         // Create a pattern stream from our alert pattern
         PatternStream<TemperatureWarning> alertPatternStream = CEP.pattern(
@@ -351,7 +350,8 @@ E． SKIP_TO_LAST策略，此种策略需要指定一个模式，当前事件组
                     }
                 },
                 TypeInformation.of(TemperatureAlert.class));
-                
+          
+          ###################Output
           #最后我们将报警流和警告流输出，当然我们也可以对这两个流做其他的操作，比如发到报警系统等。
           // Print the warning and alert events to stdout
           warnings.print();
