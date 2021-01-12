@@ -1,0 +1,79 @@
+联合模式
+===============================
+next()	严格的满足条件 
+示例：
+模式为begin("first").where(_.name='a').next("second").where(.name='b')
+当且仅当数据为a,b时，模式才会被命中。如果数据为a,c,b，由于a的后面跟了c，所以a会被直接丢弃，模式不会命中。
+
+followedBy()	松散的满足条件
+示例：
+模式为begin("first").where(_.name='a').followedBy("second").where(.name='b')
+当且仅当数据为a,b或者为a,c,b，，模式均被命中，中间的c会被忽略掉。
+
+followedByAny（）	非确定的松散满足条件
+模式为begin("first").where(_.name='a').followedByAny("second").where(.name='b')
+当且仅当数据为a,c,b,b时，对于followedBy模式而言命中的为{a,b}，对于followedByAny而言会有两次命中{a,b},{a,b}
+
+within()	模式命中的时间间隔限制
+
+notNext()
+notFollowedBy()	后面的模式不命中（严格/非严格）
+
+单个模式
+=================================
+量词API	
+times()	模式发生次数
+      示例：
+      pattern.times(2,4)，模式发生2,3,4次
+
+timesOrMore（）
+oneOrMore()	模式发生大于等于N次
+      示例：
+      pattern.timesOrMore(2)，模式发生大于等于2次
+      optional()	模式可以不匹配 
+      示例：
+      pattern.times(2).optional()，模式发生2次或者0次
+
+greedy()	模式发生越多越好
+      示例：
+      pattern.times(2).greedy()，模式发生2次且重复次数越多越好
+
+条件API	where()	模式的条件
+      示例：
+      pattern.where(_.ruleId=43322)，模式的条件为ruleId=433322
+      
+or()	模式的或条件
+      示例：
+      pattern.where(_.ruleId=43322).or(_.ruleId=43333)，模式条件为ruleId=43322或者43333
+
+util()	模式发生直至X条件满足为止
+      示例：
+      pattern.oneOrMore().util(condition)模式发生一次或者多次，直至condition满足为止
+
+忽略策略
+===========================================
+A． NO_SKIP策略，意即当前事件组中的事件还会不受约束的参与后续的模式匹配。
+    不忽略
+    在模式为:begin("start").where(_.name='a').oneOrMore().followedBy("second").where(_.name='b')
+    对于数据：a,a,a,a,b
+    模式匹配到的是:{a,b},{a,a,b},{a,a,a,b},{a,a,a,a,b}
+
+B． SKIP_TO_NEXT策略，意即当前事件组中除了第一个事件之外，其他事件可以不受约束的参与后续的模式匹配。
+    
+
+C． SKIP_PAST_LAST_EVENT策略，意即当前事件组中的任意一个事件都不参与后续的模式匹配。
+    在模式匹配完成之后，忽略掉之前的部分匹配结果
+    在模式为:begin("start").where(_.name='a').oneOrMore().followedBy("second").where(_.name='b')
+    对于数据：a,a,a,a,b
+    模式匹配到的是:{a,a,a,a,b}
+
+D． SKIP_TO_FIRST策略，此种策略需要指定一个模式，当前事件组中的任何子匹配如果包含指定模式匹配事件组中的最大匹配事件组，则此子匹配会被丢弃。
+    在模式匹配完成之后，忽略掉第一个之前的部分匹配结果
+
+E． SKIP_TO_LAST策略，此种策略需要指定一个模式，当前事件组中的任何子匹配如果包含指定模式匹配事件组中的最小匹配事件组，则此子匹配会被丢弃。
+    在模式匹配完成之后，忽略掉最后一个之前的部分匹配结果
+    在模式为:begin("start").where(_.name='a').oneOrMore().followedBy("second").where(_.name='b')
+    对于数据：a,a,a,a,b
+    模式匹配到的是:{a,b},{a,a,b},{a,a,a,a,b}
+    
+    
