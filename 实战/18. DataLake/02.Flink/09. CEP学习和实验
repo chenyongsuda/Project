@@ -116,3 +116,246 @@ E． SKIP_TO_LAST策略，此种策略需要指定一个模式，当前事件组
     模式匹配到的是:{a,b},{a,a,b},{a,a,a,a,b}
     
     
+======================================================================
+使用场景
+第一个是异常行为检测的例子：假设车辆维修的场景中，当一辆车出现故障时，这辆车会被送往维修点维修，然后被重新投放到市场运行。如果这辆车被投放到市场之后还未被使用就又被报障了，那么就有可能之前的维修是无效的。
+第二个是策略营销的例子：假设打车的场景中，用户在APP上规划了一个行程订单，如果这个行程在下单之后超过一定的时间还没有被司机接单的话，那么就需要将这个订单输出到下游做相关的策略调整。
+第三个是运维监控的例子：通常运维会监控服务器的CPU、网络IO等指标超过阈值时产生相应的告警。但是在实际使用中，后台服务的重启、网络抖动等情况都会造成瞬间的流量毛刺，对非关键链路可以忽略这些毛刺而只对频繁发生的异常进行告警以减少误报。
+
+假设打车的场景中，用户在APP上规划了一个行程订单，如果这个行程在下单之后超过一定的时间还没有被司机接单的话，那么就需要将这个订单输出到下游做相关的策略调整。
+
+      参照下单后超时未被接单的做法，把下单并且预付款后超时未被接单规则表示为下单.followedBy(预付款).followedBy(接单).within(time)，那么这样实现会存在问题吗？
+      这种做法的计算结果是会存在脏数据的，因为这个规则不仅匹配到了下单并且预付款后超时未被接单的订单（想要的结果），同样还匹配到了只有下单行为后超时未被接单的订单（脏数据，没有预付款）。
+      原因是因为超时within是控制在整个规则上，而不是某一个状态节点上，所以不论当前的状态是处在哪个状态节点，超时后都会被旁路输出。
+
+==========================
+实例 找出那些买了N分钟付款的订单和不符合的订单
+      package com.atguigu.orderpay_detect
+
+      import java.util
+
+      import org.apache.flink.cep.{PatternSelectFunction, PatternTimeoutFunction}
+      import org.apache.flink.cep.scala.CEP
+      import org.apache.flink.cep.scala.pattern.Pattern
+      import org.apache.flink.streaming.api.TimeCharacteristic
+      import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
+      import org.apache.flink.streaming.api.scala._
+      import org.apache.flink.streaming.api.windowing.time.Time
+
+
+      // 输入输出的样例类
+      case class OrderEvent(orderId:Long, eventType:String, txId:String, eventTime:Long)
+      case class OrderResult(orderId:Long, resultMsg: String)
+
+      object OrderTimeOut {
+        def main(args: Array[String]): Unit = {
+          val env = StreamExecutionEnvironment.getExecutionEnvironment
+          env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+          env.setParallelism(1)
+
+          // 从文件中读取数据，并转换为样例类
+          val resource = getClass.getResource("/OrderLog.csv")
+          //val orderEventStream: DataStream[OrderEvent] = env.readTextFile(resource.getPath)
+          val orderEventStream: DataStream[OrderEvent] = env.readTextFile("C:\\Users\\DELL\\IdeaProjects\\UserBehaviorAnalysis\\OrderPayDetect\\src\\main\\resources\\OrderLog.csv")
+            .map(data => {
+              val dataArray = data.split(",")
+              OrderEvent( dataArray(0).toLong, dataArray(1), dataArray(2), dataArray(3).toLong)
+            })
+            .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor[OrderEvent](Time.seconds(3)) {
+              override def extractTimestamp(t: OrderEvent): Long = t.eventTime * 1000L
+            })
+
+          // 1 定义一个要匹配事件序列的模式
+          val orderPayPattern = Pattern
+            .begin[OrderEvent]("create").where(_.eventType == "create") // 首先是订单的create事件
+            .followedBy("pay").where(_.eventType == "pay") // 后面来的是订单的pay事件
+            .within(Time.minutes(15))
+
+          // 2 将pattern应用在按照orderId分组的数据流上
+          val patternStream = CEP.pattern(orderEventStream.keyBy(_.orderId), orderPayPattern)
+
+          // 3 定义一个侧输出流标签，用来标明超时事件的侧输出流
+          val orderTimeOutOutputTag = new OutputTag[OrderResult]("order timeout")
+
+          // 4 调用select方法，提取匹配事件和超时事件，分别进行转换输出
+          val resultStream: DataStream[OrderResult] = patternStream
+            .select(orderTimeOutOutputTag, new OrderTimeoutSelect(), new OrderPaySelect())
+
+          // 5 打印输出
+          resultStream.print("payed")
+          resultStream.getSideOutput(orderTimeOutOutputTag).print("timeout")
+
+          env.execute(" order timeout detect job")
+
+        }
+
+      }
+
+      // 自定义超时处理函数
+      class OrderTimeoutSelect() extends PatternTimeoutFunction[OrderEvent, OrderResult]{
+        override def timeout(map: util.Map[String, util.List[OrderEvent]], l: Long): OrderResult = {
+          val timeoutOrderId = map.get("create").iterator().next().orderId
+          OrderResult(timeoutOrderId, "timeout at" + l)
+        }
+      }
+
+      //自定义匹配处理函数
+      class OrderPaySelect() extends PatternSelectFunction[OrderEvent, OrderResult]{
+        override def select(map: util.Map[String, util.List[OrderEvent]]): OrderResult = {
+          val payedOrderId = map.get("pay").get(0).orderId
+          OrderResult(payedOrderId, "payed successfully")
+        }
+
+      }
+   
+   ==========================================
+   我们通过自定义的source来模拟生成机架的温度，然后定义以下的规则来生成警告和报警
+      警告：某机架在10秒内连续两次上报的温度超过阈值；
+      报警：某机架在20秒内连续两次匹配警告；
+   
+   
+      public abstract class MonitoringEvent {
+          private int rackID;
+
+          public MonitoringEvent(int rackID) {
+              this.rackID = rackID;
+          }
+
+          public int getRackID() {
+              return rackID;
+          }
+
+          public void setRackID(int rackID) {
+              this.rackID = rackID;
+          }
+
+          @Override
+          public boolean equals(Object obj) {
+              if (obj instanceof MonitoringEvent) {
+                  MonitoringEvent monitoringEvent = (MonitoringEvent) obj;
+                  return monitoringEvent.canEquals(this) && rackID == monitoringEvent.rackID;
+              } else {
+                  return false;
+              }
+          }
+
+          @Override
+          public int hashCode() {
+              return rackID;
+          }
+
+          public boolean canEquals(Object obj) {
+              return obj instanceof MonitoringEvent;
+          }
+      }
+
+
+
+
+      public class TemperatureEvent extends MonitoringEvent {
+          private double temperature;
+          ...
+      }
+
+      public class PowerEvent extends MonitoringEvent {
+          private double voltage;
+          ...
+      }
+    
+    #我们通过自定义的source来模拟生成MonitoringEvent数据。
+    
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+        // Use ingestion time => TimeCharacteristic == EventTime + IngestionTimeExtractor
+        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+        // Input stream of monitoring events
+        DataStream<MonitoringEvent> inputEventStream = env
+                .addSource(new MonitoringEventSource(
+                        MAX_RACK_ID,
+                        PAUSE,
+                        TEMPERATURE_RATIO,
+                        POWER_STD,
+                        POWER_MEAN,
+                        TEMP_STD,
+                        TEMP_MEAN))
+                .assignTimestampsAndWatermarks(new IngestionTimeExtractor<>());
+    
+    #接下来定义模式,在10秒钟之内连续两个event的温度超过阈值
+    
+       // Warning pattern: Two consecutive temperature events whose temperature is higher than the given threshold
+        // appearing within a time interval of 10 seconds
+        Pattern<MonitoringEvent, ?> warningPattern = Pattern.<MonitoringEvent>begin("first")
+                .subtype(TemperatureEvent.class)
+                .where(new IterativeCondition<TemperatureEvent>() {
+                    private static final long serialVersionUID = -6301755149429716724L;
+
+                    @Override
+                    public boolean filter(TemperatureEvent value, Context<TemperatureEvent> ctx) throws Exception {
+                        return value.getTemperature() >= TEMPERATURE_THRESHOLD;
+                    }
+                })
+                .next("second")  //紧接着上一个事件
+
+
+                .subtype(TemperatureEvent.class)
+                .where(new IterativeCondition<TemperatureEvent>() {
+                    private static final long serialVersionUID = 2392863109523984059L;
+
+                    @Override
+                    public boolean filter(TemperatureEvent value, Context<TemperatureEvent> ctx) throws Exception {
+                        return value.getTemperature() >= TEMPERATURE_THRESHOLD;
+                    }
+                })
+                .within(Time.seconds(10));
+       
+       #使用报警模式和输入流生成模式流
+        // Create a pattern stream from our warning pattern
+        PatternStream<MonitoringEvent> tempPatternStream = CEP.pattern(
+                inputEventStream.keyBy("rackID"),
+                warningPattern);
+        
+        #使用select方法为每个匹配的报警模式生成相应的报警。其中返回值是一个map，key是我们定义的模式，value是匹配的事件列表。
+        // Generate temperature warnings for each matched warning pattern
+        DataStream<TemperatureWarning> warnings = tempPatternStream.select(
+                (Map<String, List<MonitoringEvent>> pattern) -> {
+                    TemperatureEvent first = (TemperatureEvent) pattern.get("first").get(0);
+                    TemperatureEvent second = (TemperatureEvent) pattern.get("second").get(0);
+
+                    return new TemperatureWarning(first.getRackID(), (first.getTemperature() + second.getTemperature()) / 2);
+                }
+        );
+        
+        #以上我们最后生成了相应的用于警告的DataStream类型的数据流warnings，接下来我们使用这个警告流来生成我们的报警流，即在20秒内连续两次发生警告。
+        // Alert pattern: Two consecutive temperature warnings appearing within a time interval of 20 seconds
+        Pattern<TemperatureWarning, ?> alertPattern = Pattern.<TemperatureWarning>begin("first")
+                .next("second")
+                .within(Time.seconds(20));
+        
+        
+        #然后通过上面的报警模式alertPattern和警告流warnings生成我们的报警流alertPatternStream。
+        // Create a pattern stream from our alert pattern
+        PatternStream<TemperatureWarning> alertPatternStream = CEP.pattern(
+                warnings.keyBy("rackID"),
+                alertPattern);
+        
+        #最后当收集到的两次警告中，第一次警告的平均温度小于第二次的时候，生成报警，封装TemperatureAlert信息返回。 
+        // Generate a temperature alert only if the second temperature warning's average temperature is higher than
+        // first warning's temperature
+        DataStream<TemperatureAlert> alerts = alertPatternStream.flatSelect(
+                (Map<String, List<TemperatureWarning>> pattern, Collector<TemperatureAlert> out) -> {
+                    TemperatureWarning first = pattern.get("first").get(0);
+                    TemperatureWarning second = pattern.get("second").get(0);
+
+                    if (first.getAverageTemperature() < second.getAverageTemperature()) {
+                        out.collect(new TemperatureAlert(first.getRackID()));
+                    }
+                },
+                TypeInformation.of(TemperatureAlert.class));
+                
+          #最后我们将报警流和警告流输出，当然我们也可以对这两个流做其他的操作，比如发到报警系统等。
+          // Print the warning and alert events to stdout
+          warnings.print();
+          alerts.print();
+          
+          
+          
