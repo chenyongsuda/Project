@@ -49,6 +49,45 @@ or()	模式的或条件
 util()	模式发生直至X条件满足为止
       示例：
       pattern.oneOrMore().util(condition)模式发生一次或者多次，直至condition满足为止
+      
+       // expecting 4 occurrences
+       start.times(4);
+
+       // expecting 0 or 4 occurrences
+       start.times(4).optional();
+
+       // expecting 2, 3 or 4 occurrences
+       start.times(2, 4);
+
+       // expecting 2, 3 or 4 occurrences and repeating as many as possible
+       start.times(2, 4).greedy();
+
+       // expecting 0, 2, 3 or 4 occurrences
+       start.times(2, 4).optional();
+
+       // expecting 0, 2, 3 or 4 occurrences and repeating as many as possible
+       start.times(2, 4).optional().greedy();
+
+       // expecting 1 or more occurrences
+       start.oneOrMore();
+
+       // expecting 1 or more occurrences and repeating as many as possible
+       start.oneOrMore().greedy();
+
+       // expecting 0 or more occurrences
+       start.oneOrMore().optional();
+
+       // expecting 0 or more occurrences and repeating as many as possible
+       start.oneOrMore().optional().greedy();
+
+       // expecting 2 or more occurrences
+       start.timesOrMore(2);
+
+       // expecting 2 or more occurrences and repeating as many as possible
+       start.timesOrMore(2).greedy();
+
+       // expecting 0, 2 or more occurrences and repeating as many as possible
+       start.timesOrMore(2).optional().greedy();
 
 忽略策略
 ===========================================
