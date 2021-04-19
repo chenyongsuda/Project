@@ -1,3 +1,58 @@
+关于文件名：必须以如下方式命名，不要乱起名，也无需专门手动控制加载哪个文件
+
+.env 全局默认配置文件，不论什么环境都会加载合并
+.env.development 开发环境下的配置文件
+.env.production 生产环境下的配置文件
+
+关于文件内容：
+注意：属性名必须以VUE_APP_开头，比如VUE_APP_XXX
+比如执行npm run serve命令，会自动加载.env.development文件
+
+.env.development文件内容如下:
+VUE_APP_API_HOST=127.0.0.1
+
+.env.production文件内容如下:
+VUE_APP_API_HOST=10.41.56.121
+
+env 文件需要声明运行的环境
+.env.development
+NODE_ENV = development
+.env.production
+NODE_ENV = production
+
+注意.env中的变量名必须要以VUE_APP_开头
+
+访问.env中的变量
+比如在main.js中配置axios请求的根路径就可以写成这样
+axios.defaults.baseURL = `http://${process.env.VUE_APP_API_HOST}:8000/`
+
+--------------------------------------
+.env.development（开发环境）配置内容
+
+NODE_ENV = 'development'  //模式
+VUE_APP_MODE = 'development'  //通过"VUE_APP_MODE"变量来区分环境
+VUE_APP_API_URL = 'http://192.****:8008/api/' //api地址
+.env.test（测试环境）配置内容
+
+NODE_ENV = 'production'
+VUE_APP_MODE = 'test'
+VUE_APP_API_URL = 'http://xxx.xxx.xxx.xx:8008/api/'
+outputDir = test
+.env.production文件（生产环境）配置内容
+
+NODE_ENV = 'production'
+VUE_APP_MODE = 'production'
+VUE_APP_API_URL = 'http://xxx.xxx.xxx.xx:8008/api/'
+
+if(process.env.VUE_APP_MODE==='development'){
+    //开发环境下的执行操作
+}else if(process.env.VUE_APP_MODE==='test'){
+    //测试环境下的执行操作
+}else{
+    //生产环境下的执行操作
+}
+
+-----------------------------------------
 npm install mockjs --save-dev
 
 ==========================================================
