@@ -1,0 +1,410 @@
+npm install mockjs --save-dev
+
+==========================================================
+1、api下的config.js：配置axios的拦截处理
+import axios from 'axios'
+
+// 创建一个axios实例
+const service = axios.create({
+    //请求超时配置
+    timeout:3000
+})
+//添加请求拦截器
+service.interceptors.request.use(
+    config => {
+        return config
+    },
+    err => {
+        console.log(err)
+    }
+)
+//添加响应拦截器
+service.interceptors.response.use(
+    response => {
+        let res = {}
+        res.status = response.status
+        res.data = response.data
+        return res
+    },
+    err => {
+        console.log(err)
+    }
+)
+
+export default service
+
+========================================================================
+另外一个应用场景，劫持请求，获取token，为请求添加token：
+复制代码
+// 请求拦截器
+axios.interceptors.request.use(config => {
+    const token = localStorage.getItem('userToken');
+    if (token) { // 判断是否存在token，如果存在的话，则每个http header都加上token
+      config.headers.accessToken = token;
+    }
+    return config;
+  }, 
+  error => {
+    return Promise.reject(error);
+  })
+
+
+========================================================
+2、mock目录下index.js
+import Mock from 'mockjs'
+import homeApi from './home'
+import userApi from './user'
+
+
+// 设置200-2000毫秒延时请求数据
+// Mock.setup({
+//   timeout: '200-2000'
+// })
+
+// 首页相关
+// 拦截的是 /home/getData
+Mock.mock(/\/home\/getData/, 'get', homeApi.getStatisticalData)
+
+// 用户相关
+Mock.mock(/\/user\/getUser/, 'get', userApi.getUserList)
+Mock.mock(/\/user\/del/, 'get', userApi.deleteUser)
+Mock.mock(/\/user\/batchremove/, 'get', userApi.batchremove)
+Mock.mock(/\/user\/add/, 'post', userApi.createUser)
+Mock.mock(/\/user\/edit/, 'post', userApi.updateUser)
+Mock.mock(/\/home\/getData/, 'get', homeApi.getStatisticalData)
+
+
+
+==============================================================
+import Mock from 'mockjs'
+// 图表数据
+let List = []
+export default {
+  getStatisticalData: () => {
+    for (let i = 0; i < 7; i++) {
+      List.push(
+        Mock.mock({
+          vue: Mock.Random.float(100, 8000, 0, 2),
+          wechat: Mock.Random.float(100, 8000, 0, 2),
+          ES6: Mock.Random.float(100, 8000, 0, 2),
+          Redis: Mock.Random.float(100, 8000, 0, 2),
+          React: Mock.Random.float(100, 8000, 0, 2),
+          springboot: Mock.Random.float(100, 8000, 0, 2)
+        })
+      )
+    }
+    return {
+      code: 20000,
+      data: {
+        // 饼图
+        videoData: [
+          {
+            name: 'springboot',
+            value: Mock.Random.float(1000, 10000, 0, 2)
+          },
+          {
+            name: 'vue',
+            value: Mock.Random.float(1000, 10000, 0, 2)
+          },
+          {
+            name: '小程序',
+            value: Mock.Random.float(1000, 10000, 0, 2)
+          },
+          {
+            name: 'ES6',
+            value: Mock.Random.float(1000, 10000, 0, 2)
+          },
+          {
+            name: 'Redis',
+            value: Mock.Random.float(1000, 10000, 0, 2)
+          },
+          {
+            name: 'React',
+            value: Mock.Random.float(1000, 10000, 0, 2)
+          }
+        ],
+        // 柱状图
+        userData: [
+          {
+            date: '周一',
+            new: Mock.Random.integer(1, 100),
+            active: Mock.Random.integer(100, 1000)
+          },
+          {
+            date: '周二',
+            new: Mock.Random.integer(1, 100),
+            active: Mock.Random.integer(100, 1000)
+          },
+          {
+            date: '周三',
+            new: Mock.Random.integer(1, 100),
+            active: Mock.Random.integer(100, 1000)
+          },
+          {
+            date: '周四',
+            new: Mock.Random.integer(1, 100),
+            active: Mock.Random.integer(100, 1000)
+          },
+          {
+            date: '周五',
+            new: Mock.Random.integer(1, 100),
+            active: Mock.Random.integer(100, 1000)
+          },
+          {
+            date: '周六',
+            new: Mock.Random.integer(1, 100),
+            active: Mock.Random.integer(100, 1000)
+          },
+          {
+            date: '周日',
+            new: Mock.Random.integer(1, 100),
+            active: Mock.Random.integer(100, 1000)
+          }
+        ],
+        // 折线图
+        orderData: {
+          date: ['20191001', '20191002', '20191003', '20191004', '20191005', '20191006', '20191007'],
+          data: List
+        },
+        tableData: [
+          {
+            name: 'ES6',
+            todayBuy: Mock.Random.float(100, 1000, 0, 2),
+            monthBuy: Mock.Random.float(3000, 5000, 0, 2),
+            totalBuy: Mock.Random.float(40000, 1000000, 0, 2)
+          },
+          {
+            name: '小程序',
+            todayBuy: Mock.Random.float(100, 1000, 0, 2),
+            monthBuy: Mock.Random.float(3000, 5000, 0, 2),
+            totalBuy: Mock.Random.float(40000, 1000000, 0, 2)
+          },
+          {
+            name: 'Vue',
+            todayBuy: Mock.Random.float(100, 1000, 0, 2),
+            monthBuy: Mock.Random.float(3000, 5000, 0, 2),
+            totalBuy: Mock.Random.float(40000, 1000000, 0, 2)
+          },
+          {
+            name: 'springboot',
+            todayBuy: Mock.Random.float(100, 1000, 0, 2),
+            monthBuy: Mock.Random.float(3000, 5000, 0, 2),
+            totalBuy: Mock.Random.float(40000, 1000000, 0, 2)
+          },
+          {
+            name: 'React',
+            todayBuy: Mock.Random.float(100, 1000, 0, 2),
+            monthBuy: Mock.Random.float(3000, 5000, 0, 2),
+            totalBuy: Mock.Random.float(40000, 1000000, 0, 2)
+          },
+          {
+            name: 'Redis',
+            todayBuy: Mock.Random.float(100, 1000, 0, 2),
+            monthBuy: Mock.Random.float(3000, 5000, 0, 2),
+            totalBuy: Mock.Random.float(40000, 1000000, 0, 2)
+          }
+        ]
+      }
+    }
+  }
+}
+
+=================================================================
+home.js
+====================
+import Mock from 'mockjs'
+
+// get请求从config.url获取参数，post从config.body中获取参数
+function param2Obj(url) {
+  const search = url.split('?')[1]
+  if (!search) {
+    return {}
+  }
+  return JSON.parse(
+    '{"' +
+      decodeURIComponent(search)
+        .replace(/"/g, '\\"')
+        .replace(/&/g, '","')
+        .replace(/=/g, '":"') +
+      '"}'
+  )
+}
+let List = []
+const count = 200
+for (let i = 0; i < count; i++) {
+  List.push(
+    Mock.mock({
+      id: Mock.Random.guid(),
+      name: Mock.Random.cname(),
+      addr: Mock.mock('@county(true)'),
+      'age|18-60': 1,
+      birth: Mock.Random.date(),
+      sex: Mock.Random.integer(0, 1)
+    })
+  )
+}
+
+export default {
+  /**
+   * 获取列表
+   * 要带参数 name, page, limt; name可以不填, page,limit有默认值。
+   * @param name, page, limit
+   * @return {{code: number, count: number, data: *[]}}
+   */
+  getUserList: config => {
+    const { name, page = 1, limit = 20 } = param2Obj(config.url)
+    console.log('name:' + name, 'page:' + page, '分页大小limit:' + limit)
+    const mockList = List.filter(user => {
+      if (name && user.name.indexOf(name) === -1 && user.addr.indexOf(name) === -1) return false
+      return true
+    })
+    const pageList = mockList.filter((item, index) => index < limit * page && index >= limit * (page - 1))
+    return {
+      code: 20000,
+      count: mockList.length,
+      list: pageList
+    }
+  },
+  /**
+   * 增加用户
+   * @param name, addr, age, birth, sex
+   * @return {{code: number, data: {message: string}}}
+   */
+  createUser: config => {
+    const { name, addr, age, birth, sex } = JSON.parse(config.body)
+    console.log(JSON.parse(config.body))
+    List.unshift({
+      id: Mock.Random.guid(),
+      name: name,
+      addr: addr,
+      age: age,
+      birth: birth,
+      sex: sex
+    })
+    return {
+      code: 20000,
+      data: {
+        message: '添加成功'
+      }
+    }
+  },
+  /**
+   * 删除用户
+   * @param id
+   * @return {*}
+   */
+  deleteUser: config => {
+    const { id } = param2Obj(config.url)
+    if (!id) {
+      return {
+        code: -999,
+        message: '参数不正确'
+      }
+    } else {
+      List = List.filter(u => u.id !== id)
+      return {
+        code: 20000,
+        message: '删除成功'
+      }
+    }
+  },
+  /**
+   * 批量删除
+   * @param config
+   * @return {{code: number, data: {message: string}}}
+   */
+  batchremove: config => {
+    let { ids } = param2Obj(config.url)
+    ids = ids.split(',')
+    List = List.filter(u => !ids.includes(u.id))
+    return {
+      code: 20000,
+      data: {
+        message: '批量删除成功'
+      }
+    }
+  },
+  /**
+   * 修改用户
+   * @param id, name, addr, age, birth, sex
+   * @return {{code: number, data: {message: string}}}
+   */
+  updateUser: config => {
+    const { id, name, addr, age, birth, sex } = JSON.parse(config.body)
+    const sex_num = parseInt(sex)
+    List.some(u => {
+      if (u.id === id) {
+        u.name = name
+        u.addr = addr
+        u.age = age
+        u.birth = birth
+        u.sex = sex_num
+        return true
+      }
+    })
+    return {
+      code: 20000,
+      data: {
+        message: '编辑成功'
+      }
+    }
+  }
+}
+
+
+=================================================================
+user.js
+====================
+mockjs
+#######
+Mock.mock( rurl, rtype, function( options ) )
+Mock.mock( rurl, rtype, template )
+表示当拦截到rurl和rtype的ajax请求时，将根据数据模板template生成模拟数据，并作为响应数据返回。
+
+Mock.mock( rurl, rtype, function( options ) )
+记录用于生成响应数据的函数。当拦截到匹配 rurl 和 rtype 的 Ajax 请求时，函数 function(options) 将被执行，并把执行结果作为响应数据返回。
+其中：
+rurl 可选
+表示要拦截的url，可以使字符串，也可以是正则
+rtype 可选
+表示要拦截的ajax请求方式，如get、post
+template 可选
+数据模板，可以是对象也可以是字符串
+function(option) 可选
+表示用于生成响应数据的函数
+
+===================================================
+3.main.js
+#######
+
+import Vue from 'vue'
+import App from './App.vue'
+import router from './router'
+import store from './store'
+
+
+//全局配置
+import http from '@/api/config'
+import './mock'
+
+//第三方包
+Vue.prototype.$http = http
+Vue.config.productionTip = false
+
+new Vue({
+  router,
+  store,
+  render: h => h(App)
+}).$mount('#app')
+
+==================================================
+4、组件中的方法如何使用：
+this.$http.get('/home/getData').then(res => {
+  //
+})
+
+
+
+
+
+
